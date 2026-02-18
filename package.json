@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/collinsfairk-stack/newis-dropout-prediction-system#readme",
   "dependencies": {
-    "@dataconnect/generated": "file:src/dataconnect-generated"
+    "@dataconnect/generated": "file:src/dataconnect-generated",
+    "@supabase/supabase-js": "^2.97.0"
   }
 }

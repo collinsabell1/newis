@@ -20,20 +20,9 @@ body{
   box-shadow:0 15px 40px rgba(0,0,0,0.4);
 }
 h2{text-align:center;color:#203a43;}
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:20px;
-}
-th,td{
-  padding:10px;
-  border:1px solid #ddd;
-  text-align:center;
-}
-th{
-  background:#203a43;
-  color:white;
-}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th,td{padding:10px;border:1px solid #ddd;text-align:center;}
+th{background:#203a43;color:white;}
 .green{background:#d4edda;}
 .yellow{background:#fff3cd;}
 .red{background:#f8d7da;}
@@ -78,19 +67,19 @@ button{
   <button class="download" onclick="downloadSelected()">Download Selected</button>
   <button class="download" onclick="downloadAll()">Download All</button>
 
-  <button class="back" onclick="location.href='assessment.html'">⬅ Back to Assessment</button>
-  <button class="next" onclick="location.href='riskprediction.html'">Next ➜ Risk Prediction</button>
+  <button class="back" onclick="location.href='assessment.html'">⬅ Back</button>
+  <button class="next" onclick="location.href='riskprediction.html'">Next ➜</button>
 </div>
 
 <table id="dataTable">
 <thead>
 <tr>
-  <th>Select</th>
-  <th>Admission No</th>
-  <th>Name</th>
-  <th>Class</th>
-  <th>Risk %</th>
-  <th>Date Recorded</th>
+<th>Select</th>
+<th>Admission No</th>
+<th>Name</th>
+<th>Class</th>
+<th>Risk %</th>
+<th>Date Recorded</th>
 </tr>
 </thead>
 <tbody></tbody>
@@ -99,96 +88,103 @@ button{
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  onSnapshot,
-  doc,
-  getDoc,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
-  authDomain: "newis-96304.firebaseapp.com",
-  projectId: "newis-96304"
-};
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const tbody = document.querySelector("#dataTable tbody");
+const supabase = createClient(
+"https://xnvnskxcsphbvkxhndui.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
-/* CACHE TO PREVENT DUPLICATION */
-const rowCache = new Map();
 
-/* REAL-TIME, UPDATE-ONLY LISTENER */
-onSnapshot(collection(db,"students"), async snap=>{
-  for(const change of snap.docChanges()){
-    const studentId = change.doc.id;
-    const studentData = change.doc.data();
+/* LOAD DATA */
+async function loadData(){
+  const { data, error } = await supabase
+    .from("socioeconomic")
+    .select("*")
+    .order("created_at",{ascending:false});
 
-    const assessRef = doc(db,"students",studentId,"assessment","record");
-    const assessSnap = await getDoc(assessRef);
-
-    if(!assessSnap.exists()){
-      if(rowCache.has(studentId)){
-        rowCache.get(studentId).remove();
-        rowCache.delete(studentId);
-      }
-      continue;
-    }
-
-    const assessData = assessSnap.data();
-    const risk = Number(assessData.riskPercent)||0;
-
-    let tr = rowCache.get(studentId);
-
-    if(!tr){
-      tr = document.createElement("tr");
-      tr.dataset.studentId = studentId;
-      tbody.appendChild(tr);
-      rowCache.set(studentId,tr);
-    }
-
-    tr.dataset.risk = risk;
-    tr.className = risk>55 ? "red" : risk>=45 ? "yellow" : "green";
-
-    tr.innerHTML = `
-      <td><input type="checkbox" class="selector"></td>
-      <td>${studentData.studentId||""}</td>
-      <td>${studentData.studentName||""}</td>
-      <td>${studentData.grade||""}</td>
-      <td>${risk}%</td>
-      <td>${assessData.dateRecorded ? assessData.dateRecorded.toDate().toLocaleString() : ""}</td>
-    `;
+  if(error){
+    alert("Error loading data");
+    console.error(error);
+    return;
   }
-});
 
-/* FILTERS */
-function applyFilter(fn){
-  document.querySelectorAll("tbody tr").forEach(r=>{
-    r.style.display = fn(parseInt(r.dataset.risk)) ? "" : "none";
+  const tbody = document.querySelector("tbody");
+  tbody.innerHTML="";
+
+  data.forEach(row=>{
+    const tr=document.createElement("tr");
+
+    let color="";
+    if(row.risk > 55) color="red";
+    else if(row.risk >=45) color="yellow";
+    else color="green";
+
+    tr.className=color;
+
+    tr.innerHTML=`
+      <td><input type="checkbox" class="selector" data-id="${row.id}"></td>
+      <td>${row.student_id}</td>
+      <td>${row.name}</td>
+      <td>${row.class}</td>
+      <td>${row.risk}%</td>
+      <td>${row.created_at ? new Date(row.created_at).toLocaleString() : ""}</td>
+    `;
+
+    tbody.appendChild(tr);
   });
 }
-window.showHighRisk=()=>applyFilter(r=>r>55);
-window.showMediumRisk=()=>applyFilter(r=>r>=45&&r<=55);
-window.showLowRisk=()=>applyFilter(r=>r<45);
+
+loadData();
+
+
+/* FILTERS */
 window.showAll=()=>document.querySelectorAll("tbody tr").forEach(r=>r.style.display="");
 
-/* SELECT */
-window.selectAll=()=>document.querySelectorAll(".selector").forEach(c=>c.checked=true);
+window.showHighRisk=()=>filter(r=>parseInt(r.cells[4].innerText)>55);
+window.showMediumRisk=()=>filter(r=>{
+  let v=parseInt(r.cells[4].innerText);
+  return v>=45 && v<=55;
+});
+window.showLowRisk=()=>filter(r=>parseInt(r.cells[4].innerText)<45);
+
+function filter(cond){
+  document.querySelectorAll("tbody tr").forEach(r=>{
+    r.style.display=cond(r)?"":"none";
+  });
+}
+
+
+/* SELECT ALL */
+window.selectAll=()=>{
+  document.querySelectorAll(".selector").forEach(c=>c.checked=true);
+};
+
 
 /* DELETE */
-window.deleteSelected=async()=>{
-  const rows=[...document.querySelectorAll("tbody tr")].filter(r=>r.querySelector(".selector").checked);
-  if(!rows.length) return alert("No records selected");
-  if(!confirm(`Delete ${rows.length} record(s)?`)) return;
+window.deleteSelected = async ()=>{
+  const selected=[...document.querySelectorAll(".selector")]
+  .filter(c=>c.checked)
+  .map(c=>c.dataset.id);
 
-  await Promise.all(rows.map(r=>
-    deleteDoc(doc(db,"students",r.dataset.studentId,"assessment","record"))
-  ));
+  if(!selected.length) return alert("Nothing selected");
+
+  if(!confirm("Delete selected records?")) return;
+
+  const { error } = await supabase
+    .from("socioeconomic")
+    .delete()
+    .in("id",selected);
+
+  if(error){
+    alert("Delete failed");
+    console.error(error);
+  }else{
+    loadData();
+  }
 };
+
 
 /* CSV */
 function generateCSV(rows){
@@ -203,20 +199,25 @@ function download(csv){
   const b=new Blob([csv],{type:"text/csv"});
   const u=URL.createObjectURL(b);
   const a=document.createElement("a");
-  a.href=u;a.download="socioeconomic_assessment.csv";a.click();
+  a.href=u;a.download="socioeconomic.csv";
+  a.click();
   URL.revokeObjectURL(u);
 }
 window.downloadSelected=()=>{
-  const r=[...document.querySelectorAll("tbody tr")].filter(x=>x.querySelector(".selector").checked&&x.style.display!=="none");
-  if(!r.length) return alert("No students selected");
+  const r=[...document.querySelectorAll("tbody tr")]
+  .filter(x=>x.querySelector(".selector").checked && x.style.display!=="none");
+  if(!r.length) return alert("No selection");
   download(generateCSV(r));
 };
 window.downloadAll=()=>{
-  const r=[...document.querySelectorAll("tbody tr")].filter(x=>x.style.display!=="none");
-  if(!r.length) return alert("No records found");
+  const r=[...document.querySelectorAll("tbody tr")]
+  .filter(x=>x.style.display!=="none");
+  if(!r.length) return alert("No records");
   download(generateCSV(r));
 };
+
 </script>
 
+<script type="module" src="test.js"></script>
 </body>
 </html>

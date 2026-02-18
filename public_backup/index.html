@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00c6ff">
+
+<meta charset="UTF-8">
+<title>NEWIS - National Early Warning & Intervention System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  overflow-x:hidden;
+}
+
+header{
+  padding:30px;
+  text-align:center;
+}
+
+header h1{
+  font-size:40px;
+  margin:0;
+}
+
+header p{
+  font-size:18px;
+  opacity:0.8;
+}
+
+.btn{
+  padding:12px 25px;
+  background:#00c6ff;
+  border:none;
+  border-radius:30px;
+  color:white;
+  cursor:pointer;
+  font-size:15px;
+  margin:10px;
+  transition:0.3s;
+}
+
+.btn:hover{
+  background:#0072ff;
+  transform:scale(1.05);
+}
+
+.cards{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:25px;
+  padding:40px 20px;
+}
+
+.card{
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(10px);
+  border-radius:15px;
+  padding:25px;
+  width:250px;
+  text-align:center;
+  transition:0.3s;
+}
+
+.card:hover{
+  transform:translateY(-10px);
+  box-shadow:0 10px 25px rgba(0,0,0,0.4);
+}
+
+.card a{
+  display:inline-block;
+  margin-top:15px;
+  padding:8px 18px;
+  background:#00c6ff;
+  color:white;
+  border-radius:20px;
+  text-decoration:none;
+  font-size:14px;
+}
+
+.card a:hover{
+  background:#0072ff;
+}
+
+.gallery{
+  padding:40px;
+  text-align:center;
+}
+
+.gallery img{
+  width:250px;
+  height:170px;
+  object-fit:cover;
+  margin:10px;
+  border-radius:10px;
+  transition:0.3s;
+}
+
+.gallery img:hover{
+  transform:scale(1.1);
+}
+
+.news-box{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:300px;
+  background:rgba(0,0,0,0.8);
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 20px rgba(0,198,255,0.5);
+  font-size:14px;
+}
+
+.news-box h4{
+  margin-top:0;
+  color:#00c6ff;
+}
+
+.news-box a{
+  color:#00c6ff;
+  text-decoration:none;
+  font-size:13px;
+  display:inline-block;
+  margin-top:10px;
+}
+
+footer{
+  text-align:center;
+  padding:20px;
+  background:rgba(0,0,0,0.3);
+  margin-top:40px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="connectionStatus" style="
+  position:fixed;
+  top:0;
+  width:100%;
+  text-align:center;
+  padding:6px;
+  font-size:14px;
+  z-index:9999;">
+</div>
+
+<header>
+  <h1>NEWIS</h1>
+  <p>National Early Warning & Intervention System</p>
+
+  <button class="btn" onclick="location.href='login.html'">Login</button>
+  <button class="btn" onclick="location.href='dashboard.html'">Go to Dashboard</button>
+</header>
+
+<section class="cards">
+
+  <div class="card">
+    <h3>Student Registration</h3>
+    <p>Add new student & parent details</p>
+    <a href="register.html">Open</a>
+  </div>
+
+  <div class="card">
+    <h3>Academics</h3>
+    <p>Track grades & performance trends</p>
+    <a href="academics.html">Open</a>
+  </div>
+
+  <div class="card">
+    <h3>Behavioral Analytics</h3>
+    <p>Monitor discipline & engagement</p>
+    <a href="behavioral.html">Open</a>
+  </div>
+
+  <div class="card">
+    <h3>Socioeconomic Assessment</h3>
+    <p>Evaluate risk factors</p>
+    <a href="assessment.html">Open</a>
+  </div>
+
+  <div class="card">
+    <h3>AI Risk Prediction</h3>
+    <p>Calculate dropout probability</p>
+    <a href="riskprediction.html">Open</a>
+  </div>
+
+  <!-- ✅ FIXED: Intervention Dashboard -->
+  <div class="card">
+    <h3>Intervention Dashboard</h3>
+    <p>View alerts & support actions</p>
+    <a href="intervention.html">Open</a>
+  </div>
+
+</section>
+
+<section class="gallery">
+  <h2>Understanding the Dropout Crisis</h2>
+
+  <img src="https://images.unsplash.com/photo-1588072432836-e10032774350">
+  <img src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b">
+  <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7">
+  <img src="https://images.unsplash.com/photo-1497633762265-9d179a990aa6">
+</section>
+
+<div class="news-box">
+  <h4>AI ALERT</h4>
+  <p id="newsText">Loading predictive insight...</p>
+  <a id="newsLink" href="#" target="_blank">Read Full Report →</a>
+</div>
+
+<footer>
+  © 2026 NEWIS | Powered by AI & Firebase
+</footer>
+
+<script>
+const insights = [
+  { text:"AI detected rising absenteeism trend in rural schools.", link:"https://www.unicef.org/education" },
+  { text:"Economic hardship strongly correlates with dropout rates.", link:"https://www.worldbank.org/en/topic/education" },
+  { text:"Behavioral intervention reduces dropout risk significantly.", link:"https://www.oecd.org/education/" },
+  { text:"Parental involvement lowers dropout probability.", link:"https://www.edweek.org/" },
+  { text:"Secondary school completion improves national GDP growth.", link:"https://uis.unesco.org/" }
+];
+
+function rotateNews(){
+  const item = insights[Math.floor(Math.random()*insights.length)];
+  document.getElementById("newsText").innerText = item.text;
+  document.getElementById("newsLink").href = item.link;
+}
+setInterval(rotateNews,5000);
+rotateNews();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+const statusBar = document.getElementById("connectionStatus");
+
+function updateStatus(){
+  if(navigator.onLine){
+    statusBar.innerHTML = "🟢 Online Mode";
+    statusBar.style.background = "#0f0";
+    statusBar.style.color = "#000";
+    setTimeout(()=>statusBar.innerHTML="",2000);
+  } else {
+    statusBar.innerHTML = "🔴 Offline Mode - Running from Cache";
+    statusBar.style.background = "#f00";
+    statusBar.style.color = "#fff";
+  }
+}
+
+window.addEventListener("online", updateStatus);
+window.addEventListener("offline", updateStatus);
+updateStatus();
+</script>
+
+</body>
+<script type="module" src="test.js"></script>
+</html>

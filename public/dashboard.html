@@ -108,27 +108,6 @@ AI-Powered Completion, Dropout & Intervention Command Center
   <div class="kpi"><h3>Missing Data</h3><div class="progress"><div id="mBar"></div></div><p id="mTxt"></p></div>
 </div>
 
-<div class="actions">
-  <div class="action-card"><h3>🚨 High-Risk Students</h3><p>Immediate intervention required.</p></div>
-  <div class="action-card"><h3>⚠️ Data Integrity</h3><p>Incomplete school records.</p></div>
-  <div class="action-card"><h3>🧠 Intervention Impact</h3><p>ROI of interventions.</p></div>
-  <div class="action-card"><h3>📄 National Reports</h3><p>AI-generated policy reports.</p></div>
-</div>
-
-<div class="button-bar">
-  <button>🔄 Run National AI Refresh</button>
-  <button>🎯 Auto-Assign Interventions</button>
-  <button>📊 Download AI Insights</button>
-  <button>🏛 Policy Recommendations</button>
-</div>
-
-<div class="status-cards">
-  <div class="status"><strong>AI Model</strong><br><span>Active</span></div>
-  <div class="status"><strong>Data Freshness</strong><br><span>Last 24 Hours</span></div>
-  <div class="status"><strong>Coverage</strong><br><span>Nationwide</span></div>
-  <div class="status"><strong>Alert Level</strong><br><span>Moderate</span></div>
-</div>
-
 <div class="charts">
   <div class="chart-card"><canvas id="riskChart"></canvas></div>
   <div class="chart-card"><canvas id="sourceChart"></canvas></div>
@@ -136,74 +115,125 @@ AI-Powered Completion, Dropout & Intervention Command Center
   <div class="chart-card"><canvas id="trendChart"></canvas></div>
 </div>
 
-<div class="section-title">🧠 AI-Driven Intervention Intelligence</div>
-
-<div class="charts">
-  <div class="chart-card"><canvas id="effectChart"></canvas></div>
-  <div class="chart-card"><canvas id="costImpactChart"></canvas></div>
-  <div class="chart-card"><canvas id="bestChart"></canvas></div>
-  <div class="chart-card"><canvas id="roleChart"></canvas></div>
 </div>
 
-<div class="note">
-✔ AI auto-retires ineffective interventions  
-✔ Best intervention matched to dominant risk  
-✔ Cost-effectiveness optimized nationally
-</div>
-
-</div>
-
-<!-- ================= DATA SCRIPT (ONLY ADDITION) ================= -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
-  authDomain: "newis-96304.firebaseapp.com",
-  projectId: "newis-96304",
-  storageBucket: "newis-96304.firebasestorage.app",
-  messagingSenderId: "695908769426",
-  appId: "1:695908769426:web:dc0db0866cbdaa4fb6d04b"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const supabase = createClient(
+"https://xnvnskxcsphbvkxhndui.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
 let total=0, complete=0, dropout=0, missing=0;
 let risk={Low:0,Medium:0,High:0};
 
-const students = await getDocs(collection(db,"students"));
+async function loadData(){
 
-for(const s of students.docs){
-  total++;
-  const id=s.id;
+const { data: students, error } = await supabase
+.from("students")
+.select("*");
 
-  const acad=await getDocs(collection(db,"students",id,"academics"));
-  const beh=await getDoc(doc(db,"students",id,"behavioral","record"));
-  const ass=await getDoc(doc(db,"students",id,"assessment","record"));
-
-  if(acad.empty||!beh.exists()||!ass.exists()){missing++;continue;}
-
-  let avg=0; acad.forEach(a=>avg=Number(a.data().average)||0);
-  let riskScore=(100-avg)*0.4+(beh.data().riskPercent||0)*0.3+(ass.data().riskPercent||0)*0.3;
-
-  if(riskScore>=65){dropout++;risk.High++;}
-  else if(riskScore>=40){complete++;risk.Medium++;}
-  else{complete++;risk.Low++;}
+if(error){
+console.error(error);
+alert("Database error");
+return;
 }
+
+for(const s of students){
+total++;
+
+const { data: acad } = await supabase
+.from("academics")
+.select("average")
+.eq("student_id",s.id)
+.single();
+
+const { data: beh } = await supabase
+.from("behavioral")
+.select("riskPercent")
+.eq("student_id",s.id)
+.single();
+
+const { data: ass } = await supabase
+.from("assessment")
+.select("riskPercent")
+.eq("student_id",s.id)
+.single();
+
+if(!acad||!beh||!ass){
+missing++;
+continue;
+}
+
+let avg=Number(acad.average)||0;
+
+let riskScore=
+(100-avg)*0.4+
+(beh.riskPercent||0)*0.3+
+(ass.riskPercent||0)*0.3;
+
+if(riskScore>=65){
+dropout++;
+risk.High++;
+}
+else if(riskScore>=40){
+complete++;
+risk.Medium++;
+}
+else{
+complete++;
+risk.Low++;
+}
+}
+
+render();
+}
+
+function render(){
 
 const pct=v=>total?Math.round(v/total*100):0;
 
-tBar.style.width="100%";tTxt.textContent=total+" learners";
-cBar.style.width=pct(complete)+"%";cTxt.textContent=complete+" expected to complete";
-dBar.style.width=pct(dropout)+"%";dTxt.textContent=dropout+" high risk";
-mBar.style.width=pct(missing)+"%";mTxt.textContent=missing+" incomplete";
+tBar.style.width="100%";
+tTxt.textContent=total+" learners";
 
-new Chart(riskChart,{type:"doughnut",data:{labels:["Low","Medium","High"],datasets:[{data:[risk.Low,risk.Medium,risk.High]}]}});
-new Chart(completionChart,{type:"pie",data:{labels:["Completion","Dropout"],datasets:[{data:[complete,dropout]}]}});
-new Chart(sourceChart,{type:"bar",data:{labels:["Complete","Missing"],datasets:[{data:[total-missing,missing]}]}});
-new Chart(trendChart,{type:"line",data:{labels:["2021","2022","2023","2024","2025"],datasets:[{data:[60,52,46,39,34],tension:.4}]}});
+cBar.style.width=pct(complete)+"%";
+cTxt.textContent=complete+" expected to complete";
+
+dBar.style.width=pct(dropout)+"%";
+dTxt.textContent=dropout+" high risk";
+
+mBar.style.width=pct(missing)+"%";
+mTxt.textContent=missing+" incomplete";
+
+new Chart(riskChart,{
+type:"doughnut",
+data:{labels:["Low","Medium","High"],
+datasets:[{data:[risk.Low,risk.Medium,risk.High]}]}
+});
+
+new Chart(completionChart,{
+type:"pie",
+data:{labels:["Completion","Dropout"],
+datasets:[{data:[complete,dropout]}]}
+});
+
+new Chart(sourceChart,{
+type:"bar",
+data:{labels:["Complete","Missing"],
+datasets:[{data:[total-missing,missing]}]}
+});
+
+new Chart(trendChart,{
+type:"line",
+data:{
+labels:["2021","2022","2023","2024","2025"],
+datasets:[{data:[60,52,46,39,34],tension:.4}]
+}
+});
+}
+
+loadData();
 </script>
 
 </body>

@@ -1,54 +1,65 @@
-import { initializeApp } from 
-"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-import { getFirestore, collection, addDoc, getDocs } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+/* SUPABASE CONNECTION */
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-};
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-window.calculateAssessment = function(){
+/* ================================
+   BEHAVIOR CALCULATOR
+================================ */
 
-  let checkboxes = document.querySelectorAll('#assessmentForm input[type="checkbox"]');
+window.calculateBehavior = function () {
 
-  let total = 0;
-
-  checkboxes.forEach(box=>{
-    if(box.checked){
-      total += parseInt(box.value);
-    }
-  });
-
-  document.getElementById("assessmentScore").innerText = total;
-
-};
-window.calculateBehavior = function(){
-
-  let positives = document.querySelectorAll('.positive');
-  let negatives = document.querySelectorAll('.negative');
+  const positives = document.querySelectorAll(".positive");
+  const negatives = document.querySelectorAll(".negative");
 
   let total = 0;
 
-  positives.forEach(p=>{
-    if(p.checked){
-      total += parseInt(p.value);
-    }
+  positives.forEach(p => {
+    if (p.checked) total += Number(p.value);
   });
 
-  negatives.forEach(n=>{
-    if(n.checked){
-      total -= parseInt(n.value);
-    }
+  negatives.forEach(n => {
+    if (n.checked) total -= Number(n.value);
   });
 
-  if(total < 0) total = 0;
-  if(total > 100) total = 100;
+  if (total < 0) total = 0;
+  if (total > 100) total = 100;
 
   document.getElementById("behaviorScore").innerText = total;
+};
 
+
+
+/* ================================
+   OPTIONAL SAVE FUNCTION
+   (use when you add save button)
+================================ */
+
+window.saveBehavior = async function(studentId){
+
+  const score = Number(document.getElementById("behaviorScore").innerText);
+
+  if(!studentId){
+    alert("Student ID required");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("behavior")
+    .insert([{
+      student_id: studentId,
+      score: score,
+      recorded_at: new Date()
+    }]);
+
+  if(error){
+    alert("Error saving");
+    console.error(error);
+  }else{
+    alert("Saved ✔");
+  }
 };

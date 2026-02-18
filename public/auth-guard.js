@@ -1,35 +1,59 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const firebaseConfig={
-  apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
-  authDomain:"newis-96304.firebaseapp.com",
-  projectId:"newis-96304"
-};
+/* SUPABASE INIT */
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
+/* AUTH GUARD */
+export async function requireAuth(){
 
-onAuthStateChanged(auth,async(user)=>{
-  if(!user){
-    location.href="login.html";
+  const { data:{ session } } = await supabase.auth.getSession();
+
+  if(!session){
+    window.location.href="login.html";
+    return null;
+  }
+
+  return session.user;
+}
+
+
+/* OPTIONAL ROLE CHECK */
+export async function requireRole(role){
+
+  const { data:{ session } } = await supabase.auth.getSession();
+
+  if(!session){
+    window.location.href="login.html";
     return;
   }
 
-  const snap=await getDoc(doc(db,"users",user.uid));
-  if(!snap.exists()){
+  const userId = session.user.id;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if(error || !data){
+    alert("User record missing");
+    window.location.href="login.html";
+    return;
+  }
+
+  if(data.role !== role){
     alert("Access denied");
-    location.href="login.html";
-    return;
+    window.location.href="index.html";
   }
+}
 
-  const role=snap.data().role;
-  if(!window.allowedRoles.includes(role)){
-    alert("Unauthorized access");
-    location.href="login.html";
+
+/* AUTO LISTENER (optional) */
+supabase.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){
+    window.location.href="login.html";
   }
 });

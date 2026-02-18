@@ -77,24 +77,24 @@ button{
 
 <h3>Student Information</h3>
 <div class="grid">
-<input type="text" id="studentName" readonly>
-<input type="text" id="school" readonly>
-<input type="text" id="grade" readonly>
-<input type="text" id="age" readonly>
-<input type="text" id="gender" readonly>
-<input type="text" id="parentName" readonly>
+<input id="studentName" readonly>
+<input id="school" readonly>
+<input id="grade" readonly>
+<input id="age" readonly>
+<input id="gender" readonly>
+<input id="parentName" readonly>
 </div>
 
 <label>Academic Year</label>
-<input type="text" id="year" readonly>
+<input id="year" readonly>
 
 <label>Date Recorded</label>
-<input type="text" id="recordDate" readonly>
+<input id="recordDate" readonly>
 
 <h3>Termly Average Scores</h3>
-<input type="number" id="term1" placeholder="Term 1 Average" min="0" max="100">
-<input type="number" id="term2" placeholder="Term 2 Average" min="0" max="100">
-<input type="number" id="term3" placeholder="Term 3 Average" min="0" max="100">
+<input type="number" id="term1" placeholder="Term 1 Average">
+<input type="number" id="term2" placeholder="Term 2 Average">
+<input type="number" id="term3" placeholder="Term 3 Average">
 
 <div style="text-align:center;">
 <button class="btn-add" onclick="addNew()">Add New</button>
@@ -107,150 +107,135 @@ button{
 <div class="circle" id="averageCircle">0%</div>
 
 <div class="nav-buttons">
-<button class="btn-nav" onclick="window.location.href='index.html'">⬅ Back to Index</button>
-<button class="btn-nav" onclick="window.location.href='behavioral.html'">Next ➡ Behavioral</button>
+<button class="btn-nav" onclick="window.location.href='index.html'">⬅ Back</button>
+<button class="btn-nav" onclick="window.location.href='behavioral.html'">Next ➡</button>
 </div>
 
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore, doc, setDoc, updateDoc, getDoc,
-  getDocs, collection, query, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "newis-96304.firebaseapp.com",
-  projectId: "newis-96304",
-  storageBucket: "newis-96304.firebasestorage.app",
-  messagingSenderId: "695908769426",
-  appId: "1:695908769426:web:dc0db0866cbdaa4fb6d04b"
-};
+const supabase = createClient(
+"https://xnvnskxcsphbvkxhndui.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+/* ELEMENTS */
+const studentId=document.getElementById("studentId");
+const studentName=document.getElementById("studentName");
+const school=document.getElementById("school");
+const grade=document.getElementById("grade");
+const age=document.getElementById("age");
+const gender=document.getElementById("gender");
+const parentName=document.getElementById("parentName");
+const year=document.getElementById("year");
+const recordDate=document.getElementById("recordDate");
+const term1=document.getElementById("term1");
+const term2=document.getElementById("term2");
+const term3=document.getElementById("term3");
+const circle=document.getElementById("averageCircle");
 
-let studentDocId = null;
+let studentRowId=null;
 
-year.value = new Date().getFullYear();
-recordDate.value = new Date().toLocaleString();
+/* DEFAULT YEAR */
+year.value=new Date().getFullYear();
 
-/* LOAD STUDENT */
-async function loadStudent(){
-  const adm = studentId.value.trim();
-  if(!adm) return;
-  const q = query(collection(db,"students"), where("studentId","==",adm));
-  const snap = await getDocs(q);
-  if(snap.empty){ alert("Student Not Found"); return;}
-  snap.forEach(d=>{
-    studentDocId = d.id;
-    const data = d.data();
-    studentName.value = data.studentName||"";
-    school.value = data.school||"";
-    grade.value = data.grade||"";
-    age.value = data.age||"";
-    gender.value = data.gender||"";
-    parentName.value = data.parentName||"";
-  });
-}
-studentId.addEventListener("blur", loadStudent);
+/* FIND STUDENT WHEN ID ENTERED */
+studentId.addEventListener("change",async()=>{
+const {data}=await supabase
+.from("students")
+.select("*")
+.eq("studentId",studentId.value)
+.single();
 
-/* VALIDATE SCORE — CLEAR FIELD IF INVALID */
-function validateScore(input, termName){
-  const num = Number(input.value);
+if(!data)return alert("Student not found");
 
-  if (input.value === "") return 0;
-
-  if (isNaN(num) || num > 100 || num < 0){
-    alert(termName + " must be between 0 and 100. Field cleared.");
-    input.value = "";
-    return 0;
-  }
-  return num;
-}
+studentRowId=data.id;
+studentName.value=data.studentname || data.studentName;
+school.value=data.school || "";
+grade.value=data.grade || "";
+age.value=data.age || "";
+gender.value=data.gender || "";
+parentName.value=data.parentname || "";
+});
 
 /* CALCULATE */
 function calculate(){
-  const t1 = validateScore(term1, "Term 1");
-  const t2 = validateScore(term2, "Term 2");
-  const t3 = validateScore(term3, "Term 3");
-
-  const values = [t1, t2, t3].filter(v => v !== 0);
-  const avg = values.length ? values.reduce((a,b)=>a+b,0)/values.length : 0;
-
-  const deg = avg * 3.6;
-  let color = avg < 50 ? "red" : avg <= 65 ? "yellow" : "#00ff99";
-
-  averageCircle.style.background =
-    `conic-gradient(${color} ${deg}deg,#333 ${deg}deg)`;
-  averageCircle.innerHTML = avg.toFixed(1)+"%";
-
-  return avg;
+const t1=+term1.value||0;
+const t2=+term2.value||0;
+const t3=+term3.value||0;
+const avg=Math.round((t1+t2+t3)/3);
+circle.innerText=avg+"%";
+circle.style.background=`conic-gradient(#00ff99 ${avg*3.6}deg,#333 0deg)`;
+return avg;
 }
-[term1,term2,term3].forEach(i=>i.addEventListener("input",calculate));
+
+term1.oninput=term2.oninput=term3.oninput=calculate;
 
 /* CLEAR */
-window.clearFields = () => {
-  term1.value = term2.value = term3.value = "";
-  calculate();
-};
+window.clearFields=()=>{
+term1.value=term2.value=term3.value="";
+calculate();
+}
 
 /* ADD NEW */
-window.addNew = () => {
-  studentId.value="";
-  studentDocId=null;
-  studentName.value=school.value=grade.value=age.value=gender.value=parentName.value="";
-  clearFields();
-};
+window.addNew=()=>{
+studentId.value="";
+studentRowId=null;
+studentName.value=school.value=grade.value=age.value=gender.value=parentName.value="";
+clearFields();
+}
 
 /* SAVE */
-window.saveAcademic = async () => {
-  if(!studentDocId) return alert("Enter Admission Number");
-  const ref = doc(db,"students",studentDocId,"academics",year.value);
-  const avg = calculate();
-  const snap = await getDoc(ref);
+window.saveAcademic=async()=>{
+if(!studentRowId)return alert("Enter student");
 
-  if(snap.exists()){
-    if(confirm("Record exists. Update?")){
-      await updateDoc(ref,{
-        term1:+term1.value||0,
-        term2:+term2.value||0,
-        term3:+term3.value||0,
-        average:avg,
-        recordDate:new Date().toLocaleString()
-      });
-      alert("Updated Successfully!");
-    }
-  } else {
-    await setDoc(ref,{
-      year:year.value,
-      recordDate:new Date().toLocaleString(),
-      term1:+term1.value||0,
-      term2:+term2.value||0,
-      term3:+term3.value||0,
-      average:avg
-    });
-    alert("Saved Successfully!");
-  }
-};
+const avg=calculate();
+
+const {data:existing}=await supabase
+.from("academics")
+.select("*")
+.eq("student_id",studentRowId)
+.eq("year",year.value);
+
+if(existing.length){
+if(!confirm("Record exists. Update?")) return;
+return updateAcademic();
+}
+
+await supabase.from("academics").insert([{
+student_id:studentRowId,
+year:year.value,
+term1:+term1.value||0,
+term2:+term2.value||0,
+term3:+term3.value||0,
+average:avg,
+record_date:new Date().toLocaleString()
+}]);
+
+alert("Saved ✔");
+}
 
 /* UPDATE */
-window.updateAcademic = async () => {
-  if(!studentDocId) return alert("Enter Admission Number");
-  await updateDoc(
-    doc(db,"students",studentDocId,"academics",year.value),
-    {
-      term1:+term1.value||0,
-      term2:+term2.value||0,
-      term3:+term3.value||0,
-      average:calculate(),
-      recordDate:new Date().toLocaleString()
-    }
-  );
-  alert("Updated Successfully!");
-};
+window.updateAcademic=async()=>{
+if(!studentRowId)return alert("Enter student");
+
+await supabase
+.from("academics")
+.update({
+term1:+term1.value||0,
+term2:+term2.value||0,
+term3:+term3.value||0,
+average:calculate(),
+record_date:new Date().toLocaleString()
+})
+.eq("student_id",studentRowId)
+.eq("year",year.value);
+
+alert("Updated ✔");
+}
 </script>
+
 </body>
 </html>

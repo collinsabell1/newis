@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>All Behavioral Records - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+.container{
+  max-width:1300px;
+  margin:30px auto;
+  padding:30px;
+  background:rgba(255,255,255,0.08);
+  border-radius:20px;
+  backdrop-filter:blur(15px);
+  box-shadow:0 0 40px rgba(0,0,0,0.5);
+}
+h1{text-align:center;margin-bottom:20px;}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+th,td{
+  padding:10px;
+  text-align:center;
+}
+th{background:rgba(255,255,255,0.2);}
+tr:nth-child(even){background:rgba(255,255,255,0.05);}
+
+button,select,input{
+  padding:8px 14px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+}
+
+.btn-download{background:#00c6ff;color:white;}
+.btn-nav{background:#17a2b8;color:white;}
+.btn-filter{background:#ffc107;color:black;}
+.btn-print{background:#28a745;color:white;}
+.btn-delete{background:#dc3545;color:white;}
+
+.green{color:lightgreen;font-weight:bold;}
+.yellow{color:yellow;font-weight:bold;}
+.red{color:#ff4d4d;font-weight:bold;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📊 All Students Behavioral Risk Records</h1>
+
+<div style="text-align:center;">
+<button class="btn-nav" onclick="window.location.href='behavioral.html'">⬅ Back</button>
+<button class="btn-nav" onclick="window.location.href='assessment.html'">Next ➡</button>
+</div>
+
+<br>
+
+<div style="text-align:center;">
+<input type="text" id="searchInput" placeholder="Search Admission Number">
+
+<select id="classFilter">
+<option value="All">All Classes</option>
+</select>
+
+<select id="riskFilter">
+<option value="All">All Risk Levels</option>
+<option value="High">High Risk (>50%)</option>
+<option value="Medium">Moderate Risk (=50%)</option>
+<option value="Low">Low Risk (<50%)</option>
+</select>
+
+<button class="btn-filter" onclick="renderTable()">Apply</button>
+</div>
+
+<br>
+
+<div style="text-align:center;">
+<button class="btn-download" onclick="downloadAll()">Download All</button>
+<button class="btn-download" onclick="downloadSelected()">Download Selected</button>
+<button class="btn-print" onclick="printAll()">Print All</button>
+<button class="btn-print" onclick="printSelected()">Print Selected</button>
+<button class="btn-delete" onclick="deleteSelected()">Delete Selected</button>
+</div>
+
+<table id="recordsTable">
+<thead>
+<tr>
+<th><input type="checkbox" id="selectAll"></th>
+<th>Adm No</th>
+<th>Name</th>
+<th>Class</th>
+<th>School</th>
+<th>Risk %</th>
+<th>Date Recorded</th>
+<th>Status</th>
+<th>Report</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
+
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  collectionGroup,
+  deleteDoc,
+  doc
+
+
+
+/* ================= SELECT ALL ================= */
+document.getElementById("selectAll").addEventListener("change",function(){
+  document.querySelectorAll(".rowCheck")
+    .forEach(cb=>cb.checked=this.checked);
+}])
+
+/* ================= DELETE SELECTED ================= */
+window.deleteSelected = async () => {
+
+  const selectedIds=[...document.querySelectorAll(".rowCheck:checked")]
+    .map(cb=>cb.dataset.id);
+
+  if(!selectedIds.length){
+    alert("No records selected");
+    return;
+  }
+
+  if(!confirm(`Delete ${selectedIds.length} behavioral record(s)? This cannot be undone.`)) return;
+
+  for(const studentId of selectedIds){
+    await deleteDoc(doc(db,"students",studentId,"behavioral","record"));
+  }
+
+  alert("Selected records deleted successfully");
+  loadData();
+};
+
+/* ================= CSV DOWNLOAD ================= */
+function downloadCSV(rows, filename){
+  if(!rows.length) return alert("No data!");
+
+  const header="AdmNo,Name,Class,School,Risk%,Status,Date\n";
+  const csv=rows.map(r=>
+    `${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}`
+  ).join("\n");
+
+  const blob=new Blob([header+csv],{type:"text/csv"}])
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+}
+
+window.downloadAll=()=>downloadCSV(allData,"All_Behavioral_Records.csv");
+
+window.downloadSelected=()=>{
+  const selectedIds=[...document.querySelectorAll(".rowCheck:checked")]
+    .map(cb=>cb.dataset.id);
+
+  const selected=allData.filter(r=>selectedIds.includes(r.id));
+  downloadCSV(selected,"Selected_Behavioral_Records.csv");
+};
+
+/* ================= PRINT ================= */
+window.printReport=(data)=>{
+  const win=window.open("","_blank");
+  win.document.write(`<h2>Behavioral Risk Report</h2>${generateReport([data])}`);
+};
+
+window.printAll=()=>{
+  const win=window.open("","_blank");
+  win.document.write(`<h2>All Behavioral Records</h2>${generateReport(allData)}`);
+};
+
+window.printSelected=()=>{
+  const selectedIds=[...document.querySelectorAll(".rowCheck:checked")]
+    .map(cb=>cb.dataset.id);
+  const selected=allData.filter(r=>selectedIds.includes(r.id));
+  const win=window.open("","_blank");
+  win.document.write(`<h2>Selected Behavioral Records</h2>${generateReport(selected)}`);
+};
+
+function generateReport(dataArray){
+  let html="";
+  dataArray.forEach(r=>{
+    html+=`
+      <hr>
+      <p><b>Admission:</b> ${r.adm}</p>
+      <p><b>Name:</b> ${r.name}</p>
+      <p><b>Class:</b> ${r.class}</p>
+      <p><b>School:</b> ${r.school}</p>
+      <p><b>Risk:</b> ${r.risk}%</p>
+      <p><b>Status:</b> ${r.status}</p>
+      <p><b>Date:</b> ${r.date.toLocaleDateString()}</p>
+    `;
+  }])
+  html+=`<br><button onclick="window.print()">Print</button>`;
+  return html;
+}
+
+/* ================= START ================= */
+loadData();
+</script>
+
+</body>
+<script type="module" src="test.js"></script>
+</html>

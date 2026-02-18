@@ -114,7 +114,7 @@ const db = getFirestore(app);
 const safe = v => Math.max(0, Math.min(100, Number(v)||0));
 
 async function getAcademicRisk(id){
-  const snap = await SUPABASE_QUERY(collection(db,"students",id,"academics"));
+  const snap = await getDocs(collection(db,"students",id,"academics"));
   if(snap.empty) return 50;
 
   const recs = snap.docs.map(d=>d.data());
@@ -127,7 +127,7 @@ window.loadStudent = async()=>{
   if(!admNo) return alert("Enter Admission Number");
 
   const q = query(collection(db,"students"),where("studentId","==",admNo));
-  const snap = await SUPABASE_QUERY(q);
+  const snap = await getDocs(q);
   if(snap.empty) return alert("Student not found");
 
   const d = snap.docs[0];

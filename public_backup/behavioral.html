@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Behavioral Risk Assessment - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#141e30,#243b55);
+  color:white;
+}
+
+/* MAIN CARD */
+.container{
+  max-width:1200px;
+  margin:30px auto;
+  padding:30px;
+  background:rgba(255,255,255,0.08);
+  border-radius:20px;
+  backdrop-filter:blur(15px);
+  box-shadow:0 0 40px rgba(0,0,0,0.6);
+}
+
+h2{
+  text-align:center;
+  margin-bottom:25px;
+  font-size:28px;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:25px;
+}
+@media(min-width:992px){
+  .grid{grid-template-columns:1fr 1fr}
+}
+
+.section{
+  padding:20px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.1);
+}
+
+/* INPUTS */
+input[type="text"]{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  margin-bottom:12px;
+}
+input[readonly]{
+  background:#e0e0e0;
+  font-weight:bold;
+}
+
+/* CHECKBOX GRID */
+.checkbox-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+@media(min-width:600px){
+  .checkbox-grid{grid-template-columns:1fr 1fr}
+}
+
+/* BUTTONS */
+.button-area{
+  text-align:center;
+  margin-top:25px;
+}
+button{
+  padding:10px 18px;
+  margin:6px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.save{background:#28a745;color:white}
+.update{background:#ffc107}
+.delete{background:#dc3545;color:white}
+.view{background:#6f42c1;color:white}
+.nav{background:#17a2b8;color:white}
+
+/* LABEL NEXT TO ASSESSMENT */
+.assessment-wrap{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.assessment-label{
+  background:#ffc107;
+  color:#000;
+  padding:4px 8px;
+  border-radius:8px;
+  font-size:12px;
+  font-weight:bold;
+}
+
+/* RISK CIRCLE */
+.circular{
+  width:200px;
+  height:200px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:32px;
+  font-weight:bold;
+  margin:30px auto;
+}
+.green{background:#28a745}
+.yellow{background:#ffc107;color:black}
+.red{background:#dc3545}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Behavioral Dropout Risk Assessment</h2>
+
+<div class="grid">
+
+<!-- LEFT -->
+<div class="section">
+<label>Enter Admission Number:</label>
+<input type="text" id="studentId" placeholder="Enter Admission Number">
+
+<input type="text" id="studentName" readonly placeholder="Student Name">
+<input type="text" id="studentClass" readonly placeholder="Class">
+<input type="text" id="studentAge" readonly placeholder="Age">
+<input type="text" id="studentGender" readonly placeholder="Gender">
+<input type="text" id="studentSchool" readonly placeholder="School">
+</div>
+
+<!-- RIGHT -->
+<div class="section">
+<h3>Behavioral Risk Indicators</h3>
+<div class="checkbox-grid">
+<label><input type="checkbox" class="negative"> Chronic absenteeism</label>
+<label><input type="checkbox" class="negative"> Frequent lateness</label>
+<label><input type="checkbox" class="negative"> Truancy</label>
+<label><input type="checkbox" class="negative"> Bullying others</label>
+<label><input type="checkbox" class="negative"> Fighting in school</label>
+<label><input type="checkbox" class="negative"> Drug or substance abuse</label>
+<label><input type="checkbox" class="negative"> Sneaking out (boarding)</label>
+<label><input type="checkbox" class="negative"> Dormitory misconduct</label>
+<label><input type="checkbox" class="negative"> Theft</label>
+<label><input type="checkbox" class="negative"> Disrespect to teachers</label>
+<label><input type="checkbox" class="negative"> Academic dishonesty</label>
+<label><input type="checkbox" class="negative"> Incomplete assignments</label>
+<label><input type="checkbox" class="negative"> Early pregnancy risk</label>
+<label><input type="checkbox" class="negative"> Peer pressure influence</label>
+<label><input type="checkbox" class="negative"> Family instability</label>
+<label><input type="checkbox" class="negative"> Financial challenges</label>
+<label><input type="checkbox" class="negative"> Repeated disciplinary cases</label>
+</div>
+</div>
+
+</div>
+
+<div id="circle" class="circular green">0%</div>
+
+<div class="button-area">
+<button class="save" onclick="saveRecord()">Save</button>
+<button class="update" onclick="updateRecord()">Update</button>
+<button class="delete" onclick="deleteRecord()">Delete</button>
+
+<button class="view" onclick="window.location.href='/behavioral_view.html'">
+View All Behavioral
+</button>
+
+<!-- ASSESSMENT BUTTON WITH LABEL -->
+<span class="assessment-wrap">
+  <button class="nav" onclick="window.location.href='/assessment.html'">
+    📝 Assessment
+  </button>
+  <span class="assessment-label">NEW</span>
+</span>
+
+<button class="nav" onclick="window.location.href='/academics.html'">
+⬅ Back to Academics
+</button>
+</div>
+
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
+
+import {
+  getFirestore, collection, query, where, getDocs,
+  doc, setDoc, getDoc, deleteDoc
+
+
+
+window.updateRecord = window.saveRecord;
+
+/* DELETE */
+window.deleteRecord = async function(){
+  if(!currentStudentDocId) return;
+  if(!confirm("Delete Behavioral Record?")) return;
+
+  await deleteDoc(
+    doc(db,"students",currentStudentDocId,"behavioral","record")
+  );
+
+  document.querySelectorAll(".negative").forEach(cb=>cb.checked=false);
+  document.getElementById("circle").innerHTML="0%";
+  behavioralExists=false;
+
+  alert("Behavioral Record Deleted!");
+};
+</script>
+</body>
+<script type="module" src="test.js"></script>
+</html>

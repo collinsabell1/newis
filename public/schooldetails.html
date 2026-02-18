@@ -6,273 +6,340 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
+:root{
+ --bg1:#0f2027;
+ --bg2:#203a43;
+ --bg3:#2c5364;
+ --glass:rgba(255,255,255,0.12);
+ --text:white;
+}
+.light{
+ --bg1:#f2f7ff;
+ --bg2:#dbeafe;
+ --bg3:#c7d2fe;
+ --glass:rgba(255,255,255,0.8);
+ --text:#111;
+}
 body{
-  margin:0;
-  font-family:'Segoe UI',Arial,sans-serif;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  color:white;
-  display:flex;
-  justify-content:center;
-  padding-top:20px;
-  min-height:100vh;
+ margin:0;
+ font-family:'Segoe UI',Arial;
+ background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+ color:var(--text);
+ display:flex;
+ justify-content:center;
+ padding-top:20px;
+ min-height:100vh;
+ transition:.3s;
 }
 .container{
-  background:rgba(255,255,255,0.1);
-  padding:30px;
-  border-radius:20px;
-  width:700px;
-  backdrop-filter:blur(15px);
+ background:var(--glass);
+ padding:30px;
+ border-radius:20px;
+ width:720px;
+ backdrop-filter:blur(15px);
 }
 input,select,button{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border:none;
-  border-radius:10px;
+ width:100%;
+ padding:10px;
+ margin:6px 0;
+ border:none;
+ border-radius:10px;
 }
-button{font-weight:bold;cursor:pointer;}
-.btn-back{background:#ff416c;}
-.btn-search{background:#ffc107;color:black;}
-.btn-create{background:#00c6ff;}
-.btn-update{background:#28a745;}
-.btn-delete{background:#dc3545;}
-.btn-clear{background:#6c757d;}
-.item-list{display:flex;flex-wrap:wrap;gap:6px;}
+button{font-weight:bold;cursor:pointer}
+.btn{background:#00c6ff;color:white}
+.btn-danger{background:#dc3545}
+.btn-edit{background:#28a745}
+.btn-clear{background:#6c757d}
+.topbar{
+ display:flex;
+ justify-content:space-between;
+ margin-bottom:10px;
+}
+.item-list{display:flex;flex-wrap:wrap;gap:6px}
 .item{
-  background:rgba(0,0,0,.4);
-  padding:5px 10px;
-  border-radius:12px;
+ background:rgba(0,0,0,.4);
+ padding:5px 10px;
+ border-radius:12px;
 }
 .item button{
-  margin-left:6px;
-  background:red;
-  color:white;
-  border-radius:50%;
+ margin-left:6px;
+ background:red;
+ color:white;
+ border-radius:50%;
 }
-.success{text-align:center;color:#00ff99;margin-top:10px;}
+.success{text-align:center;color:#00ff99;margin-top:10px}
+.spinner{
+ display:none;
+ text-align:center;
+ font-size:18px;
+}
+.search-results{
+ background:#111;
+ border-radius:10px;
+ max-height:150px;
+ overflow:auto;
+ position:absolute;
+ width:90%;
+ z-index:99;
+}
+.search-results div{
+ padding:8px;
+ cursor:pointer;
+}
+.search-results div:hover{
+ background:#00c6ff;
+}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
-<button class="btn-back" onclick="location.href='register.html'">⬅ Back</button>
+<div class="topbar">
+<button onclick="logout()">Logout</button>
+<button onclick="toggleTheme()">Toggle Theme</button>
+</div>
 
-<h2>Register School Details</h2>
+<h2>School Manager</h2>
 
-<input id="searchName" placeholder="Search School by Name">
-<button class="btn-search" onclick="searchSchool()">🔍 Search</button>
-
-<hr>
+<input id="searchName" placeholder="Search school..." autocomplete="off">
+<div id="results" class="search-results"></div>
 
 <input id="schoolName" placeholder="School Name">
-
 <select id="schoolLevel">
-  <option value="">Select Level</option>
-  <option>Pre-primary</option>
-  <option>Lower Primary</option>
-  <option>Upper Primary</option>
-  <option>Junior Secondary</option>
-  <option>Senior Secondary</option>
-  <option>College / TVET</option>
+<option value="">Level</option>
+<option>Primary</option>
+<option>Secondary</option>
+<option>College</option>
 </select>
 
-<input list="countiesList" id="schoolCounty" placeholder="County">
-<datalist id="countiesList"></datalist>
+<input id="schoolCounty" placeholder="County">
+<input id="schoolSubcounty" placeholder="Subcounty">
+<input id="schoolPhone" placeholder="Phone">
 
-<input list="subcountiesList" id="schoolSubcounty" placeholder="Sub-county">
-<datalist id="subcountiesList"></datalist>
-
-<input id="schoolPhone" placeholder="Phone Number">
-
-<input id="classInput" placeholder="Enter Class and press Enter">
+<input id="classInput" placeholder="Enter class + Enter">
 <div id="classesList" class="item-list"></div>
 
-<input id="streamInput" placeholder="Enter Stream and press Enter">
+<input id="streamInput" placeholder="Enter stream + Enter">
 <div id="streamsList" class="item-list"></div>
 
-<button class="btn-create" onclick="createSchool()">Register School</button>
-<button class="btn-update" onclick="updateSchool()">Update School</button>
-<button class="btn-delete" onclick="deleteSchool()">Delete School</button>
-<button class="btn-clear" onclick="clearForm()">Clear Form</button>
+<button class="btn" onclick="createSchool()">Create</button>
+<button class="btn-edit" onclick="updateSchool()">Update</button>
+<button class="btn-danger" onclick="deleteSchool()">Delete</button>
+<button class="btn-clear" onclick="clearForm()">Clear</button>
 
+<div class="spinner" id="loader">⏳ Processing...</div>
 <div id="message" class="success"></div>
+
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* FIREBASE */
-const app = initializeApp({
-  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
-  authDomain: "newis-96304.firebaseapp.com",
-  projectId: "newis-96304"
-});
-const db = getFirestore(app);
+/* CONNECT */
+const supabase=createClient(
+"https://xnvnskxcsphbvkxhndui.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
-/* STATE */
-let currentSchoolId=null;
-let classes=[], streams=[];
+/* AUTH CHECK */
+const {data:{session}}=await supabase.auth.getSession();
+if(!session) location.href="login.html";
 
-/* SAFE NORMALIZED ID */
-function makeSchoolId(name){
-  return "SCHOOL_" + name
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g,"")
-    .replace(/\s+/g,"_");
+/* ROLE */
+let role="viewer";
+const {data:userRow}=await supabase
+.from("users")
+.select("role")
+.eq("id",session.user.id)
+.single();
+if(userRow) role=userRow.role;
+
+/* UI CONTROL */
+if(role==="viewer"){
+ document.querySelectorAll("button").forEach(b=>{
+  if(!b.textContent.includes("Clear")) b.disabled=true;
+ });
 }
 
-/* CLEAR FORM */
-window.clearForm = ()=>{
-  currentSchoolId=null;
-  classes=[]; streams=[];
-  searchName.value="";
-  schoolName.value="";
-  schoolLevel.value="";
-  schoolCounty.value="";
-  schoolSubcounty.value="";
-  schoolPhone.value="";
-  classInput.value="";
-  streamInput.value="";
-  classesList.innerHTML="";
-  streamsList.innerHTML="";
-  subcountiesList.innerHTML="";
-  message.innerText="Form cleared";
+/* STATE */
+let currentId=null;
+let classes=[],streams=[];
+
+const loader=document.getElementById("loader");
+function load(on){loader.style.display=on?"block":"none"}
+
+/* THEME */
+window.toggleTheme=()=>{
+ document.body.classList.toggle("light")
 };
 
-/* RENDER CLASSES / STREAMS */
+/* CLEAR */
+window.clearForm=()=>{
+ currentId=null;
+ classes=[];streams=[];
+ document.querySelectorAll("input").forEach(i=>i.value="")
+ classesList.innerHTML="";
+ streamsList.innerHTML="";
+};
+
+/* RENDER TAGS */
 function render(arr,box){
-  box.innerHTML="";
-  arr.forEach((v,i)=>{
-    const d=document.createElement("div");
-    d.className="item";
-    d.textContent=v;
-    const b=document.createElement("button");
-    b.textContent="×";
-    b.onclick=()=>{arr.splice(i,1);render(arr,box);}
-    d.appendChild(b);
-    box.appendChild(d);
-  });
+ box.innerHTML="";
+ arr.forEach((v,i)=>{
+  const d=document.createElement("div");
+  d.className="item";
+  d.innerHTML=v+" <button>x</button>";
+  d.onclick=()=>{arr.splice(i,1);render(arr,box)}
+  box.appendChild(d);
+ })
 }
 
 classInput.onkeydown=e=>{
-  if(e.key==="Enter" && classInput.value){
-    classes.push(classInput.value.trim());
-    render(classes,classesList);
-    classInput.value="";
-  }
+ if(e.key==="Enter"&&classInput.value){
+  classes.push(classInput.value);
+  render(classes,classesList);
+  classInput.value=""
+ }
 };
 streamInput.onkeydown=e=>{
-  if(e.key==="Enter" && streamInput.value){
-    streams.push(streamInput.value.trim());
-    render(streams,streamsList);
-    streamInput.value="";
-  }
-};
-
-/* SEARCH SCHOOL */
-window.searchSchool = async ()=>{
-  if(!searchName.value) return alert("Enter school name");
-  const id = makeSchoolId(searchName.value);
-  const snap = await getDoc(doc(db,"schools",id));
-  if(!snap.exists()) return alert("School not found");
-
-  const d=snap.data();
-  currentSchoolId=id;
-
-  schoolName.value=d.name;
-  schoolLevel.value=d.level;
-  schoolCounty.value=d.county;
-  loadSubcounties();
-  schoolSubcounty.value=d.subcounty;
-  schoolPhone.value=d.phone||"";
-  classes=d.classes||[];
-  streams=d.streams||[];
-  render(classes,classesList);
+ if(e.key==="Enter"&&streamInput.value){
+  streams.push(streamInput.value);
   render(streams,streamsList);
-
-  message.innerText="School loaded";
+  streamInput.value=""
+ }
 };
 
-/* CREATE SCHOOL */
-window.createSchool = async ()=>{
-  if(!schoolName.value) return alert("Enter school name");
-  const id = makeSchoolId(schoolName.value);
-  currentSchoolId=id;
+/* SEARCH AUTOCOMPLETE */
+searchName.oninput=async()=>{
+ const q=searchName.value;
+ if(q.length<2){results.innerHTML="";return}
 
-  await setDoc(doc(db,"schools",id),{
-    name:schoolName.value,
-    level:schoolLevel.value,
-    county:schoolCounty.value,
-    subcounty:schoolSubcounty.value,
-    phone:schoolPhone.value,
-    classes,
-    streams,
-    createdAt:serverTimestamp()
-  });
+ const {data}=await supabase
+ .from("schools")
+ .select("name")
+ .ilike("name",`%${q}%`)
+ .limit(5);
 
-  message.innerText="School registered";
-  clearForm();
+ results.innerHTML="";
+ data.forEach(s=>{
+  const d=document.createElement("div");
+  d.textContent=s.name;
+  d.onclick=()=>loadSchool(s.name);
+  results.appendChild(d);
+ })
 };
 
-/* UPDATE SCHOOL */
-window.updateSchool = async ()=>{
-  if(!currentSchoolId) return alert("Search first");
-  await updateDoc(doc(db,"schools",currentSchoolId),{
-    name:schoolName.value,
-    level:schoolLevel.value,
-    county:schoolCounty.value,
-    subcounty:schoolSubcounty.value,
-    phone:schoolPhone.value,
-    classes,
-    streams,
-    updatedAt:serverTimestamp()
-  });
-  message.innerText="School updated";
-};
+/* LOAD SCHOOL */
+async function loadSchool(name){
+ load(true);
+ results.innerHTML="";
+ searchName.value=name;
 
-/* DELETE SCHOOL */
-window.deleteSchool = async ()=>{
-  if(!currentSchoolId) return alert("Search first");
-  if(!confirm("Delete permanently?")) return;
-  await deleteDoc(doc(db,"schools",currentSchoolId));
-  message.innerText="School deleted";
-  clearForm();
-};
+ const id=name.toLowerCase().replace(/\s+/g,"_");
+ currentId=id;
 
-/* COUNTIES & SUBCOUNTIES */
-const counties={
-  "Mombasa":["Changamwe","Jomvu","Kisauni","Likoni","Mvita","Nyali"],
-  "Kwale":["Kinango","Lunga Lunga","Msambweni","Matuga"],
-  "Kilifi":["Ganze","Kaloleni","Kilifi North","Kilifi South","Magarini","Malindi","Rabai"],
-  "Tana River":["Bura","Galole","Garsen"],
-  "Lamu":["Lamu East","Lamu West"],
-  "Taita Taveta":["Mwatate","Voi","Taveta","Wundanyi"],
-  "Garissa":["Balambala","Dadaab","Fafi","Garissa Township","Hulugho","Ijara","Lagdera"],
-  "Wajir":["Eldas","Tarbaj","Wajir East","Wajir North","Wajir South","Wajir West"],
-  "Mandera":["Banissa","Lafey","Mandera East","Mandera North","Mandera South","Mandera West"],
-  "Marsabit":["Laisamis","Moyale","North Horr","Saku"],
-  "Isiolo":["Isiolo North","Isiolo South"],
-  "Meru":["Buuri","Igembe Central","Igembe North","Igembe South","Imenti Central","Imenti North","Imenti South","Tigania East","Tigania West"],
-  "Tharaka Nithi":["Chuka/Igambang’ombe","Maara","Tharaka"],
-  "Embu":["Manyatta","Mbeere North","Mbeere South","Runyenjes"],
-  "Kitui":["Kitui Central","Kitui East","Kitui Rural","Kitui South","Kitui West","Mwingi Central","Mwingi North","Mwingi West"],
-  "Machakos":["Kathiani","Machakos Town","Masinga","Matungulu","Mavoko","Mwala","Yatta"],
-  "Makueni":["Kaiti","Kibwezi East","Kibwezi West","Kilome","Makueni","Mbooni"],
-  "Nairobi":["Dagoretti North","Dagoretti South","Embakasi Central","Embakasi East","Embakasi North","Embakasi South","Embakasi West","Kamukunji","Kasarani","Kibra","Langata","Makadara","Mathare","Roysambu","Ruaraka","Starehe","Westlands"]
-};
+ const {data}=await supabase
+ .from("schools")
+ .select("*")
+ .eq("id",id)
+ .single();
 
-Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
+ if(!data){alert("Not found");load(false);return}
 
-function loadSubcounties(){
-  subcountiesList.innerHTML="";
-  (counties[schoolCounty.value]||[]).forEach(sc=>{
-    subcountiesList.appendChild(new Option(sc,sc));
-  });
+ schoolName.value=data.name;
+ schoolLevel.value=data.level;
+ schoolCounty.value=data.county;
+ schoolSubcounty.value=data.subcounty;
+ schoolPhone.value=data.phone;
+
+ classes=data.classes||[];
+ streams=data.streams||[];
+
+ render(classes,classesList);
+ render(streams,streamsList);
+ load(false);
 }
-schoolCounty.oninput=loadSubcounties;
+
+/* VALIDATE */
+function validate(){
+ if(!schoolName.value) return "Enter school name";
+ if(!schoolLevel.value) return "Select level";
+ return null;
+}
+
+/* CREATE */
+window.createSchool=async()=>{
+ const err=validate();
+ if(err)return alert(err);
+
+ load(true);
+
+ const id=schoolName.value.toLowerCase().replace(/\s+/g,"_");
+
+ const {error}=await supabase.from("schools").insert({
+ id,
+ name:schoolName.value,
+ level:schoolLevel.value,
+ county:schoolCounty.value,
+ subcounty:schoolSubcounty.value,
+ phone:schoolPhone.value,
+ classes,
+ streams
+ });
+
+ load(false);
+ if(error) return alert(error.message);
+ message.innerText="Created successfully";
+ clearForm();
+};
+
+/* UPDATE */
+window.updateSchool=async()=>{
+ if(!currentId) return alert("Search school first");
+ load(true);
+
+ const {error}=await supabase
+ .from("schools")
+ .update({
+ name:schoolName.value,
+ level:schoolLevel.value,
+ county:schoolCounty.value,
+ subcounty:schoolSubcounty.value,
+ phone:schoolPhone.value,
+ classes,
+ streams
+ })
+ .eq("id",currentId);
+
+ load(false);
+ if(error) return alert(error.message);
+ message.innerText="Updated";
+};
+
+/* DELETE */
+window.deleteSchool=async()=>{
+ if(!currentId) return alert("Search first");
+ if(!confirm("Delete?")) return;
+ load(true);
+
+ const {error}=await supabase
+ .from("schools")
+ .delete()
+ .eq("id",currentId);
+
+ load(false);
+ if(error)return alert(error.message);
+ message.innerText="Deleted";
+ clearForm();
+};
+
+/* LOGOUT */
+window.logout=async()=>{
+ await supabase.auth.signOut();
+ location.href="login.html";
+};
 </script>
 </body>
 </html>

@@ -1,55 +1,61 @@
 type User @table {
+  id: UUID!
   displayName: String!
   email: String!
   role: String!
-  createdAt: Timestamp!
+  createdAt: String!
   photoUrl: String
 }
 
 type Student @table {
+  id: UUID!
   studentId: String!
   firstName: String!
   lastName: String!
-  enrollmentDate: Date!
+  enrollmentDate: String!
   currentRiskLevel: String!
-  createdAt: Timestamp!
-  dateOfBirth: Date
+  createdAt: String!
+  dateOfBirth: String
   contactEmail: String
   contactPhone: String
 }
 
 type AcademicData @table {
-  student: Student!
+  id: UUID!
+  studentId: UUID!
   gpa: Float!
   attendanceRate: Float!
-  lastUpdated: Timestamp!
+  lastUpdated: String!
   courseFailureCount: Int
   creditsAttempted: Int
   creditsEarned: Int
 }
 
 type SocioeconomicFactor @table {
-  student: Student!
+  id: UUID!
+  studentId: UUID!
   factorType: String!
   scoreOrStatus: String!
-  lastUpdated: Timestamp!
+  lastUpdated: String!
   description: String
 }
 
 type BehavioralEngagement @table {
-  student: Student!
+  id: UUID!
+  studentId: UUID!
   indicatorType: String!
   scoreOrDescription: String!
-  lastUpdated: Timestamp!
+  lastUpdated: String!
   notes: String
 }
 
 type Intervention @table {
-  student: Student!
+  id: UUID!
+  studentId: UUID!
   interventionType: String!
-  interventionDate: Date!
-  loggedByUser: User!
+  interventionDate: String!
+  loggedByUserId: UUID!
   effectiveness: String!
   description: String
-  followUpDate: Date
+  followUpDate: String
 }

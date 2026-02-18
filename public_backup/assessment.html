@@ -63,6 +63,7 @@ button{
 .save{background:#28a745;color:#fff;}
 .update{background:#ffc107;}
 .delete{background:#dc3545;color:#fff;}
+.search{background:#17a2b8;color:#fff;}
 .clear{background:#6c757d;color:#fff;}
 .nav{background:#203a43;color:#fff;}
 .view{background:#6f42c1;color:#fff;}
@@ -99,10 +100,10 @@ button{
 <input type="text" id="studentId" placeholder="Enter Admission Number">
 
 <label>Student Name:</label>
-<input type="text" id="studentName">
+<input type="text" id="studentName" readonly>
 
 <label>Class:</label>
-<input type="text" id="studentClass">
+<input type="text" id="studentClass" readonly>
 </div>
 
 <div class="section">
@@ -112,14 +113,17 @@ button{
 <label><input type="checkbox" class="risk" data-weight="15" value="fees"> Unable to pay school fees</label>
 <label><input type="checkbox" class="risk" data-weight="12" value="orphan"> Orphan / vulnerable child</label>
 <label><input type="checkbox" class="risk" data-weight="15" value="childlabour"> Child labour</label>
+
 <label><input type="checkbox" class="risk" data-weight="10" value="singleparent"> Single parent</label>
 <label><input type="checkbox" class="risk" data-weight="15" value="violence"> Domestic/community violence</label>
 <label><input type="checkbox" class="risk" data-weight="8" value="largedependents"> Large dependent family</label>
 <label><input type="checkbox" class="risk" data-weight="8" value="poorhousing"> Poor housing conditions</label>
+
 <label><input type="checkbox" class="risk" data-weight="15" value="pregnancy"> Early pregnancy</label>
 <label><input type="checkbox" class="risk" data-weight="12" value="absenteeism"> Chronic absenteeism</label>
 <label><input type="checkbox" class="risk" data-weight="10" value="peerpressure"> Negative peer influence</label>
 <label><input type="checkbox" class="risk" data-weight="10" value="substance"> Substance abuse exposure</label>
+
 <label><input type="checkbox" class="risk" data-weight="8" value="drought"> Drought / disaster</label>
 <label><input type="checkbox" class="risk" data-weight="8" value="distance"> Long distance to school</label>
 </div>
@@ -147,118 +151,52 @@ button{
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
 
-/* SUPABASE CONNECTION */
-const supabase = createClient(
-  "https://xnvnskxcsphbvkxhndui.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
-);
+import {
+  getFirestore, collection, query, where, getDocs,
+  doc, setDoc, getDoc, deleteDoc
 
-let recordExists=false;
 
-/* RISK CALCULATION */
-function calculateRisk(){
-  let total=0;
-  document.querySelectorAll(".risk:checked").forEach(cb=>{
-    total+=Number(cb.dataset.weight);
-  });
 
-  if(total>100) total=100;
+/* UPDATE WITH CONFIRMATION */
+window.updateRecord = async ()=>{
+  if(!currentStudentDocId) return;
+  if(!recordExists) return alert("No existing record to update");
+  if(!confirm("Update existing assessment?")) return;
 
-  const circle=document.getElementById("riskCircle");
-  const level=document.getElementById("riskLevel");
+  await setDoc(doc(db,"students",currentStudentDocId,"assessment","record"),{
+    riskPercent:calculateRisk(),
+    selectedRisks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
+    dateRecorded:new Date()
+  }])
 
-  circle.textContent=total+"%";
-
-  if(total<45){
-    circle.className="circle green";
-    level.textContent="Low Risk";
-  } else if(total<=55){
-    circle.className="circle yellow";
-    level.textContent="Medium Risk";
-  } else{
-    circle.className="circle red";
-    level.textContent="High Risk";
-  }
-
-  return total;
-}
-
-document.querySelectorAll(".risk").forEach(cb=>{
-  cb.addEventListener("change",calculateRisk);
-});
-
-/* SAVE */
-window.saveRecord=async()=>{
-  const id=studentId.value.trim();
-  if(!id) return alert("Enter admission number");
-
-  const { error } = await supabase
-  .from("assessments")
-  .insert({
-    admission_no:id,
-    name:studentName.value,
-    class:studentClass.value,
-    risk_percent:calculateRisk(),
-    risks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
-    date_recorded:new Date()
-  });
-
-  if(error) return alert(error.message);
-
-  recordExists=true;
-  alert("Saved successfully");
-};
-
-/* UPDATE */
-window.updateRecord=async()=>{
-  const id=studentId.value.trim();
-  if(!id) return;
-
-  const { error } = await supabase
-  .from("assessments")
-  .update({
-    name:studentName.value,
-    class:studentClass.value,
-    risk_percent:calculateRisk(),
-    risks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
-    date_recorded:new Date()
-  })
-  .eq("admission_no",id);
-
-  if(error) return alert(error.message);
-
-  alert("Updated successfully");
+  alert("Assessment updated");
 };
 
 /* DELETE */
-window.deleteRecord=async()=>{
-  const id=studentId.value.trim();
-  if(!id) return;
+window.deleteRecord = async ()=>{
+  if(!currentStudentDocId || !recordExists) return;
+  if(!confirm("Delete this assessment?")) return;
 
-  if(!confirm("Delete this record?")) return;
-
-  const { error } = await supabase
-  .from("assessments")
-  .delete()
-  .eq("admission_no",id);
-
-  if(error) return alert(error.message);
-
-  alert("Deleted");
+  await deleteDoc(doc(db,"students",currentStudentDocId,"assessment","record"));
+  alert("Record deleted");
   clearForm();
 };
 
 /* CLEAR */
-window.clearForm=()=>{
+window.clearForm = ()=>{
   studentId.value="";
   studentName.value="";
   studentClass.value="";
+  currentStudentDocId=null;
   recordExists=false;
   document.querySelectorAll(".risk").forEach(cb=>cb.checked=false);
-  calculateRisk();
+  document.getElementById("riskCircle").textContent="0%";
+  document.getElementById("riskCircle").className="circle green";
+  document.getElementById("riskLevel").textContent="Low Risk";
 };
 </script>
-
 </body>
+<script type="module" src="test.js"></script>
 </html>

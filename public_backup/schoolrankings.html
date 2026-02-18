@@ -35,7 +35,7 @@ const app = initializeApp({apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",proj
 const db = getFirestore(app);
 
 const data={};
-const snap=await SUPABASE_QUERY(collectionGroup(db,"assessment"));
+const snap=await getDocs(collectionGroup(db,"assessment"));
 snap.forEach(d=>{
   if(d.id!=="record")return;
   const s=d.data().school||"Unknown";

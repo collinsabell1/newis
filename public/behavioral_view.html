@@ -22,33 +22,16 @@ body{
   box-shadow:0 0 40px rgba(0,0,0,0.5);
 }
 h1{text-align:center;margin-bottom:20px;}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:20px;
-}
-th,td{
-  padding:10px;
-  text-align:center;
-}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th,td{padding:10px;text-align:center;}
 th{background:rgba(255,255,255,0.2);}
 tr:nth-child(even){background:rgba(255,255,255,0.05);}
-
-button,select,input{
-  padding:8px 14px;
-  margin:5px;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
-}
-
+button,select,input{padding:8px 14px;margin:5px;border:none;border-radius:10px;font-weight:bold;}
 .btn-download{background:#00c6ff;color:white;}
 .btn-nav{background:#17a2b8;color:white;}
 .btn-filter{background:#ffc107;color:black;}
 .btn-print{background:#28a745;color:white;}
 .btn-delete{background:#dc3545;color:white;}
-
 .green{color:lightgreen;font-weight:bold;}
 .yellow{color:yellow;font-weight:bold;}
 .red{color:#ff4d4d;font-weight:bold;}
@@ -114,124 +97,78 @@ button,select,input{
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-  getFirestore, 
-  collection, 
-  getDocs, 
-  collectionGroup,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "newis-96304.firebaseapp.com",
-  projectId: "newis-96304",
-  storageBucket: "newis-96304.appspot.com",
-  messagingSenderId: "695908769426",
-  appId: "1:695908769426:web:dc0db0866cbdaa4fb6d04b"
-};
+/* SUPABASE */
+const supabase = createClient(
+"https://xnvnskxcsphbvkxhndui.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+let allData=[];
 
-let allData = [];
-
-/* ================= FAST LOAD DATA ================= */
+/* LOAD DATA */
 async function loadData(){
 
-  allData = [];
-  const classSet = new Set();
+  const { data, error } = await supabase
+  .from("behavioral_records")
+  .select("*")
+  .order("created_at",{ascending:false});
 
-  const studentsSnap = await getDocs(collection(db,"students"));
-  const studentMap = new Map();
+  if(error){
+    alert(error.message);
+    return;
+  }
 
-  studentsSnap.forEach(docSnap=>{
-    const s = docSnap.data();
-    studentMap.set(docSnap.id, s);
-    if(s.grade) classSet.add(s.grade);
-  });
+  allData = data.map(r=>({
+    id:r.id,
+    adm:r.admission_no,
+    name:r.name,
+    class:r.class,
+    school:r.school,
+    risk:r.risk_percent,
+    status:r.risk_percent>50?"High":r.risk_percent==50?"Medium":"Low",
+    date:new Date(r.created_at)
+  }));
 
-  const behavioralSnap = await getDocs(collectionGroup(db,"behavioral"));
-
-  behavioralSnap.forEach(docSnap=>{
-
-    if(docSnap.id !== "record") return;
-
-    const studentId = docSnap.ref.parent.parent.id;
-    const student = studentMap.get(studentId);
-    if(!student) return;
-
-    const b = docSnap.data();
-    const riskScore = Number(b.riskPercent ?? 0);
-
-    let status = "Low Risk";
-    if(riskScore > 50) status="High Risk";
-    else if(riskScore === 50) status="Moderate Risk";
-
-    let recordedDate = new Date();
-    if(b.dateRecorded?.toDate){
-      recordedDate = b.dateRecorded.toDate();
-    } else if(b.dateRecorded){
-      recordedDate = new Date(b.dateRecorded);
-    }
-
-    allData.push({
-      id: studentId,
-      adm: student.studentId || "",
-      name: student.studentName || "",
-      class: student.grade || "",
-      school: student.school || "",
-      risk: riskScore,
-      date: recordedDate,
-      status
-    });
-
-  });
-
-  populateClassFilter(classSet);
+  populateClassFilter();
   renderTable();
 }
 
-/* ================= CLASS FILTER ================= */
-function populateClassFilter(classSet){
-  const classFilter = document.getElementById("classFilter");
-  classFilter.innerHTML = `<option value="All">All Classes</option>`;
-  [...classSet].sort().forEach(c=>{
-    const opt=document.createElement("option");
-    opt.value=c;
-    opt.textContent=c;
-    classFilter.appendChild(opt);
+/* CLASS FILTER DROPDOWN */
+function populateClassFilter(){
+  const select=document.getElementById("classFilter");
+  const classes=[...new Set(allData.map(x=>x.class))];
+  select.innerHTML='<option value="All">All Classes</option>';
+  classes.forEach(c=>{
+    const o=document.createElement("option");
+    o.value=c;o.textContent=c;
+    select.appendChild(o);
   });
 }
 
-/* ================= RENDER TABLE ================= */
-window.renderTable = function(){
+/* RENDER TABLE */
+window.renderTable=()=>{
+
+  const tbody=document.querySelector("#recordsTable tbody");
+  tbody.innerHTML="";
 
   const search=document.getElementById("searchInput").value.toLowerCase();
-  const selectedClass=document.getElementById("classFilter").value;
+  const classFilter=document.getElementById("classFilter").value;
   const riskFilter=document.getElementById("riskFilter").value;
-  const tbody=document.querySelector("#recordsTable tbody");
-
-  tbody.innerHTML="";
-  document.getElementById("selectAll").checked=false;
 
   const filtered=allData.filter(r=>{
-    if(search && !r.adm.toLowerCase().includes(search)) return false;
-    if(selectedClass!=="All" && r.class!==selectedClass) return false;
-    if(riskFilter==="High" && r.risk<=50) return false;
-    if(riskFilter==="Medium" && r.risk!==50) return false;
-    if(riskFilter==="Low" && r.risk>=50) return false;
-    return true;
-  }).sort((a,b)=>b.risk-a.risk);
+    return(
+      r.adm.toLowerCase().includes(search) &&
+      (classFilter==="All"||r.class===classFilter) &&
+      (riskFilter==="All"||
+        (riskFilter==="High"&&r.risk>50)||
+        (riskFilter==="Medium"&&r.risk==50)||
+        (riskFilter==="Low"&&r.risk<50))
+    );
+  });
 
   filtered.forEach(r=>{
-    const colorClass=
-      r.risk>50?"red":
-      r.risk===50?"yellow":
-      "green";
-
     const tr=document.createElement("tr");
 
     tr.innerHTML=`
@@ -240,112 +177,95 @@ window.renderTable = function(){
       <td>${r.name}</td>
       <td>${r.class}</td>
       <td>${r.school}</td>
-      <td class="${colorClass}">${r.risk}%</td>
+      <td>${r.risk}%</td>
       <td>${r.date.toLocaleDateString()}</td>
-      <td>${r.status}</td>
-      <td><button class="btn-print">Print</button></td>
+      <td class="${r.status==='High'?'red':r.status==='Medium'?'yellow':'green'}">${r.status}</td>
+      <td><button onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
     `;
-
-    tr.querySelector(".btn-print")
-      .addEventListener("click",()=>printReport(r));
-
     tbody.appendChild(tr);
   });
 };
 
-/* ================= SELECT ALL ================= */
+/* SELECT ALL */
 document.getElementById("selectAll").addEventListener("change",function(){
   document.querySelectorAll(".rowCheck")
-    .forEach(cb=>cb.checked=this.checked);
+  .forEach(cb=>cb.checked=this.checked);
 });
 
-/* ================= DELETE SELECTED ================= */
-window.deleteSelected = async () => {
+/* DELETE */
+window.deleteSelected=async()=>{
+  const ids=[...document.querySelectorAll(".rowCheck:checked")]
+  .map(cb=>cb.dataset.id);
 
-  const selectedIds=[...document.querySelectorAll(".rowCheck:checked")]
-    .map(cb=>cb.dataset.id);
+  if(!ids.length) return alert("No records selected");
 
-  if(!selectedIds.length){
-    alert("No records selected");
-    return;
-  }
+  if(!confirm("Delete selected records?")) return;
 
-  if(!confirm(`Delete ${selectedIds.length} behavioral record(s)? This cannot be undone.`)) return;
+  await supabase.from("behavioral_records").delete().in("id",ids);
 
-  for(const studentId of selectedIds){
-    await deleteDoc(doc(db,"students",studentId,"behavioral","record"));
-  }
-
-  alert("Selected records deleted successfully");
   loadData();
 };
 
-/* ================= CSV DOWNLOAD ================= */
-function downloadCSV(rows, filename){
-  if(!rows.length) return alert("No data!");
-
-  const header="AdmNo,Name,Class,School,Risk%,Status,Date\n";
-  const csv=rows.map(r=>
-    `${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}`
-  ).join("\n");
-
-  const blob=new Blob([header+csv],{type:"text/csv"});
+/* CSV */
+function downloadCSV(rows,name){
+  if(!rows.length) return alert("No data");
+  let csv="AdmNo,Name,Class,School,Risk,Status,Date\n";
+  rows.forEach(r=>{
+    csv+=`${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download=filename;
+  a.download=name;
   a.click();
 }
 
-window.downloadAll=()=>downloadCSV(allData,"All_Behavioral_Records.csv");
+window.downloadAll=()=>downloadCSV(allData,"All_Behavioral.csv");
 
 window.downloadSelected=()=>{
-  const selectedIds=[...document.querySelectorAll(".rowCheck:checked")]
-    .map(cb=>cb.dataset.id);
-
-  const selected=allData.filter(r=>selectedIds.includes(r.id));
-  downloadCSV(selected,"Selected_Behavioral_Records.csv");
+  const ids=[...document.querySelectorAll(".rowCheck:checked")]
+  .map(cb=>cb.dataset.id);
+  const rows=allData.filter(r=>ids.includes(r.id));
+  downloadCSV(rows,"Selected_Behavioral.csv");
 };
 
-/* ================= PRINT ================= */
-window.printReport=(data)=>{
+/* PRINT */
+window.printReport=(r)=>{
   const win=window.open("","_blank");
-  win.document.write(`<h2>Behavioral Risk Report</h2>${generateReport([data])}`);
+  win.document.write(`
+  <h2>Behavioral Report</h2>
+  Admission: ${r.adm}<br>
+  Name: ${r.name}<br>
+  Class: ${r.class}<br>
+  School: ${r.school}<br>
+  Risk: ${r.risk}%<br>
+  Status: ${r.status}<br>
+  Date: ${r.date.toLocaleDateString()}
+  <br><br><button onclick="window.print()">Print</button>
+  `);
 };
 
-window.printAll=()=>{
-  const win=window.open("","_blank");
-  win.document.write(`<h2>All Behavioral Records</h2>${generateReport(allData)}`);
-};
-
+window.printAll=()=>printReportList(allData);
 window.printSelected=()=>{
-  const selectedIds=[...document.querySelectorAll(".rowCheck:checked")]
-    .map(cb=>cb.dataset.id);
-  const selected=allData.filter(r=>selectedIds.includes(r.id));
-  const win=window.open("","_blank");
-  win.document.write(`<h2>Selected Behavioral Records</h2>${generateReport(selected)}`);
+  const ids=[...document.querySelectorAll(".rowCheck:checked")]
+  .map(cb=>cb.dataset.id);
+  const rows=allData.filter(r=>ids.includes(r.id));
+  printReportList(rows);
 };
 
-function generateReport(dataArray){
-  let html="";
-  dataArray.forEach(r=>{
-    html+=`
-      <hr>
-      <p><b>Admission:</b> ${r.adm}</p>
-      <p><b>Name:</b> ${r.name}</p>
-      <p><b>Class:</b> ${r.class}</p>
-      <p><b>School:</b> ${r.school}</p>
-      <p><b>Risk:</b> ${r.risk}%</p>
-      <p><b>Status:</b> ${r.status}</p>
-      <p><b>Date:</b> ${r.date.toLocaleDateString()}</p>
-    `;
+function printReportList(rows){
+  const win=window.open("","_blank");
+  let html="<h2>Behavioral Records</h2>";
+  rows.forEach(r=>{
+    html+=`<hr>
+    ${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
   });
-  html+=`<br><button onclick="window.print()">Print</button>`;
-  return html;
+  win.document.write(html+"<br><button onclick='window.print()'>Print</button>");
 }
 
-/* ================= START ================= */
+/* START */
 loadData();
-</script>
 
+</script>
 </body>
 </html>

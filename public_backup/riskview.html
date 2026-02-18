@@ -112,7 +112,7 @@ const safe = v => Math.max(0, Math.min(100, Number(v)||0));
 
 /* 🔹 Fetch latest academic average */
 async function getAcademicRisk(studentId){
-  const snap = await SUPABASE_QUERY(collection(db,"students",studentId,"academics"));
+  const snap = await getDocs(collection(db,"students",studentId,"academics"));
   if(snap.empty) return 0;
 
   const recs = snap.docs.map(d=>d.data());
@@ -162,7 +162,7 @@ function predict(overall, grade){
 /* 🔹 Load ALL students */
 async function loadAll(){
   table.innerHTML="";
-  const snap = await SUPABASE_QUERY(collection(db,"students"));
+  const snap = await getDocs(collection(db,"students"));
   if(snap.empty){
     table.innerHTML="<tr><td colspan='9'>No student records found</td></tr>";
     return;

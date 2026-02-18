@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Academic Risk - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+.container{
+  max-width:1100px;
+  margin:30px auto;
+  padding:30px;
+  background:rgba(255,255,255,0.08);
+  border-radius:20px;
+  backdrop-filter:blur(15px);
+  box-shadow:0 0 40px rgba(0,0,0,0.5);
+}
+h1{text-align:center;margin-bottom:25px;}
+label{font-weight:500;margin-top:10px;display:block;}
+input{
+  width:100%;
+  padding:12px 14px;
+  margin:8px 0;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.3);
+  background:rgba(255,255,255,0.15);
+  color:white;
+  font-size:15px;
+}
+button{
+  padding:10px 15px;
+  margin:6px;
+  border:none;
+  border-radius:12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.btn-add{background:#28a745;color:white;}
+.btn-save{background:#00c6ff;color:white;}
+.btn-update{background:#ffc107;color:black;}
+.btn-clear{background:#6c757d;color:white;}
+.btn-view{background:#6f42c1;color:white;}
+.btn-nav{background:#17a2b8;color:white;}
+.circle{
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  background:conic-gradient(#00ff99 0deg,#333 0deg);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:bold;
+  margin:25px auto;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:15px;
+}
+.nav-buttons{text-align:center;margin-top:20px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📘 Academic Risk Assessment</h1>
+
+<label>Admission Number</label>
+<input type="text" id="studentId">
+
+<h3>Student Information</h3>
+<div class="grid">
+<input type="text" id="studentName" readonly>
+<input type="text" id="school" readonly>
+<input type="text" id="grade" readonly>
+<input type="text" id="age" readonly>
+<input type="text" id="gender" readonly>
+<input type="text" id="parentName" readonly>
+</div>
+
+<label>Academic Year</label>
+<input type="text" id="year" readonly>
+
+<label>Date Recorded</label>
+<input type="text" id="recordDate" readonly>
+
+<h3>Termly Average Scores</h3>
+<input type="number" id="term1" placeholder="Term 1 Average" min="0" max="100">
+<input type="number" id="term2" placeholder="Term 2 Average" min="0" max="100">
+<input type="number" id="term3" placeholder="Term 3 Average" min="0" max="100">
+
+<div style="text-align:center;">
+<button class="btn-add" onclick="addNew()">Add New</button>
+<button class="btn-save" onclick="saveAcademic()">Save</button>
+<button class="btn-update" onclick="updateAcademic()">Update</button>
+<button class="btn-clear" onclick="clearFields()">Clear</button>
+<button class="btn-view" onclick="window.location.href='view-all.html'">View All</button>
+</div>
+
+<div class="circle" id="averageCircle">0%</div>
+
+<div class="nav-buttons">
+<button class="btn-nav" onclick="window.location.href='index.html'">⬅ Back to Index</button>
+<button class="btn-nav" onclick="window.location.href='behavioral.html'">Next ➡ Behavioral</button>
+</div>
+
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
+
+import {
+  getFirestore, doc, setDoc, updateDoc, getDoc,
+  getDocs, collection, query, where
+
+
+
+/* ADD NEW */
+window.addNew = () => {
+  studentId.value="";
+  studentDocId=null;
+  studentName.value=school.value=grade.value=age.value=gender.value=parentName.value="";
+  clearFields();
+};
+
+/* SAVE */
+window.saveAcademic = async () => {
+  if(!studentDocId) return alert("Enter Admission Number");
+  const ref = doc(db,"students",studentDocId,"academics",year.value);
+  const avg = calculate();
+  const snap = await getDoc(ref);
+
+  if(snap.exists()){
+    if(confirm("Record exists. Update?")){
+      await updateDoc(ref,{
+        term1:+term1.value||0,
+        term2:+term2.value||0,
+        term3:+term3.value||0,
+        average:avg,
+        recordDate:new Date().toLocaleString()
+      }])
+      alert("Updated Successfully!");
+    }
+  } else {
+    await setDoc(ref,{
+      year:year.value,
+      recordDate:new Date().toLocaleString(),
+      term1:+term1.value||0,
+      term2:+term2.value||0,
+      term3:+term3.value||0,
+      average:avg
+    }])
+    alert("Saved Successfully!");
+  }
+};
+
+/* UPDATE */
+window.updateAcademic = async () => {
+  if(!studentDocId) return alert("Enter Admission Number");
+  await updateDoc(
+    doc(db,"students",studentDocId,"academics",year.value),
+    {
+      term1:+term1.value||0,
+      term2:+term2.value||0,
+      term3:+term3.value||0,
+      average:calculate(),
+      recordDate:new Date().toLocaleString()
+    }
+  );
+  alert("Updated Successfully!");
+};
+</script>
+</body>
+<script type="module" src="test.js"></script>
+</html>

@@ -118,15 +118,15 @@ canvas{width:100%!important;height:100%!important;}
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
+
 import { getFirestore, collection, query, where, getDocs, getDoc, doc }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
-  authDomain:"newis-96304.firebaseapp.com",
   projectId:"newis-96304"
-});
+}])
 const db=getFirestore(app);
 const safe=v=>Number(v)||0;
 let charts={};
@@ -144,22 +144,22 @@ function drawCharts(a,b,c,f,years,avgs){
     data:{labels:["Academic","Behaviour","Socio","Final"],
     datasets:[{data:[a,b,c,f]}]},
     options:{scales:{y:{min:0,max:100}}}
-  });
+  }])
 
   charts.pie=new Chart(pieChart,{type:"pie",
     data:{labels:["Academic","Behaviour","Socio","Final"],
     datasets:[{data:[a,b,c,f]}]}
-  });
+  }])
 
   charts.line=new Chart(lineChart,{type:"line",
     data:{labels:years,datasets:[{data:avgs,fill:true,tension:.3}]},
     options:{scales:{y:{min:0,max:100}}}
-  });
+  }])
 
   charts.doughnut=new Chart(doughnutChart,{type:"doughnut",
     data:{labels:["Academic","Behaviour","Socio","Final"],
     datasets:[{data:[a,b,c,f]}]}
-  });
+  }])
 }
 
 window.loadStudent=async()=>{
@@ -180,7 +180,7 @@ window.loadStudent=async()=>{
   acad.forEach(x=>{
     years.push(x.data().year);
     avgs.push(safe(x.data().average));
-  });
+  }])
   const avg=avgs.at(-1)||0;
 
   let beh=0,ass=0;
@@ -260,4 +260,5 @@ Given the ${risk}% risk level, targeted academic support, behavioural monitoring
 </script>
 
 </body>
+<script type="module" src="test.js"></script>
 </html>
