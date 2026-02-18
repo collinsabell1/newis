@@ -52,7 +52,7 @@ button{font-weight:bold;cursor:pointer}
 .btn-clear{background:#6c757d}
 .topbar{
  display:flex;
- justify-content:space-between;
+ justify-content:flex-end;
  margin-bottom:10px;
 }
 .item-list{display:flex;flex-wrap:wrap;gap:6px}
@@ -97,7 +97,6 @@ button{font-weight:bold;cursor:pointer}
 <div class="container">
 
 <div class="topbar">
-<button onclick="logout()">Logout</button>
 <button onclick="toggleTheme()">Toggle Theme</button>
 </div>
 
@@ -142,26 +141,6 @@ const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
-
-/* AUTH CHECK */
-const {data:{session}}=await supabase.auth.getSession();
-if(!session) location.href="login.html";
-
-/* ROLE */
-let role="viewer";
-const {data:userRow}=await supabase
-.from("users")
-.select("role")
-.eq("id",session.user.id)
-.single();
-if(userRow) role=userRow.role;
-
-/* UI CONTROL */
-if(role==="viewer"){
- document.querySelectorAll("button").forEach(b=>{
-  if(!b.textContent.includes("Clear")) b.disabled=true;
- });
-}
 
 /* STATE */
 let currentId=null;
@@ -211,7 +190,7 @@ streamInput.onkeydown=e=>{
  }
 };
 
-/* SEARCH AUTOCOMPLETE */
+/* SEARCH */
 searchName.oninput=async()=>{
  const q=searchName.value;
  if(q.length<2){results.innerHTML="";return}
@@ -334,12 +313,7 @@ window.deleteSchool=async()=>{
  message.innerText="Deleted";
  clearForm();
 };
-
-/* LOGOUT */
-window.logout=async()=>{
- await supabase.auth.signOut();
- location.href="login.html";
-};
 </script>
+
 </body>
 </html>
