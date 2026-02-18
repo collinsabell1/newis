@@ -5,7 +5,8 @@
 <title>Student Registration - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- FACE API -->
+<!-- LIBRARIES -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 
 <style>
@@ -19,7 +20,6 @@ justify-content:center;
 padding-top:20px;
 min-height:100vh;
 }
-
 .container{
 background:rgba(255,255,255,0.12);
 padding:30px;
@@ -27,7 +27,6 @@ border-radius:20px;
 width:560px;
 backdrop-filter:blur(15px);
 }
-
 input,select,button{
 width:100%;
 padding:10px;
@@ -35,19 +34,13 @@ margin:6px 0;
 border:none;
 border-radius:10px;
 }
-
 button{font-weight:bold;cursor:pointer;}
-
 .btn-create{background:#00c6ff;}
 .btn-search{background:#ffc107;color:black;}
 .btn-update{background:#28a745;}
 .btn-cam{background:#ff9800;}
-
-.success{
-text-align:center;
-color:#00ff99;
-margin-top:10px;
-}
+.btn-bulk{background:#9c27b0;}
+.success{text-align:center;color:#00ff99;margin-top:10px;}
 
 .floating-actions{
 position:fixed;
@@ -57,7 +50,6 @@ display:flex;
 gap:12px;
 z-index:9999;
 }
-
 .float-btn{
 padding:10px 18px;
 border-radius:14px;
@@ -69,29 +61,16 @@ background-size:300% 300%;
 animation:gradientMove 6s ease infinite;
 box-shadow:0 8px 20px rgba(0,0,0,0.35);
 }
-
 .btn-home{background-image:linear-gradient(45deg,#ff416c,#ff4b2b,#ff6a00);}
 .btn-school{background-image:linear-gradient(45deg,#00c6ff,#0072ff,#00ffcc);}
-
 @keyframes gradientMove{
 0%{background-position:0% 50%;}
 50%{background-position:100% 50%;}
 100%{background-position:0% 50%;}
 }
 
-#video{
-width:100%;
-border-radius:10px;
-margin-top:10px;
-display:none;
-}
-
-#preview{
-width:140px;
-margin-top:10px;
-border-radius:12px;
-display:none;
-}
+#video{width:100%;border-radius:10px;margin-top:10px;display:none;}
+#preview{width:140px;margin-top:10px;border-radius:12px;display:none;}
 </style>
 </head>
 
@@ -105,7 +84,7 @@ display:none;
 <div class="container">
 <h2>Student Registration</h2>
 
-<input id="studentId" placeholder="Admission Number (ADM-001)">
+<input id="studentId" placeholder="Admission Number">
 <button class="btn-search" onclick="searchStudent()">🔍 Search Student</button>
 
 <input id="studentName" placeholder="Student Full Name">
@@ -133,6 +112,16 @@ display:none;
 <button class="btn-update" onclick="updateStudent()">Update Student</button>
 
 <hr>
+
+<h3>Bulk Upload Students (Excel)</h3>
+<p style="font-size:13px;opacity:.9">
+Excel columns must be:<br>
+<b>studentId | studentName | dateOfBirth | school | grade | stream</b>
+</p>
+<input type="file" id="excelFile" accept=".xlsx,.xls">
+<button class="btn-bulk" onclick="bulkUpload()">Upload Excel</button>
+
+<hr>
 <h3>Live Student List</h3>
 <div id="liveList"></div>
 
@@ -144,250 +133,205 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"YOUR_API_KEY"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* LOAD FACE MODEL */
 await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
 
-/* ELEMENTS */
-const schoolSelect=document.getElementById("schoolSelect");
-const gradeSelect=document.getElementById("gradeSelect");
-const streamSelect=document.getElementById("streamSelect");
-const levelDisplay=document.getElementById("levelDisplay");
-const studentId=document.getElementById("studentId");
-const studentName=document.getElementById("studentName");
-const dateOfBirth=document.getElementById("dateOfBirth");
-const ageField=document.getElementById("age");
-const photoUpload=document.getElementById("photoUpload");
-const preview=document.getElementById("preview");
-const video=document.getElementById("video");
-const canvas=document.getElementById("canvas");
-const message=document.getElementById("message");
-const liveList=document.getElementById("liveList");
-
-let schoolsMap={};
-let currentStudentId=null;
-let cameraStream=null;
-let capturedBlob=null;
+const el=id=>document.getElementById(id);
+let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
 /* AGE */
-dateOfBirth.onchange=()=>{
-const birth=new Date(dateOfBirth.value);
-const today=new Date();
-let age=today.getFullYear()-birth.getFullYear();
-const m=today.getMonth()-birth.getMonth();
-if(m<0||(m===0 && today.getDate()<birth.getDate())) age--;
-ageField.value=age;
+el("dateOfBirth").onchange=()=>{
+const b=new Date(el("dateOfBirth").value);
+const t=new Date();
+let a=t.getFullYear()-b.getFullYear();
+if(t.getMonth()<b.getMonth()||(t.getMonth()==b.getMonth()&&t.getDate()<b.getDate()))a--;
+el("age").value=a;
 };
 
 /* LOAD SCHOOLS */
-async function loadSchools(){
-const {data}=await supabase.from("schools").select("*");
-data.forEach(s=>{
+const {data:schools}=await supabase.from("schools").select("*");
+schools.forEach(s=>{
 schoolsMap[s.name]=s;
-schoolSelect.add(new Option(s.name,s.name));
+el("schoolSelect").add(new Option(s.name,s.name));
 });
-}
-loadSchools();
 
 /* SCHOOL CHANGE */
-schoolSelect.onchange=()=>{
-gradeSelect.innerHTML="<option>Select Class</option>";
-streamSelect.innerHTML="<option>Select Stream</option>";
-const s=schoolsMap[schoolSelect.value];
-if(!s) return;
-levelDisplay.value=s.level||"";
-(s.classes||[]).forEach(c=>gradeSelect.add(new Option(c,c)));
-(s.streams||[]).forEach(st=>streamSelect.add(new Option(st,st)));
+el("schoolSelect").onchange=()=>{
+const s=schoolsMap[el("schoolSelect").value];
+el("gradeSelect").innerHTML="<option>Select Class</option>";
+el("streamSelect").innerHTML="<option>Select Stream</option>";
+if(!s)return;
+el("levelDisplay").value=s.level||"";
+(s.classes||[]).forEach(c=>el("gradeSelect").add(new Option(c,c)));
+(s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 };
 
 /* SEARCH */
 window.searchStudent=async()=>{
-if(!studentId.value) return alert("Enter admission number");
+const id=el("studentId").value;
+if(!id)return alert("Enter ID");
 
-const {data,error}=await supabase
-.from("students")
-.select("*")
-.eq("studentId",studentId.value)
-.single();
-
-if(error||!data) return alert("Student not in system");
+const {data}=await supabase.from("students").select("*").eq("studentId",id).single();
+if(!data)return alert("Student not in system");
 
 currentStudentId=data.studentId;
-
-studentName.value=data.studentName||"";
-dateOfBirth.value=data.dateOfBirth||"";
-ageField.value=data.age||"";
-schoolSelect.value=data.school||"";
-schoolSelect.onchange();
-gradeSelect.value=data.grade||"";
-streamSelect.value=data.stream||"";
+el("studentName").value=data.studentName;
+el("dateOfBirth").value=data.dateOfBirth;
+el("age").value=data.age;
+el("schoolSelect").value=data.school;
+el("schoolSelect").onchange();
+el("gradeSelect").value=data.grade;
+el("streamSelect").value=data.stream;
 
 if(data.photo){
-preview.src=data.photo;
-preview.style.display="block";
+el("preview").src=data.photo;
+el("preview").style.display="block";
 }
-
-message.innerText="Student loaded";
 };
 
 /* CAMERA */
 window.startCamera=async()=>{
 cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
-video.srcObject=cameraStream;
-video.style.display="block";
+el("video").srcObject=cameraStream;
+el("video").style.display="block";
 };
 
 window.capturePhoto=()=>{
-const ctx=canvas.getContext("2d");
-canvas.width=video.videoWidth;
-canvas.height=video.videoHeight;
-ctx.drawImage(video,0,0);
-
-canvas.toBlob(blob=>{
-capturedBlob=blob;
-preview.src=URL.createObjectURL(blob);
-preview.style.display="block";
+const v=el("video");
+const c=el("canvas");
+c.width=v.videoWidth;
+c.height=v.videoHeight;
+c.getContext("2d").drawImage(v,0,0);
+c.toBlob(b=>{
+capturedBlob=b;
+el("preview").src=URL.createObjectURL(b);
+el("preview").style.display="block";
 });
 };
 
-/* AI FACE CROP */
-async function optimizeImage(file){
-
-return new Promise(resolve=>{
+/* AI FACE + WHITE BG */
+async function optimize(file){
+return new Promise(res=>{
 const img=new Image();
 img.onload=async()=>{
-
-const detection=await faceapi.detectSingleFace(img,new faceapi.TinyFaceDetectorOptions());
-
+const d=await faceapi.detectSingleFace(img,new faceapi.TinyFaceDetectorOptions());
 let sx,sy,size;
 
-if(detection){
-const box=detection.box;
-size=Math.max(box.width,box.height)*1.6;
-sx=box.x+box.width/2-size/2;
-sy=box.y+box.height/2-size/2;
-
-sx=Math.max(0,sx);
-sy=Math.max(0,sy);
-size=Math.min(size,img.width-sx,img.height-sy);
+if(d){
+const b=d.box;
+size=Math.max(b.width,b.height)*1.6;
+sx=b.x+b.width/2-size/2;
+sy=b.y+b.height/2-size/2;
 }else{
 size=Math.min(img.width,img.height);
 sx=(img.width-size)/2;
 sy=(img.height-size)/2;
 }
 
+sx=Math.max(0,sx);
+sy=Math.max(0,sy);
+size=Math.min(size,img.width-sx,img.height-sy);
+
 const out=500;
 const c=document.createElement("canvas");
 c.width=out;
 c.height=out;
-
 const ctx=c.getContext("2d");
+
+ctx.fillStyle="white";
+ctx.fillRect(0,0,out,out);
+
 ctx.drawImage(img,sx,sy,size,size,0,0,out,out);
 
-c.toBlob(blob=>resolve(blob),"image/jpeg",0.7);
+c.toBlob(blob=>res(blob),"image/jpeg",0.75);
 };
 img.src=URL.createObjectURL(file);
 });
 }
 
-/* UPLOAD */
+/* UPLOAD PHOTO */
 async function uploadPhoto(id){
-
-let file=photoUpload.files[0]||capturedBlob;
-if(!file) return null;
-
-const optimized=await optimizeImage(file);
+let f=el("photoUpload").files[0]||capturedBlob;
+if(!f)return null;
+const opt=await optimize(f);
 const path=`students/${id}_${Date.now()}.jpg`;
-
-await supabase.storage.from("photos").upload(path,optimized);
-const {data}=supabase.storage.from("photos").getPublicUrl(path);
-return data.publicUrl;
-}
-
-/* VALID */
-function validId(id){
-return /^[A-Za-z0-9\-]{3,20}$/.test(id);
+await supabase.storage.from("photos").upload(path,opt);
+return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 }
 
 /* REGISTER */
 window.registerStudent=async()=>{
-if(!validId(studentId.value)) return alert("Invalid ID");
+const id=el("studentId").value;
+if(!id)return alert("ID required");
 
-if(!studentId.value||!studentName.value||!schoolSelect.value||!gradeSelect.value)
-return alert("Fill required");
+const {data:exists}=await supabase.from("students").select("studentId").eq("studentId",id).limit(1);
+if(exists.length)return alert("Student exists");
 
-const {data:exists}=await supabase
-.from("students")
-.select("studentId")
-.eq("studentId",studentId.value)
-.limit(1);
-
-if(exists.length) return alert("Student exists");
-
-const photo=await uploadPhoto(studentId.value);
+const photo=await uploadPhoto(id);
 
 await supabase.from("students").insert([{
-studentId:studentId.value,
-studentName:studentName.value,
-dateOfBirth:dateOfBirth.value,
-age:Number(ageField.value),
-school:schoolSelect.value,
-level:levelDisplay.value,
-grade:gradeSelect.value,
-stream:streamSelect.value||"",
-photo:photo,
-created_at:new Date()
+studentId:id,
+studentName:el("studentName").value,
+dateOfBirth:el("dateOfBirth").value,
+age:Number(el("age").value),
+school:el("schoolSelect").value,
+level:el("levelDisplay").value,
+grade:el("gradeSelect").value,
+stream:el("streamSelect").value,
+photo
 }]);
 
-message.innerText="✔ Student Registered";
+el("message").innerText="✔ Registered";
 };
 
 /* UPDATE */
 window.updateStudent=async()=>{
-if(!currentStudentId) return alert("Search student first");
+if(!currentStudentId)return alert("Search first");
 
-let photo=await uploadPhoto(currentStudentId);
+const photo=await uploadPhoto(currentStudentId);
 
-const updateData={
-studentName:studentName.value,
-dateOfBirth:dateOfBirth.value,
-age:Number(ageField.value),
-school:schoolSelect.value,
-level:levelDisplay.value,
-grade:gradeSelect.value,
-stream:streamSelect.value||""
+const data={
+studentName:el("studentName").value,
+dateOfBirth:el("dateOfBirth").value,
+age:Number(el("age").value),
+school:el("schoolSelect").value,
+level:el("levelDisplay").value,
+grade:el("gradeSelect").value,
+stream:el("streamSelect").value
+};
+if(photo)data.photo=photo;
+
+await supabase.from("students").update(data).eq("studentId",currentStudentId);
+el("message").innerText="✔ Updated";
 };
 
-if(photo) updateData.photo=photo;
+/* BULK EXCEL */
+window.bulkUpload=async()=>{
+const file=el("excelFile").files[0];
+if(!file)return alert("Upload Excel file");
 
-await supabase
-.from("students")
-.update(updateData)
-.eq("studentId",currentStudentId);
+const data=await file.arrayBuffer();
+const wb=XLSX.read(data);
+const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-message.innerText="✔ Student Updated";
+for(const r of rows){
+await supabase.from("students").insert([r]);
+}
+
+alert("Bulk upload complete");
 };
 
 /* REALTIME */
-supabase
-.channel("students")
+supabase.channel("students")
 .on("postgres_changes",{event:"INSERT",schema:"public",table:"students"},
-payload=>{
-const s=payload.new;
-liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
-})
+p=>liveList.innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`)
 .subscribe();
 
-/* LOAD */
-async function loadStudents(){
-const {data}=await supabase.from("students").select("*").limit(20);
-data.forEach(s=>{
-liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
-});
-}
-loadStudents();
+/* LOAD LIST */
+const {data:list}=await supabase.from("students").select("*").limit(20);
+list.forEach(s=>liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`);
 </script>
 
 </body>
