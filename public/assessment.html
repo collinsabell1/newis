@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socioeconomic Risk Assessment - NEWIS</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  margin:0;
+}
+.container{
+  max-width:1400px;
+  margin:30px auto;
+  background:#fff;
+  padding:30px;
+  border-radius:15px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+}
+h2{text-align:center;color:#203a43;margin-bottom:20px;}
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
+  gap:20px;
+}
+
+.section{
+  background:#f4f6fa;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+
+label{display:block;margin:6px 0;}
+input[type="text"]{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+.buttons{
+  margin-top:25px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+
+button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+  min-width:120px;
+}
+
+.save{background:#28a745;color:#fff;}
+.update{background:#ffc107;}
+.delete{background:#dc3545;color:#fff;}
+.search{background:#17a2b8;color:#fff;}
+.clear{background:#6c757d;color:#fff;}
+.nav{background:#203a43;color:#fff;}
+.view{background:#6f42c1;color:#fff;}
+
+.circle{
+  width:170px;
+  height:170px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:bold;
+  margin:20px auto;
+  color:#fff;
+}
+.green{background:#28a745;}
+.yellow{background:#ffc107;color:black;}
+.red{background:#dc3545;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Socioeconomic Dropout Risk Assessment</h2>
+
+<div class="grid">
+
+<div class="section">
+<h3>Student Details</h3>
+
+<label>Admission Number:</label>
+<input type="text" id="studentId" placeholder="Enter Admission Number">
+
+<label>Student Name:</label>
+<input type="text" id="studentName" readonly>
+
+<label>Class:</label>
+<input type="text" id="studentClass" readonly>
+</div>
+
+<div class="section">
+<h3>Socioeconomic Risk Indicators</h3>
+
+<label><input type="checkbox" class="risk" data-weight="10" value="poverty"> Household poverty</label>
+<label><input type="checkbox" class="risk" data-weight="15" value="fees"> Unable to pay school fees</label>
+<label><input type="checkbox" class="risk" data-weight="12" value="orphan"> Orphan / vulnerable child</label>
+<label><input type="checkbox" class="risk" data-weight="15" value="childlabour"> Child labour</label>
+
+<label><input type="checkbox" class="risk" data-weight="10" value="singleparent"> Single parent</label>
+<label><input type="checkbox" class="risk" data-weight="15" value="violence"> Domestic/community violence</label>
+<label><input type="checkbox" class="risk" data-weight="8" value="largedependents"> Large dependent family</label>
+<label><input type="checkbox" class="risk" data-weight="8" value="poorhousing"> Poor housing conditions</label>
+
+<label><input type="checkbox" class="risk" data-weight="15" value="pregnancy"> Early pregnancy</label>
+<label><input type="checkbox" class="risk" data-weight="12" value="absenteeism"> Chronic absenteeism</label>
+<label><input type="checkbox" class="risk" data-weight="10" value="peerpressure"> Negative peer influence</label>
+<label><input type="checkbox" class="risk" data-weight="10" value="substance"> Substance abuse exposure</label>
+
+<label><input type="checkbox" class="risk" data-weight="8" value="drought"> Drought / disaster</label>
+<label><input type="checkbox" class="risk" data-weight="8" value="distance"> Long distance to school</label>
+</div>
+
+<div class="section">
+<h3>Socioeconomic Risk Level</h3>
+<div id="riskCircle" class="circle green">0%</div>
+<p style="text-align:center;font-weight:bold;" id="riskLevel">Low Risk</p>
+</div>
+
+</div>
+
+<div class="buttons">
+<button class="save" onclick="saveRecord()">Save</button>
+<button class="update" onclick="updateRecord()">Update</button>
+<button class="delete" onclick="deleteRecord()">Delete</button>
+<button class="clear" onclick="clearForm()">Clear</button>
+
+<button class="view" onclick="location.href='assessment_view.html'">View All</button>
+<button class="nav" onclick="location.href='behavioral.html'">⬅ Previous</button>
+<button class="nav" onclick="location.href='riskprediction.html'">Next ➡</button>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore, collection, query, where, getDocs,
+  doc, setDoc, getDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let currentStudentDocId = null;
+let recordExists = false;
+
+/* LOAD STUDENT + PREPOPULATE IF RECORD EXISTS */
+studentId.addEventListener("blur", async () => {
+  const id = studentId.value.trim();
+  if(!id) return;
+
+  const q = query(collection(db,"students"), where("studentId","==",id));
+  const snap = await getDocs(q);
+
+  if(snap.empty){
+    alert("Student not found");
+    clearForm();
+    return;
+  }
+
+  const studentDoc = snap.docs[0];
+  currentStudentDocId = studentDoc.id;
+
+  const data = studentDoc.data();
+  studentName.value = data.studentName || "";
+  studentClass.value = data.grade || "";
+
+  const recordRef = doc(db,"students",currentStudentDocId,"assessment","record");
+  const recordSnap = await getDoc(recordRef);
+
+  document.querySelectorAll(".risk").forEach(cb=>cb.checked=false);
+  recordExists = false;
+
+  if(recordSnap.exists()){
+    recordExists = true;
+    const r = recordSnap.data();
+    document.querySelectorAll(".risk").forEach(cb=>{
+      cb.checked = r.selectedRisks?.includes(cb.value);
+    });
+    calculateRisk();
+    alert("Existing assessment loaded. Use UPDATE to modify.");
+  }else{
+    calculateRisk();
+  }
+});
+
+/* CALCULATE RISK */
+function calculateRisk(){
+  let total=0,max=0;
+  document.querySelectorAll(".risk").forEach(cb=>{
+    max+=Number(cb.dataset.weight);
+    if(cb.checked) total+=Number(cb.dataset.weight);
+  });
+
+  const pct=Math.round((total/max)*100)||0;
+  const c=document.getElementById("riskCircle");
+  const l=document.getElementById("riskLevel");
+
+  c.textContent=pct+"%";
+  c.className="circle";
+
+  if(pct<45){c.classList.add("green");l.textContent="Low Risk";}
+  else if(pct<=60){c.classList.add("yellow");l.textContent="Moderate Risk";}
+  else{c.classList.add("red");l.textContent="High Risk";}
+  return pct;
+}
+document.querySelectorAll(".risk").forEach(cb=>cb.addEventListener("change",calculateRisk));
+
+/* SAVE (NO DUPLICATES) */
+window.saveRecord = async ()=>{
+  if(!currentStudentDocId) return alert("Enter admission number first");
+  if(recordExists) return alert("Record already exists. Use UPDATE.");
+
+  await setDoc(doc(db,"students",currentStudentDocId,"assessment","record"),{
+    riskPercent:calculateRisk(),
+    selectedRisks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
+    dateRecorded:new Date()
+  });
+
+  recordExists=true;
+  alert("Assessment saved successfully");
+};
+
+/* UPDATE WITH CONFIRMATION */
+window.updateRecord = async ()=>{
+  if(!currentStudentDocId) return;
+  if(!recordExists) return alert("No existing record to update");
+  if(!confirm("Update existing assessment?")) return;
+
+  await setDoc(doc(db,"students",currentStudentDocId,"assessment","record"),{
+    riskPercent:calculateRisk(),
+    selectedRisks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
+    dateRecorded:new Date()
+  });
+
+  alert("Assessment updated");
+};
+
+/* DELETE */
+window.deleteRecord = async ()=>{
+  if(!currentStudentDocId || !recordExists) return;
+  if(!confirm("Delete this assessment?")) return;
+
+  await deleteDoc(doc(db,"students",currentStudentDocId,"assessment","record"));
+  alert("Record deleted");
+  clearForm();
+};
+
+/* CLEAR */
+window.clearForm = ()=>{
+  studentId.value="";
+  studentName.value="";
+  studentClass.value="";
+  currentStudentDocId=null;
+  recordExists=false;
+  document.querySelectorAll(".risk").forEach(cb=>cb.checked=false);
+  document.getElementById("riskCircle").textContent="0%";
+  document.getElementById("riskCircle").className="circle green";
+  document.getElementById("riskLevel").textContent="Low Risk";
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socioeconomic View All - NEWIS</title>
+
+<style>
+body{
+  font-family: Arial;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  margin:0;
+}
+.container{
+  max-width:1400px;
+  margin:30px auto;
+  background:white;
+  padding:25px;
+  border-radius:12px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+}
+h2{text-align:center;color:#203a43;}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+th,td{
+  padding:10px;
+  border:1px solid #ddd;
+  text-align:center;
+}
+th{
+  background:#203a43;
+  color:white;
+}
+.green{background:#d4edda;}
+.yellow{background:#fff3cd;}
+.red{background:#f8d7da;}
+.buttons{
+  margin-top:20px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.download{background:#28a745;color:white;}
+.select{background:#17a2b8;color:white;}
+.filter{background:#ffc107;color:black;}
+.back{background:#6c757d;color:white;}
+.next{background:#007bff;color:white;}
+.delete{background:#dc3545;color:white;}
+@media(max-width:768px){table{font-size:12px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>All Socioeconomic Assessment Records</h2>
+
+<div class="buttons">
+  <button class="filter" onclick="showAll()">Show All</button>
+  <button class="filter" onclick="showHighRisk()">High Risk (>55%)</button>
+  <button class="filter" onclick="showMediumRisk()">Medium Risk (45–55%)</button>
+  <button class="filter" onclick="showLowRisk()">Low Risk (<45%)</button>
+
+  <button class="select" onclick="selectAll()">Select All</button>
+  <button class="delete" onclick="deleteSelected()">Delete Selected</button>
+
+  <button class="download" onclick="downloadSelected()">Download Selected</button>
+  <button class="download" onclick="downloadAll()">Download All</button>
+
+  <button class="back" onclick="location.href='assessment.html'">⬅ Back to Assessment</button>
+  <button class="next" onclick="location.href='riskprediction.html'">Next ➜ Risk Prediction</button>
+</div>
+
+<table id="dataTable">
+<thead>
+<tr>
+  <th>Select</th>
+  <th>Admission No</th>
+  <th>Name</th>
+  <th>Class</th>
+  <th>Risk %</th>
+  <th>Date Recorded</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  onSnapshot,
+  doc,
+  getDoc,
+  deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const tbody = document.querySelector("#dataTable tbody");
+
+/* CACHE TO PREVENT DUPLICATION */
+const rowCache = new Map();
+
+/* REAL-TIME, UPDATE-ONLY LISTENER */
+onSnapshot(collection(db,"students"), async snap=>{
+  for(const change of snap.docChanges()){
+    const studentId = change.doc.id;
+    const studentData = change.doc.data();
+
+    const assessRef = doc(db,"students",studentId,"assessment","record");
+    const assessSnap = await getDoc(assessRef);
+
+    if(!assessSnap.exists()){
+      if(rowCache.has(studentId)){
+        rowCache.get(studentId).remove();
+        rowCache.delete(studentId);
+      }
+      continue;
+    }
+
+    const assessData = assessSnap.data();
+    const risk = Number(assessData.riskPercent)||0;
+
+    let tr = rowCache.get(studentId);
+
+    if(!tr){
+      tr = document.createElement("tr");
+      tr.dataset.studentId = studentId;
+      tbody.appendChild(tr);
+      rowCache.set(studentId,tr);
+    }
+
+    tr.dataset.risk = risk;
+    tr.className = risk>55 ? "red" : risk>=45 ? "yellow" : "green";
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="selector"></td>
+      <td>${studentData.studentId||""}</td>
+      <td>${studentData.studentName||""}</td>
+      <td>${studentData.grade||""}</td>
+      <td>${risk}%</td>
+      <td>${assessData.dateRecorded ? assessData.dateRecorded.toDate().toLocaleString() : ""}</td>
+    `;
+  }
+});
+
+/* FILTERS */
+function applyFilter(fn){
+  document.querySelectorAll("tbody tr").forEach(r=>{
+    r.style.display = fn(parseInt(r.dataset.risk)) ? "" : "none";
+  });
+}
+window.showHighRisk=()=>applyFilter(r=>r>55);
+window.showMediumRisk=()=>applyFilter(r=>r>=45&&r<=55);
+window.showLowRisk=()=>applyFilter(r=>r<45);
+window.showAll=()=>document.querySelectorAll("tbody tr").forEach(r=>r.style.display="");
+
+/* SELECT */
+window.selectAll=()=>document.querySelectorAll(".selector").forEach(c=>c.checked=true);
+
+/* DELETE */
+window.deleteSelected=async()=>{
+  const rows=[...document.querySelectorAll("tbody tr")].filter(r=>r.querySelector(".selector").checked);
+  if(!rows.length) return alert("No records selected");
+  if(!confirm(`Delete ${rows.length} record(s)?`)) return;
+
+  await Promise.all(rows.map(r=>
+    deleteDoc(doc(db,"students",r.dataset.studentId,"assessment","record"))
+  ));
+};
+
+/* CSV */
+function generateCSV(rows){
+  let csv="Admission No,Name,Class,Risk %,Date Recorded\n";
+  rows.forEach(r=>{
+    const c=r.children;
+    csv+=`${c[1].innerText},${c[2].innerText},${c[3].innerText},${c[4].innerText},${c[5].innerText}\n`;
+  });
+  return csv;
+}
+function download(csv){
+  const b=new Blob([csv],{type:"text/csv"});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement("a");
+  a.href=u;a.download="socioeconomic_assessment.csv";a.click();
+  URL.revokeObjectURL(u);
+}
+window.downloadSelected=()=>{
+  const r=[...document.querySelectorAll("tbody tr")].filter(x=>x.querySelector(".selector").checked&&x.style.display!=="none");
+  if(!r.length) return alert("No students selected");
+  download(generateCSV(r));
+};
+window.downloadAll=()=>{
+  const r=[...document.querySelectorAll("tbody tr")].filter(x=>x.style.display!=="none");
+  if(!r.length) return alert("No records found");
+  download(generateCSV(r));
+};
+</script>
+
+</body>
+</html>

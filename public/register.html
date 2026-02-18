@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Registration - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  display:flex;
+  justify-content:center;
+  padding-top:20px;
+  min-height:100vh;
+}
+
+.floating-actions{
+  position:fixed;
+  top:20px;
+  left:20px;
+  display:flex;
+  gap:12px;
+  z-index:9999;
+}
+.float-btn{
+  padding:10px 18px;
+  border-radius:14px;
+  border:none;
+  font-weight:600;
+  cursor:pointer;
+  color:white;
+  background-size:300% 300%;
+  animation:gradientMove 6s ease infinite;
+  box-shadow:0 8px 20px rgba(0,0,0,0.35);
+}
+.btn-home{background-image:linear-gradient(45deg,#ff416c,#ff4b2b,#ff6a00);}
+.btn-school{background-image:linear-gradient(45deg,#00c6ff,#0072ff,#00ffcc);}
+
+@keyframes gradientMove{
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+
+.container{
+  background:rgba(255,255,255,0.12);
+  padding:30px;
+  border-radius:20px;
+  width:560px;
+  backdrop-filter:blur(15px);
+}
+
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:10px;
+}
+button{font-weight:bold;cursor:pointer;}
+
+.btn-create{background:#00c6ff;}
+.btn-bulk{background:#20c997;}
+.btn-view{background:#6f42c1;}
+
+.success{text-align:center;color:#00ff99;margin-top:10px;}
+hr{border:0;height:1px;background:rgba(255,255,255,.2);margin:20px 0;}
+</style>
+</head>
+
+<body>
+
+<div class="floating-actions">
+  <button class="float-btn btn-home" onclick="location.href='index.html'">⬅ Home</button>
+  <button class="float-btn btn-school" onclick="location.href='schooldetails.html'">🏫 Register School</button>
+</div>
+
+<div class="container">
+<h2>Student Registration</h2>
+
+<input id="studentId" placeholder="Admission Number">
+<input id="studentName" placeholder="Student Full Name">
+
+<!-- NEW DOB + AGE -->
+<input type="date" id="dateOfBirth">
+<input id="age" placeholder="Age" readonly>
+
+<select id="schoolSelect">
+  <option value="">Select School</option>
+</select>
+
+<input id="levelDisplay" placeholder="School Level" readonly>
+
+<select id="gradeSelect">
+  <option value="">Select Class / Form</option>
+</select>
+
+<select id="streamSelect">
+  <option value="">Select Stream (Optional)</option>
+</select>
+
+<button class="btn-create" onclick="registerStudent()">Register Student</button>
+
+<hr>
+
+<h3>📥 Bulk Student Upload</h3>
+<input type="file" id="excelFile" accept=".xlsx,.xls,.csv">
+<button class="btn-bulk" onclick="bulkUpload()">Upload Excel</button>
+
+<button class="btn-view" onclick="location.href='registerview.html'">View All</button>
+
+<div id="message" class="success"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, addDoc,
+  query, where, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* FIREBASE */
+const app = initializeApp({
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304"
+});
+const db = getFirestore(app);
+
+/* ELEMENTS */
+const schoolSelect = document.getElementById("schoolSelect");
+const gradeSelect = document.getElementById("gradeSelect");
+const streamSelect = document.getElementById("streamSelect");
+const levelDisplay = document.getElementById("levelDisplay");
+const studentId = document.getElementById("studentId");
+const studentName = document.getElementById("studentName");
+const dateOfBirth = document.getElementById("dateOfBirth");
+const ageField = document.getElementById("age");
+const excelFile = document.getElementById("excelFile");
+const message = document.getElementById("message");
+
+const schoolsMap = {};
+
+/* AUTO CALCULATE AGE */
+dateOfBirth.addEventListener("change", () => {
+  if (!dateOfBirth.value) return;
+
+  const birthDate = new Date(dateOfBirth.value);
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  ageField.value = age;
+});
+
+/* LOAD SCHOOLS */
+(async ()=>{
+  const snap = await getDocs(collection(db,"schools"));
+  snap.forEach(d=>{
+    const s = d.data();
+    schoolsMap[s.name] = s;
+    schoolSelect.add(new Option(s.name,s.name));
+  });
+})();
+
+/* SCHOOL CHANGE */
+schoolSelect.onchange = ()=>{
+  gradeSelect.innerHTML="<option value=''>Select Class / Form</option>";
+  streamSelect.innerHTML="<option value=''>Select Stream (Optional)</option>";
+  levelDisplay.value="";
+
+  const s = schoolsMap[schoolSelect.value];
+  if(!s) return;
+
+  levelDisplay.value = s.level || "";
+  (s.classes||[]).forEach(c=>gradeSelect.add(new Option(c,c)));
+  (s.streams||[]).forEach(st=>streamSelect.add(new Option(st,st)));
+};
+
+/* REGISTER STUDENT */
+window.registerStudent = async ()=>{
+  if(!studentId.value || !studentName.value || !schoolSelect.value || !gradeSelect.value || !dateOfBirth.value)
+    return alert("Fill all required fields");
+
+  const q = query(
+    collection(db,"students"),
+    where("studentId","==",studentId.value),
+    where("school","==",schoolSelect.value)
+  );
+  if(!(await getDocs(q)).empty)
+    return alert("Student already exists");
+
+  await addDoc(collection(db,"students"),{
+    studentId:studentId.value,
+    studentName:studentName.value,
+    dateOfBirth: dateOfBirth.value,
+    age: Number(ageField.value),
+    school:schoolSelect.value,
+    level:levelDisplay.value,
+    grade:gradeSelect.value,
+    stream:streamSelect.value||"",
+    createdAt:serverTimestamp()
+  });
+
+  await addDoc(collection(db,"users"),{
+    role:"student",
+    linkedStudentId:studentId.value,
+    name:studentName.value,
+    school:schoolSelect.value,
+    createdAt:serverTimestamp()
+  });
+
+  message.innerText="✔ Student registered successfully";
+
+  studentId.value="";
+  studentName.value="";
+  dateOfBirth.value="";
+  ageField.value="";
+};
+
+/* BULK UPLOAD (UNCHANGED) */
+window.bulkUpload = async ()=>{
+  if(!schoolSelect.value || !gradeSelect.value)
+    return alert("Select School and Class first");
+
+  const file = excelFile.files[0];
+  if(!file) return alert("Select Excel file");
+
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    const wb = XLSX.read(e.target.result,{type:"binary"});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    let added=0, skipped=0;
+
+    for(const r of rows){
+      const adm = r["adm no"]||r["admission number"];
+      const name = r["student name"];
+      const cls = r["class"]||r["grade"]||r["form"]||gradeSelect.value;
+      const stream = r["stream"]||streamSelect.value||"";
+
+      if(!adm||!name||!cls){skipped++;continue;}
+
+      const q = query(
+        collection(db,"students"),
+        where("studentId","==",String(adm)),
+        where("school","==",schoolSelect.value)
+      );
+      if(!(await getDocs(q)).empty){skipped++;continue;}
+
+      await addDoc(collection(db,"students"),{
+        studentId:String(adm),
+        studentName:String(name),
+        school:schoolSelect.value,
+        level:levelDisplay.value,
+        grade:String(cls),
+        stream:String(stream),
+        createdAt:serverTimestamp()
+      });
+
+      await addDoc(collection(db,"users"),{
+        role:"student",
+        linkedStudentId:String(adm),
+        name:String(name),
+        school:schoolSelect.value,
+        createdAt:serverTimestamp()
+      });
+
+      added++;
+    }
+    message.innerText=`✔ Upload complete — Added: ${added}, Skipped: ${skipped}`;
+  };
+  reader.readAsBinaryString(file);
+};
+</script>
+
+</body>
+</html>

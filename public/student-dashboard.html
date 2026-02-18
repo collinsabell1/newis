@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Student Dashboard - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>window.allowedRoles=["student"];</script>
+<script src="auth-guard.js" type="module"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Segoe UI;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+.container{
+  max-width:900px;
+  margin:40px auto;
+  padding:20px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+}
+.card{
+  background:rgba(255,255,255,0.12);
+  padding:25px;
+  border-radius:18px;
+  text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+.card button{
+  margin-top:10px;
+  padding:10px 14px;
+  border:none;
+  border-radius:10px;
+  background:#00c6ff;
+  font-weight:bold;
+  cursor:pointer;
+}
+.card button:hover{background:#00a6d6}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>🎓 Student Dashboard</h2>
+
+<div class="grid">
+
+<div class="card">
+<h3>🧑‍🎓 Self Report</h3>
+<p>Daily wellbeing & study check-in</p>
+<button onclick="location.href='student-report.html'">Open</button>
+</div>
+
+<div class="card">
+<h3>🧠 Study Coach</h3>
+<p>Personalized risk & study tips</p>
+<button onclick="location.href='student-coach.html'">Open</button>
+</div>
+
+<div class="card">
+<h3>📨 Counselor Chat</h3>
+<p>Private messaging with counselor</p>
+<button onclick="location.href='student-chat.html'">Open</button>
+</div>
+
+<div class="card">
+<h3>🏅 My Badges</h3>
+<p>Attendance & motivation rewards</p>
+<button onclick="location.href='student-badges.html'">Open</button>
+</div>
+
+<div class="card">
+<h3>🚨 Anonymous Help</h3>
+<p>Report distress safely</p>
+<button onclick="location.href='anonymous-report.html'">Open</button>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

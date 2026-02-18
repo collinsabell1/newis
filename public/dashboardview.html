@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEWIS Dropout & Risk Analytics Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- SheetJS for Excel -->
+<script src="https://cdn.sheetjs.com/xlsx-0.19.2/package/dist/xlsx.full.min.js"></script>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+body {
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+.dashboard {
+  max-width:1600px;
+  margin:30px auto;
+  padding:20px;
+}
+
+h1 {
+  text-align:center;
+  margin-bottom:25px;
+  color:#fff;
+}
+
+.cards {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:18px;
+}
+
+.card {
+  background:#fff;
+  border-radius:12px;
+  padding:18px 22px;
+  color:#203a43;
+  box-shadow:0 8px 25px rgba(0,0,0,0.3);
+}
+
+.card h2 {margin:0;}
+.card h3 {margin-top:4px;color:#555;font-size:14px;}
+
+.charts {
+  margin-top:30px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+  gap:22px;
+}
+
+.map-container {
+  margin-top:30px;
+  height:400px;
+  border-radius:15px;
+  overflow:hidden;
+  box-shadow:0 15px 40px rgba(0,0,0,0.35);
+}
+
+.btn-export {
+  background:#28a745;
+  border:none;
+  color:white;
+  padding:10px 16px;
+  font-weight:bold;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:20px;
+}
+
+.btn-export:hover {
+  background:#218838;
+}
+</style>
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<h1>📊 NEWIS Dropout Analytics & Prediction Dashboard</h1>
+
+<!-- KPI CARDS -->
+<div class="cards">
+  <div class="card"><h2 id="totalStudents">0</h2><h3>Total Students</h3></div>
+  <div class="card"><h2 id="avgDropout">0%</h2><h3>Avg Dropout Rate</h3></div>
+  <div class="card"><h2 id="highRiskCount">0</h2><h3>High Risk (>70%)</h3></div>
+  <div class="card"><h2 id="mediumRiskCount">0</h2><h3>Medium Risk</h3></div>
+  <div class="card"><h2 id="lowRiskCount">0</h2><h3>Low Risk</h3></div>
+  <div class="card"><h2 id="predictedTrend">Stable</h2><h3>Predicted Trend</h3></div>
+</div>
+
+<!-- MAP -->
+<div class="map-container" id="dropoutMap"></div>
+
+<!-- CHARTS -->
+<div class="charts">
+  <div><canvas id="riskDistribution"></canvas></div>
+  <div><canvas id="classDropoutChart"></canvas></div>
+  <div><canvas id="trendChart"></canvas></div>
+</div>
+
+<button class="btn-export" onclick="exportToExcel()">Download All Data (Excel)</button>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  collectionGroup
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let allRecords = [];
+
+async function loadData() {
+  const studentsSnap = await getDocs(collection(db,"students"));
+  const dropoutSnap = await getDocs(collectionGroup(db,"assessment"));
+
+  let total = studentsSnap.size;
+  document.getElementById("totalStudents").innerText = total;
+
+  let high=0, med=0, low=0, sumRate=0;
+
+  dropoutSnap.forEach(docSnap=> {
+    if(docSnap.id === "record"){
+      let data = docSnap.data();
+      let r = Number(data.riskPercent) || 0;
+      sumRate += r;
+      if(r>70) high++;
+      else if(r>=45) med++;
+      else low++;
+      allRecords.push(data);
+    }
+  });
+
+  document.getElementById("avgDropout").innerText = Math.round(sumRate/allRecords.length) + "%";
+  document.getElementById("highRiskCount").innerText = high;
+  document.getElementById("mediumRiskCount").innerText = med;
+  document.getElementById("lowRiskCount").innerText = low;
+
+  renderMap();
+  renderCharts();
+}
+
+function renderMap(){
+  const map = L.map('dropoutMap').setView([0, 37], 6); // Default to Kenya region
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  allRecords.forEach(r=>{
+    if(r.location && r.location.lat && r.location.lng){
+      let color = r.riskPercent>70 ? 'red' : r.riskPercent>=45 ? 'orange' : 'green';
+      L.circleMarker(
+        [r.location.lat, r.location.lng],
+        { radius:8, fillColor:color, color:color, fillOpacity:0.7 }
+      ).addTo(map)
+      .bindPopup(`<b>${r.school}</b><br>Dropout: ${r.riskPercent}%`);
+    }
+  });
+}
+
+function renderCharts(){
+  new Chart(document.getElementById("riskDistribution"), {
+    type:'pie',
+    data:{
+      labels:['High','Medium','Low'],
+      datasets:[{
+        data:[
+          parseInt(document.getElementById("highRiskCount").innerText),
+          parseInt(document.getElementById("mediumRiskCount").innerText),
+          parseInt(document.getElementById("lowRiskCount").innerText)
+        ],
+        backgroundColor:['#dc3545','#ffc107','#28a745']
+      }]
+    }
+  });
+
+  new Chart(document.getElementById("classDropoutChart"), {
+    type:'bar',
+    data:{
+      labels:allRecords.map(r=>r.class),
+      datasets:[{
+        label:'Dropout %',
+        data:allRecords.map(r=>r.riskPercent),
+        borderColor:'#17a2b8',
+        backgroundColor:'#17a2b8'
+      }]
+    }
+  });
+
+  new Chart(document.getElementById("trendChart"), {
+    type:'line',
+    data:{
+      labels:allRecords.map((_,i)=>i+1),
+      datasets:[{
+        label:'Risk Trend',
+        data:allRecords.map(r=>r.riskPercent),
+        borderColor:'#007bff'
+      }]
+    }
+  });
+}
+
+// Excel Export
+function exportToExcel(){
+  let wb = XLSX.utils.book_new();
+  let ws = XLSX.utils.json_to_sheet(allRecords);
+  XLSX.utils.book_append_sheet(wb,ws,"DropoutData");
+  XLSX.writeFile(wb,"dropout_data.xlsx");
+}
+
+loadData();
+
+</script>
+
+</body>
+</html>

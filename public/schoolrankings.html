@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>School Performance Ranking</title>
+<style>
+body{font-family:Segoe UI;background:#eef2f5}
+.container{max-width:1200px;margin:30px auto;background:white;padding:25px;border-radius:14px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;text-align:center;border-bottom:1px solid #ddd}
+th{background:#203a43;color:white}
+.gold{background:#ffd700;font-weight:bold}
+.silver{background:#c0c0c0}
+.bronze{background:#cd7f32;color:white}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>🏫 National School Performance Ranking</h1>
+<table>
+<thead>
+<tr><th>Rank</th><th>School</th><th>Avg Risk %</th><th>Status</th></tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collectionGroup, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app = initializeApp({apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",projectId:"newis-96304"});
+const db = getFirestore(app);
+
+const data={};
+const snap=await getDocs(collectionGroup(db,"assessment"));
+snap.forEach(d=>{
+  if(d.id!=="record")return;
+  const s=d.data().school||"Unknown";
+  const r=Number(d.data().riskPercent)||0;
+  if(!data[s]) data[s]={sum:0,count:0};
+  data[s].sum+=r; data[s].count++;
+});
+
+const sorted=Object.entries(data)
+.map(([k,v])=>({school:k,avg:Math.round(v.sum/v.count)}))
+.sort((a,b)=>a.avg-b.avg);
+
+const tbody=document.getElementById("rows");
+sorted.forEach((s,i)=>{
+  let cls=i==0?"gold":i==1?"silver":i==2?"bronze":"";
+  tbody.innerHTML+=`
+    <tr class="${cls}">
+      <td>${i+1}</td><td>${s.school}</td>
+      <td>${s.avg}%</td>
+      <td>${s.avg<45?"Excellent":s.avg<60?"Moderate":"Critical"}</td>
+    </tr>`;
+});
+</script>
+</body>
+</html>

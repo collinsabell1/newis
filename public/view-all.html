@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>All Academic Records - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+.container{
+  max-width:1300px;
+  margin:30px auto;
+  padding:30px;
+  background:rgba(255,255,255,0.08);
+  border-radius:20px;
+  backdrop-filter:blur(15px);
+  box-shadow:0 0 40px rgba(0,0,0,0.5);
+}
+h1{text-align:center;margin-bottom:20px;}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+th,td{
+  padding:10px;
+  text-align:center;
+}
+th{
+  background:rgba(255,255,255,0.2);
+}
+tr:nth-child(even){
+  background:rgba(255,255,255,0.05);
+}
+button,select,input{
+  padding:8px 14px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+}
+.btn-download{background:#00c6ff;color:white;}
+.btn-nav{background:#17a2b8;color:white;}
+.btn-filter{background:#ffc107;color:black;}
+.btn-print{background:#28a745;color:white;}
+.btn-delete{background:#dc3545;color:white;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📊 All Students Academic Records</h1>
+
+<div style="text-align:center;">
+<button class="btn-nav" onclick="window.location.href='/index.html'">⬅ Back to Index</button>
+<button class="btn-nav" onclick="window.location.href='/academics.html'">⬅ Back to Academics</button>
+<button class="btn-nav" onclick="window.location.href='/behavioral.html'">Next ➡ Behavioral</button>
+</div>
+
+<br>
+
+<div style="text-align:center;">
+<input type="text" id="searchInput" placeholder="Search Admission Number">
+
+<select id="yearFilter"></select>
+
+<select id="classFilter">
+<option value="All">All Classes</option>
+</select>
+
+<select id="averageFilter">
+<option value="All">All Performance</option>
+<option value="Above">Above 50%</option>
+<option value="Below">Below 50%</option>
+<option value="Equal">Exactly 50%</option>
+</select>
+
+<button class="btn-filter" onclick="renderTable()">Apply</button>
+</div>
+
+<br>
+
+<button class="btn-download" onclick="downloadAll()">Download All</button>
+<button class="btn-download" onclick="downloadSelected()">Download Selected</button>
+<button class="btn-delete" onclick="deleteSelected()">🗑 Delete Selected</button>
+
+<table id="recordsTable">
+<thead>
+<tr>
+<th><input type="checkbox" id="selectAll"></th>
+<th>Adm No</th>
+<th>Name</th>
+<th>Class</th>
+<th>Year</th>
+<th>T1</th>
+<th>T2</th>
+<th>T3</th>
+<th>Average</th>
+<th>Rank</th>
+<th>Report</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  getDocs,
+  collection,
+  doc,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304",
+  storageBucket: "newis-96304.firebasestorage.app",
+  messagingSenderId: "695908769426",
+  appId: "1:695908769426:web:dc0db0866cbdaa4fb6d04b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let allData = [];
+let currentFiltered = [];
+
+/* ⚡ OPTIMIZED LOADER */
+async function loadData(){
+  allData = [];
+
+  const studentsSnap = await getDocs(collection(db,"students"));
+  const yearSet = new Set();
+  const classSet = new Set();
+  const seen = new Set();
+
+  await Promise.all(
+    studentsSnap.docs.map(studentDoc=>{
+      const student = studentDoc.data();
+      return getDocs(collection(db,"students",studentDoc.id,"academics"))
+        .then(acadSnap=>{
+          acadSnap.forEach(a=>{
+            const data = a.data();
+            const key = student.studentId + "_" + data.year;
+            if(seen.has(key)) return;
+            seen.add(key);
+
+            yearSet.add(data.year);
+            classSet.add(student.grade);
+
+            allData.push({
+              docPath: a.ref.path,
+              adm: student.studentId,
+              name: student.studentName,
+              class: student.grade,
+              year: data.year,
+              t1: data.term1,
+              t2: data.term2,
+              t3: data.term3,
+              avg: Number(data.average)
+            });
+          });
+        });
+    })
+  );
+
+  yearFilter.innerHTML="<option value='All'>All Years</option>";
+  [...yearSet].forEach(y=>yearFilter.innerHTML+=`<option>${y}</option>`);
+
+  classFilter.innerHTML="<option value='All'>All Classes</option>";
+  [...classSet].forEach(c=>classFilter.innerHTML+=`<option>${c}</option>`);
+
+  renderTable();
+}
+loadData();
+
+/* TABLE RENDER */
+window.renderTable = function(){
+  const search = searchInput.value.toLowerCase();
+  const selectedYear = yearFilter.value;
+  const selectedClass = classFilter.value;
+  const avgFilter = averageFilter.value;
+
+  const tbody = recordsTable.querySelector("tbody");
+  tbody.innerHTML = "";
+
+  currentFiltered = allData.filter(r=>{
+    if(search && !r.adm.toLowerCase().includes(search)) return false;
+    if(selectedYear !== "All" && r.year != selectedYear) return false;
+    if(selectedClass !== "All" && r.class != selectedClass) return false;
+    if(avgFilter === "Above" && r.avg <= 50) return false;
+    if(avgFilter === "Below" && r.avg >= 50) return false;
+    if(avgFilter === "Equal" && r.avg != 50) return false;
+    return true;
+  });
+
+  let grouped = {};
+  currentFiltered.forEach(r=>{
+    const key = r.year + "_" + r.class;
+    if(!grouped[key]) grouped[key] = [];
+    grouped[key].push(r);
+  });
+
+  Object.values(grouped).forEach(group=>{
+    group.sort((a,b)=>b.avg-a.avg);
+    group.forEach((r,i)=>r.rank=i+1);
+  });
+
+  currentFiltered.forEach((r,index)=>{
+    let color="lightgreen";
+    if(r.avg<50) color="red";
+    else if(r.avg<=65) color="yellow";
+
+    tbody.innerHTML+=`
+    <tr>
+      <td><input type="checkbox" class="rowCheck" data-index="${index}"></td>
+      <td>${r.adm}</td>
+      <td>${r.name}</td>
+      <td>${r.class}</td>
+      <td>${r.year}</td>
+      <td>${r.t1}</td>
+      <td>${r.t2}</td>
+      <td>${r.t3}</td>
+      <td style="color:${color};font-weight:bold">${r.avg.toFixed(1)}%</td>
+      <td>${r.rank}</td>
+      <td><button class="btn-print" onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
+    </tr>`;
+  });
+};
+
+selectAll.addEventListener("change",function(){
+  document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
+});
+
+/* 🗑 DELETE SELECTED WITH CONFIRMATION */
+window.deleteSelected = async function(){
+  const selected = [...document.querySelectorAll(".rowCheck")]
+    .filter(c=>c.checked)
+    .map(c=>currentFiltered[c.dataset.index]);
+
+  if(!selected.length){
+    alert("⚠️ Please select at least one record to delete.");
+    return;
+  }
+
+  const confirmDelete = confirm(
+    `⚠️ CONFIRM DELETION\n\nYou are about to permanently delete ${selected.length} academic record(s).\n\nThis action CANNOT be undone.\n\nClick OK to proceed or Cancel to stop.`
+  );
+
+  if(!confirmDelete) return;
+
+  const batch = writeBatch(db);
+  selected.forEach(r=>batch.delete(doc(db,r.docPath)));
+  await batch.commit();
+
+  alert("✅ Selected records deleted successfully.");
+  loadData();
+};
+
+/* DOWNLOAD */
+function downloadCSV(rows,filename){
+  let csv="AdmNo,Name,Class,Year,T1,T2,T3,Average,Rank\n";
+  rows.forEach(r=>{
+    csv+=`${r.adm},${r.name},${r.class},${r.year},${r.t1},${r.t2},${r.t3},${r.avg},${r.rank}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+}
+window.downloadAll=()=>downloadCSV(currentFiltered,"All_Academic_Records.csv");
+window.downloadSelected=()=>{
+  const sel=[...document.querySelectorAll(".rowCheck")]
+    .filter(c=>c.checked)
+    .map(c=>currentFiltered[c.dataset.index]);
+  if(!sel.length) return alert("Select students first!");
+  downloadCSV(sel,"Selected_Records.csv");
+};
+
+/* PRINT */
+window.printReport=function(data){
+  const win=window.open("");
+  win.document.write(`
+    <h2>Student Report Card</h2>
+    <p><b>Admission:</b> ${data.adm}</p>
+    <p><b>Name:</b> ${data.name}</p>
+    <p><b>Class:</b> ${data.class}</p>
+    <p><b>Year:</b> ${data.year}</p>
+    <p><b>Average:</b> ${data.avg}%</p>
+    <button onclick="print()">Print</button>
+  `);
+};
+</script>
+</body>
+</html>

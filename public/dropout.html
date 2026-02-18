@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dropout Risk Prediction</title>
+</head>
+<body>
+
+<h1>📕 Dropout Risk Prediction</h1>
+
+<form id="riskForm">
+
+  <label>Student ID:</label><br>
+  <input type="text" id="studentId" required><br><br>
+
+  <label>Academic Risk:</label><br>
+  <input type="number" id="academicRisk" required><br><br>
+
+  <label>Assessment Risk:</label><br>
+  <input type="number" id="assessmentRisk" required><br><br>
+
+  <label>Behavior Score (0-100):</label><br>
+  <input type="number" id="behaviorScore" required><br><br>
+
+  <button type="submit">Calculate & Save</button>
+
+</form>
+
+<h2 id="result"></h2>
+
+<script type="module">
+
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getFirestore, collection, addDoc } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* 🔐 FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* 📕 MAIN FORMULA */
+function calculateDropoutRisk(academicRisk, assessmentRisk, behaviorScore){
+
+ let weightedAcademic = academicRisk * 0.35;
+ let weightedSocio = assessmentRisk * 0.40;
+ let weightedBehavior = (100 - behaviorScore) * 0.25;
+
+ let totalRisk = weightedAcademic + weightedSocio + weightedBehavior;
+
+ let category = "LOW";
+
+ if(totalRisk >= 70) category = "HIGH";
+ else if(totalRisk >= 40) category = "MEDIUM";
+
+ return {
+   weightedAcademic,
+   weightedSocio,
+   weightedBehavior,
+   totalRisk,
+   category
+ };
+}
+
+document.getElementById("riskForm")
+.addEventListener("submit", async (e)=>{
+
+ e.preventDefault();
+
+ const studentId = document.getElementById("studentId").value;
+ const academicRisk = parseFloat(document.getElementById("academicRisk").value);
+ const assessmentRisk = parseFloat(document.getElementById("assessmentRisk").value);
+ const behaviorScore = parseFloat(document.getElementById("behaviorScore").value);
+
+ const result = calculateDropoutRisk(
+   academicRisk,
+   assessmentRisk,
+   behaviorScore
+ );
+
+ /* 🔥 SAVE PREDICTION */
+ await addDoc(collection(db,"riskPredictions"),{
+   studentId,
+   weightedAcademic: result.weightedAcademic,
+   weightedSocio: result.weightedSocio,
+   weightedBehavior: result.weightedBehavior,
+   totalRisk: result.totalRisk,
+   category: result.category,
+   createdAt: new Date()
+ });
+
+ /* 🚨 AUTO INTERVENTION */
+ if(result.totalRisk >= 60){
+   await addDoc(collection(db,"interventions"),{
+     studentId,
+     interventionType: "Comprehensive Support",
+     importance: 9,
+     workability: 8,
+     priorityScore: (9*8)/10,
+     status: "PENDING",
+     createdAt: new Date()
+   });
+ }
+
+ /* 📈 TIME TREND TRACKING */
+ await addDoc(collection(db,"riskTrends"),{
+   studentId,
+   year: new Date().getFullYear(),
+   totalRisk: result.totalRisk,
+   createdAt: new Date()
+ });
+
+ document.getElementById("result").innerHTML =
+   "Total Risk: " + result.totalRisk.toFixed(2) +
+   "<br>Category: " + result.category;
+
+});
+
+</script>
+
+</body>
+</html>

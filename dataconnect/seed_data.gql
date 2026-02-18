@@ -1,0 +1,107 @@
+mutation CreateSeedData @transaction @auth(level: USER, insecureReason: "This is a seed data mutation for initial setup and will only be run by administrators.") {
+  user_insertMany(data: [
+    {
+      id: "b201087e-d9ed-49a3-a75d-6c1746f332c1",
+      createdAt: "2023-01-01T10:00:00Z",
+      displayName: "Admin User",
+      email: "admin@example.com",
+      role: "admin"
+    },
+    {
+      id: "a1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+      createdAt: "2023-01-02T11:00:00Z",
+      displayName: "Teacher One",
+      email: "teacher1@example.com",
+      role: "teacher"
+    }
+  ])
+  student_insertMany(data: [
+    {
+      id: "c76d8e9f-0a1b-2c3d-4e5f-6a7b8c9d0e1f",
+      contactEmail: "student1@example.com",
+      contactPhone: "555-123-4567",
+      createdAt: "2023-03-15T09:00:00Z",
+      currentRiskLevel: "Medium",
+      dateOfBirth: "2008-05-10",
+      enrollmentDate: "2022-09-01",
+      firstName: "Alice",
+      lastName: "Smith",
+      studentId: "S001"
+    },
+    {
+      id: "f8e7d6c5-b4a3-2d1e-0f9e-8d7c6b5a4f3e",
+      contactEmail: "student2@example.com",
+      contactPhone: "555-987-6543",
+      createdAt: "2023-03-16T10:30:00Z",
+      currentRiskLevel: "High",
+      dateOfBirth: "2007-11-20",
+      enrollmentDate: "2022-09-01",
+      firstName: "Bob",
+      lastName: "Johnson",
+      studentId: "S002"
+    }
+  ])
+  academicData_insertMany(data: [
+    {
+      studentId: "c76d8e9f-0a1b-2c3d-4e5f-6a7b8c9d0e1f",
+      attendanceRate: 0.95,
+      courseFailureCount: 0,
+      creditsAttempted: 30,
+      creditsEarned: 30,
+      gpa: 3.8,
+      lastUpdated: "2023-10-26T14:00:00Z"
+    },
+    {
+      studentId: "f8e7d6c5-b4a3-2d1e-0f9e-8d7c6b5a4f3e",
+      attendanceRate: 0.80,
+      courseFailureCount: 2,
+      creditsAttempted: 30,
+      creditsEarned: 24,
+      gpa: 2.5,
+      lastUpdated: "2023-10-26T14:05:00Z"
+    }
+  ])
+  behavioralEngagement_insertMany(data: [
+    {
+      studentId: "c76d8e9f-0a1b-2c3d-4e5f-6a7b8c9d0e1f",
+      indicatorType: "Class Participation",
+      lastUpdated: "2023-10-25T11:00:00Z",
+      notes: "Engages actively in discussions.",
+      scoreOrDescription: "High"
+    },
+    {
+      studentId: "f8e7d6c5-b4a3-2d1e-0f9e-8d7c6b5a4f3e",
+      indicatorType: "Disruptive Behavior",
+      lastUpdated: "2023-10-25T11:15:00Z",
+      notes: "Frequent disruptions in class.",
+      scoreOrDescription: "Low"
+    }
+  ])
+  socioeconomicFactor_insertMany(data: [
+    {
+      studentId: "c76d8e9f-0a1b-2c3d-4e5f-6a7b8c9d0e1f",
+      description: "Qualifies for reduced lunch program.",
+      factorType: "Financial Aid",
+      lastUpdated: "2023-10-24T09:00:00Z",
+      scoreOrStatus: "Eligible"
+    },
+    {
+      studentId: "f8e7d6c5-b4a3-2d1e-0f9e-8d7c6b5a4f3e",
+      description: "Family reports housing instability.",
+      factorType: "Housing",
+      lastUpdated: "2023-10-24T09:30:00Z",
+      scoreOrStatus: "At Risk"
+    }
+  ])
+  intervention_insertMany(data: [
+    {
+      studentId: "f8e7d6c5-b4a3-2d1e-0f9e-8d7c6b5a4f3e",
+      loggedByUserId: "a1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+      description: "Counseling sessions for behavioral issues.",
+      effectiveness: "Moderate",
+      followUpDate: "2024-01-15",
+      interventionDate: "2023-10-01",
+      interventionType: "Behavioral Counseling"
+    }
+  ])
+}

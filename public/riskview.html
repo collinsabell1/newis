@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEWIS – Student Risk Overview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:#fff;
+}
+
+.container{
+  padding:25px;
+}
+
+h2{
+  margin-bottom:15px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+  color:#111;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
+
+th,td{
+  padding:12px;
+  text-align:left;
+  font-size:14px;
+}
+
+th{
+  background:#203a43;
+  color:#fff;
+}
+
+tr:nth-child(even){
+  background:#f2f2f2;
+}
+
+.badge{
+  padding:5px 10px;
+  border-radius:12px;
+  font-weight:bold;
+  font-size:12px;
+}
+
+.low{background:#28a745;color:#fff;}
+.mid{background:#ffc107;color:#000;}
+.high{background:#dc3545;color:#fff;}
+
+.small{
+  font-size:12px;
+  opacity:.8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>📊 Student Dropout Risk Overview (CBC)</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Admission No</th>
+        <th>Name</th>
+        <th>Class</th>
+        <th>Academic %</th>
+        <th>Behaviour %</th>
+        <th>Social %</th>
+        <th>Overall Risk %</th>
+        <th>Prediction</th>
+        <th>Predicted Term & Year</th>
+      </tr>
+    </thead>
+    <tbody id="riskTable">
+      <tr><td colspan="9">Loading data…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  getDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* 🔹 Firebase config (same project as dashboard) */
+const app = initializeApp({
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304"
+});
+
+const db = getFirestore(app);
+const table = document.getElementById("riskTable");
+const safe = v => Math.max(0, Math.min(100, Number(v)||0));
+
+/* 🔹 Fetch latest academic average */
+async function getAcademicRisk(studentId){
+  const snap = await getDocs(collection(db,"students",studentId,"academics"));
+  if(snap.empty) return 0;
+
+  const recs = snap.docs.map(d=>d.data());
+  recs.sort((a,b)=>{
+    if(a.year && b.year) return b.year - a.year;
+    if(a.timestamp && b.timestamp) return b.timestamp.seconds - a.timestamp.seconds;
+    return 0;
+  });
+
+  return safe(100 - (recs[0].average||0));
+}
+
+/* 🔹 Prediction logic (same as dashboard) */
+function predict(overall, grade){
+  const now = new Date();
+  const year = now.getFullYear();
+  const term = Math.ceil((now.getMonth()+1)/4);
+
+  const g = parseInt(grade.match(/\d+/)?.[0]||0);
+  const finalGrade = grade.toLowerCase().includes("form") ? 4 : 12;
+  const completionYear = year + (finalGrade - g);
+
+  const horizon = overall <= 35 ? 4 : overall <= 60 ? 2 : 1;
+  const predictedYear = year + horizon;
+
+  if(predictedYear > completionYear){
+    return { 
+      text:"Likely to Successfully Complete",
+      cls:"low",
+      when:`Term ${term}, ${predictedYear}`
+    };
+  }else if(predictedYear === completionYear){
+    return {
+      text:"Completion at Risk",
+      cls:"mid",
+      when:`Term ${term}, ${predictedYear}`
+    };
+  }else{
+    return {
+      text:"Might Not Complete",
+      cls:"high",
+      when:`Term ${term}, ${predictedYear}`
+    };
+  }
+}
+
+/* 🔹 Load ALL students */
+async function loadAll(){
+  table.innerHTML="";
+  const snap = await getDocs(collection(db,"students"));
+  if(snap.empty){
+    table.innerHTML="<tr><td colspan='9'>No student records found</td></tr>";
+    return;
+  }
+
+  for(const d of snap.docs){
+    const s = d.data();
+
+    const academic = await getAcademicRisk(d.id);
+
+    let behaviour = 0, social = 0;
+
+    const b = await getDoc(doc(db,"students",d.id,"behavioral","record"));
+    if(b.exists()) behaviour = safe(b.data().riskPercent);
+
+    const a = await getDoc(doc(db,"students",d.id,"assessment","record"));
+    if(a.exists()) social = safe(a.data().riskPercent);
+
+    const overall = safe(
+      academic*0.4 +
+      behaviour*0.3 +
+      social*0.3
+    );
+
+    const p = predict(overall, s.grade||"");
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${s.studentId||"-"}</td>
+      <td>${s.studentName||"-"}</td>
+      <td>${s.grade||"-"}</td>
+      <td>${academic}%</td>
+      <td>${behaviour}%</td>
+      <td>${social}%</td>
+      <td><b>${overall}%</b></td>
+      <td><span class="badge ${p.cls}">${p.text}</span></td>
+      <td class="small">${p.when}</td>
+    `;
+    table.appendChild(row);
+  }
+}
+
+loadAll();
+</script>
+
+</body>
+</html>

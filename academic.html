@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Academic Risk Assessment - NEWIS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body{
+      margin:0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+      color:white;
+    }
+
+    .container{
+      max-width:800px;
+      margin:50px auto;
+      background: rgba(255,255,255,0.08);
+      padding:30px;
+      border-radius:20px;
+      backdrop-filter: blur(15px);
+      box-shadow:0 0 40px rgba(0,0,0,0.4);
+    }
+
+    h1{
+      text-align:center;
+      margin-bottom:30px;
+      font-size:28px;
+    }
+
+    input, select{
+      width:100%;
+      padding:12px;
+      margin:8px 0;
+      border:none;
+      border-radius:8px;
+      font-size:15px;
+    }
+
+    button{
+      width:100%;
+      padding:12px;
+      margin-top:15px;
+      background:#00c6ff;
+      border:none;
+      border-radius:8px;
+      font-size:16px;
+      font-weight:bold;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    button:hover{
+      background:#0072ff;
+    }
+
+    .student-card{
+      background:rgba(255,255,255,0.1);
+      padding:15px;
+      border-radius:12px;
+      margin-bottom:20px;
+    }
+
+    .result-box{
+      margin-top:20px;
+      padding:15px;
+      background:rgba(0,0,0,0.4);
+      border-radius:12px;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Academic Risk Evaluation</h1>
+
+  <label>Enter Admission Number</label>
+  <input type="text" id="studentId" placeholder="Admission Number">
+
+  <button onclick="fetchStudent()">Load Student</button>
+
+  <div id="studentInfo"></div>
+
+  <div id="marksSection" style="display:none;">
+
+    <label>Year</label>
+    <input type="text" id="year" placeholder="2026">
+
+    <label>Class Level</label>
+    <input type="text" id="classLevel" placeholder="Grade 8">
+
+    <label>Term 1 Marks</label>
+    <input type="number" id="term1">
+
+    <label>Term 2 Marks</label>
+    <input type="number" id="term2">
+
+    <label>Term 3 Marks</label>
+    <input type="number" id="term3">
+
+    <button onclick="saveAcademic()">Calculate & Save</button>
+
+  </div>
+
+  <div id="result"></div>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304",
+  storageBucket: "newis-96304.firebasestorage.app",
+  messagingSenderId: "695908769426",
+  appId: "1:695908769426:web:dc0db0866cbdaa4fb6d04b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+
+window.fetchStudent = async function(){
+
+  const studentId = document.getElementById("studentId").value;
+
+  const q = query(collection(db,"students"), where("studentId","==",studentId));
+  const querySnapshot = await getDocs(q);
+
+  if(querySnapshot.empty){
+    alert("Student not found!");
+    return;
+  }
+
+  querySnapshot.forEach((doc)=>{
+    const data = doc.data();
+    document.getElementById("studentInfo").innerHTML = `
+      <div class="student-card">
+        <strong>Name:</strong> ${data.studentName}<br>
+        <strong>Class:</strong> ${data.grade}<br>
+        <strong>Parent:</strong> ${data.parentName}<br>
+      </div>
+    `;
+  });
+
+  document.getElementById("marksSection").style.display="block";
+};
+
+
+
+function calculateAcademicRisk(term1, term2, term3){
+
+ let annualTotal = term1 + term2 + term3;
+ let average = annualTotal / 3;
+ let riskScore = 100 - average;
+
+ return { annualTotal, average, riskScore };
+}
+
+
+
+window.saveAcademic = async function(){
+
+  const studentId = document.getElementById("studentId").value;
+  const year = document.getElementById("year").value;
+  const classLevel = document.getElementById("classLevel").value;
+  const term1 = Number(document.getElementById("term1").value);
+  const term2 = Number(document.getElementById("term2").value);
+  const term3 = Number(document.getElementById("term3").value);
+
+  const { annualTotal, average, riskScore } =
+        calculateAcademicRisk(term1, term2, term3);
+
+  await addDoc(collection(db,"academics"),{
+    studentId,
+    year,
+    classLevel,
+    term1,
+    term2,
+    term3,
+    annualTotal,
+    average,
+    riskScore
+  });
+
+  document.getElementById("result").innerHTML = `
+    <div class="result-box">
+      <strong>Annual Total:</strong> ${annualTotal}<br>
+      <strong>Average:</strong> ${average.toFixed(2)}<br>
+      <strong>Academic Risk Score:</strong> ${riskScore.toFixed(2)}%
+    </div>
+  `;
+
+  alert("Academic Record Saved Successfully!");
+
+};
+
+</script>
+
+</body>
+</html>

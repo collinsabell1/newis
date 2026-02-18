@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>NEWIS Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:Segoe UI,Arial,sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+.card{
+  width:360px;
+  background:rgba(255,255,255,0.1);
+  padding:30px;
+  border-radius:18px;
+  color:white;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+}
+h2{text-align:center;margin-bottom:20px}
+input,button{
+  width:100%;
+  padding:12px;
+  margin:10px 0;
+  border-radius:10px;
+  border:none;
+  font-size:1em;
+}
+input{background:white;color:black}
+button{
+  background:#00c6ff;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:hover{background:#00a6d6}
+.small{
+  text-align:center;
+  font-size:.85em;
+  opacity:.85;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h2>🔐 NEWIS Login</h2>
+
+<input type="email" id="email" placeholder="Email address">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+
+<div class="small">
+National Early Warning & Intervention System
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain:"newis-96304.firebaseapp.com",
+  projectId:"newis-96304"
+};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+window.login = async () => {
+  const emailVal=email.value;
+  const pass=password.value;
+
+  if(!emailVal || !pass){
+    alert("Enter email and password");
+    return;
+  }
+
+  try{
+    const res=await signInWithEmailAndPassword(auth,emailVal,pass);
+    const uid=res.user.uid;
+
+    const userSnap=await getDoc(doc(db,"users",uid));
+    if(!userSnap.exists()){
+      alert("No role assigned. Contact admin.");
+      return;
+    }
+
+    const role=userSnap.data().role;
+
+    /* ROLE ROUTING */
+    if(role==="student") location.href="student-dashboard.html";
+    else if(role==="counselor") location.href="counselor-dashboard.html";
+    else if(role==="parent") location.href="parent-dashboard.html";
+    else if(role==="school") location.href="school-dashboard.html";
+    else if(role==="admin") location.href="admin-dashboard.html";
+    else alert("Unknown role");
+
+  }catch(e){
+    alert(e.message);
+  }
+};
+</script>
+
+</body>
+</html>

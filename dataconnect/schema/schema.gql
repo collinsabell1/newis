@@ -1,0 +1,55 @@
+type User @table {
+  displayName: String!
+  email: String!
+  role: String!
+  createdAt: Timestamp!
+  photoUrl: String
+}
+
+type Student @table {
+  studentId: String!
+  firstName: String!
+  lastName: String!
+  enrollmentDate: Date!
+  currentRiskLevel: String!
+  createdAt: Timestamp!
+  dateOfBirth: Date
+  contactEmail: String
+  contactPhone: String
+}
+
+type AcademicData @table {
+  student: Student!
+  gpa: Float!
+  attendanceRate: Float!
+  lastUpdated: Timestamp!
+  courseFailureCount: Int
+  creditsAttempted: Int
+  creditsEarned: Int
+}
+
+type SocioeconomicFactor @table {
+  student: Student!
+  factorType: String!
+  scoreOrStatus: String!
+  lastUpdated: Timestamp!
+  description: String
+}
+
+type BehavioralEngagement @table {
+  student: Student!
+  indicatorType: String!
+  scoreOrDescription: String!
+  lastUpdated: Timestamp!
+  notes: String
+}
+
+type Intervention @table {
+  student: Student!
+  interventionType: String!
+  interventionDate: Date!
+  loggedByUser: User!
+  effectiveness: String!
+  description: String
+  followUpDate: Date
+}

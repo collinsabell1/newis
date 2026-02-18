@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEWIS AI Dropout Risk Dashboard (CBC)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#134E5E,#71B280);
+}
+.container{padding:25px;padding-bottom:190px;}
+
+.top-widget{
+  background:#fff;padding:20px;border-radius:15px;
+  display:flex;justify-content:space-between;flex-wrap:wrap;
+  box-shadow:0 10px 25px rgba(0,0,0,.2);
+}
+.top-widget input{padding:8px;border-radius:6px;border:1px solid #ccc;}
+.top-widget button{
+  padding:8px 14px;border:none;border-radius:8px;
+  background:#134E5E;color:#fff;font-weight:bold;cursor:pointer;
+}
+
+.details-card{
+  background:#203a43;color:#fff;
+  padding:20px;border-radius:15px;margin:20px 0;
+}
+
+.summary{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:20px;}
+.summary-card{
+  flex:1 1 200px;padding:20px;border-radius:15px;
+  text-align:center;font-weight:bold;font-size:18px;color:#fff;
+}
+.green{background:#28a745;}
+.yellow{background:#ffc107;color:#111;}
+.red{background:#dc3545;}
+
+.charts{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:20px;
+}
+.chart-card{
+  background:#fff;padding:20px;border-radius:15px;height:320px;
+}
+canvas{width:100%!important;height:100%!important;}
+
+.prediction-card{
+  position:fixed;right:16px;bottom:16px;
+  width:min(95vw,420px);
+  padding:22px;border-radius:26px;
+  background:linear-gradient(135deg,#ff512f,#dd2476);
+  color:white;display:none;
+  box-shadow:0 25px 50px rgba(0,0,0,.5);
+}
+.pred-title{font-size:20px;font-weight:900;}
+.pred-meta{font-size:13px;margin:6px 0;white-space:pre-line;}
+.confidence{
+  display:inline-block;
+  padding:6px 14px;border-radius:14px;
+  font-weight:bold;margin:4px 4px 4px 0;
+}
+.low{background:#28a745;}
+.high{background:#dc3545;}
+
+.explain{
+  margin-top:10px;padding:12px;border-radius:14px;
+  background:rgba(255,255,255,.18);
+  font-size:13px;
+  white-space:pre-line;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<div class="top-widget">
+  <h2>AI Dropout Risk Dashboard (CBC)</h2>
+  <div>
+    <input id="studentId" placeholder="Admission Number">
+    <button onclick="loadStudent()">Load</button>
+  </div>
+</div>
+
+<div class="details-card">
+  <p><b>Name:</b> <span id="studentName">-</span></p>
+  <p><b>Class:</b> <span id="studentClass">-</span></p>
+  <p><b>School:</b> <span id="studentSchool">-</span></p>
+</div>
+
+<div class="summary">
+  <div id="academicCard" class="summary-card">Academic</div>
+  <div id="behaviourCard" class="summary-card">Behaviour</div>
+  <div id="assessmentCard" class="summary-card">Socio</div>
+  <div id="finalCard" class="summary-card">Final</div>
+</div>
+
+<div class="charts">
+  <div class="chart-card"><canvas id="barChart"></canvas></div>
+  <div class="chart-card"><canvas id="pieChart"></canvas></div>
+  <div class="chart-card"><canvas id="lineChart"></canvas></div>
+  <div class="chart-card"><canvas id="doughnutChart"></canvas></div>
+</div>
+</div>
+
+<div id="predictionCard" class="prediction-card">
+  <div id="predTitle" class="pred-title"></div>
+  <div id="predMeta" class="pred-meta"></div>
+  <div id="completionTag" class="confidence"></div>
+  <div id="dropoutTag" class="confidence"></div>
+  <div id="predExplain" class="explain"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, getDoc, doc }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app=initializeApp({
+  apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain:"newis-96304.firebaseapp.com",
+  projectId:"newis-96304"
+});
+const db=getFirestore(app);
+const safe=v=>Number(v)||0;
+let charts={};
+
+function setCard(id,text,color){
+  const el=document.getElementById(id);
+  el.innerText=text;
+  el.className="summary-card "+color;
+}
+
+function drawCharts(a,b,c,f,years,avgs){
+  Object.values(charts).forEach(ch=>ch.destroy());
+
+  charts.bar=new Chart(barChart,{type:"bar",
+    data:{labels:["Academic","Behaviour","Socio","Final"],
+    datasets:[{data:[a,b,c,f]}]},
+    options:{scales:{y:{min:0,max:100}}}
+  });
+
+  charts.pie=new Chart(pieChart,{type:"pie",
+    data:{labels:["Academic","Behaviour","Socio","Final"],
+    datasets:[{data:[a,b,c,f]}]}
+  });
+
+  charts.line=new Chart(lineChart,{type:"line",
+    data:{labels:years,datasets:[{data:avgs,fill:true,tension:.3}]},
+    options:{scales:{y:{min:0,max:100}}}
+  });
+
+  charts.doughnut=new Chart(doughnutChart,{type:"doughnut",
+    data:{labels:["Academic","Behaviour","Socio","Final"],
+    datasets:[{data:[a,b,c,f]}]}
+  });
+}
+
+window.loadStudent=async()=>{
+  const adm=studentId.value.trim();
+  if(!adm) return alert("Enter Admission Number");
+
+  const q=query(collection(db,"students"),where("studentId","==",adm));
+  const snap=await getDocs(q);
+  if(snap.empty) return alert("Student not found");
+
+  const d=snap.docs[0], s=d.data();
+  studentName.innerText=s.studentName;
+  studentClass.innerText=s.grade;
+  studentSchool.innerText=s.school||"-";
+
+  let years=[],avgs=[];
+  const acad=await getDocs(collection(db,"students",d.id,"academics"));
+  acad.forEach(x=>{
+    years.push(x.data().year);
+    avgs.push(safe(x.data().average));
+  });
+  const avg=avgs.at(-1)||0;
+
+  let beh=0,ass=0;
+  const b=await getDoc(doc(db,"students",d.id,"behavioral","record"));
+  if(b.exists()) beh=safe(b.data().riskPercent);
+  const a=await getDoc(doc(db,"students",d.id,"assessment","record"));
+  if(a.exists()) ass=safe(a.data().riskPercent);
+
+  const acadRisk=100-avg;
+  const final=+(acadRisk*.4+beh*.3+ass*.3).toFixed(1);
+
+  setCard("academicCard",avg+"% Avg",avg<50?"red":avg<65?"yellow":"green");
+  setCard("behaviourCard",beh+"% Risk",beh<45?"green":beh<60?"yellow":"red");
+  setCard("assessmentCard",ass+"% Risk",ass<45?"green":ass<60?"yellow":"red");
+  setCard("finalCard",final+"% Overall",final<35?"green":final<60?"yellow":"red");
+
+  drawCharts(acadRisk,beh,ass,final,years,avgs);
+  predictOutcome(final,s.grade);
+};
+
+/* 🔮 CBC STRICT PREDICTION WITH AI COMMENT */
+function predictOutcome(risk,cls){
+  predictionCard.style.display="block";
+
+  const yearNow=new Date().getFullYear();
+  const term=Math.ceil((new Date().getMonth()+1)/4);
+  const g=parseInt(cls.match(/\d+/)?.[0]||0);
+
+  let finalGrade=0,level="";
+  if(/grade/i.test(cls)&&g>=7&&g<=9){finalGrade=9;level="Junior School";}
+  else if(/grade/i.test(cls)&&g>=10&&g<=12){finalGrade=12;level="Senior School";}
+  else if(/form/i.test(cls)&&g>=1&&g<=4){finalGrade=4;level="Secondary";}
+  else{
+    predTitle.innerText="INVALID LEVEL";
+    predExplain.innerText="Only Junior, Senior and Secondary supported.";
+    return;
+  }
+
+  const horizon=risk<=30?4:risk<=55?2:1;
+  const dropoutYear=yearNow+horizon;
+  const completionYear=yearNow+(finalGrade-g);
+
+  const willComplete=dropoutYear>=completionYear;
+  const classAtDropout=/form/i.test(cls)
+    ?`Form ${Math.min(g+horizon,4)}`
+    :`Grade ${Math.min(g+horizon,finalGrade)}`;
+
+  predTitle.innerText=willComplete
+    ?"🎓 SUCCESSFUL COMPLETION"
+    :"⚠️ DROP-OUT RISK";
+
+  predMeta.innerText=
+`Level: ${level}
+Predicted Dropout: Term ${term}, ${dropoutYear}
+Class at Dropout: ${willComplete?"School already completed":classAtDropout}`;
+
+  completionTag.innerText=willComplete
+    ?"WILL COMPLETE SUCCESSFULLY"
+    :"NOT COMPLETE SUCCESSFULLY";
+  completionTag.className="confidence "+(willComplete?"low":"high");
+
+  dropoutTag.innerText=willComplete?"Dropout Unlikely":"Dropout Likely";
+  dropoutTag.className="confidence "+(willComplete?"low":"high");
+
+  /* 🧠 AI COMMENT */
+  if(willComplete){
+    predExplain.innerText=
+      "School already completed before the predicted dropout window.";
+  }else{
+    predExplain.innerText=
+`AI Analysis:
+The learner will still be enrolled in ${classAtDropout} during the predicted dropout period.
+
+Given the ${risk}% risk level, targeted academic support, behavioural monitoring and socioeconomic intervention are strongly recommended to ensure retention and successful completion.`;
+  }
+}
+</script>
+
+</body>
+</html>

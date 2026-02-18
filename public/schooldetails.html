@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>School Details - NEWIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  display:flex;
+  justify-content:center;
+  padding-top:20px;
+  min-height:100vh;
+}
+.container{
+  background:rgba(255,255,255,0.1);
+  padding:30px;
+  border-radius:20px;
+  width:700px;
+  backdrop-filter:blur(15px);
+}
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:10px;
+}
+button{font-weight:bold;cursor:pointer;}
+.btn-back{background:#ff416c;}
+.btn-search{background:#ffc107;color:black;}
+.btn-create{background:#00c6ff;}
+.btn-update{background:#28a745;}
+.btn-delete{background:#dc3545;}
+.btn-clear{background:#6c757d;}
+.item-list{display:flex;flex-wrap:wrap;gap:6px;}
+.item{
+  background:rgba(0,0,0,.4);
+  padding:5px 10px;
+  border-radius:12px;
+}
+.item button{
+  margin-left:6px;
+  background:red;
+  color:white;
+  border-radius:50%;
+}
+.success{text-align:center;color:#00ff99;margin-top:10px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<button class="btn-back" onclick="location.href='register.html'">⬅ Back</button>
+
+<h2>Register School Details</h2>
+
+<input id="searchName" placeholder="Search School by Name">
+<button class="btn-search" onclick="searchSchool()">🔍 Search</button>
+
+<hr>
+
+<input id="schoolName" placeholder="School Name">
+
+<select id="schoolLevel">
+  <option value="">Select Level</option>
+  <option>Pre-primary</option>
+  <option>Lower Primary</option>
+  <option>Upper Primary</option>
+  <option>Junior Secondary</option>
+  <option>Senior Secondary</option>
+  <option>College / TVET</option>
+</select>
+
+<input list="countiesList" id="schoolCounty" placeholder="County">
+<datalist id="countiesList"></datalist>
+
+<input list="subcountiesList" id="schoolSubcounty" placeholder="Sub-county">
+<datalist id="subcountiesList"></datalist>
+
+<input id="schoolPhone" placeholder="Phone Number">
+
+<input id="classInput" placeholder="Enter Class and press Enter">
+<div id="classesList" class="item-list"></div>
+
+<input id="streamInput" placeholder="Enter Stream and press Enter">
+<div id="streamsList" class="item-list"></div>
+
+<button class="btn-create" onclick="createSchool()">Register School</button>
+<button class="btn-update" onclick="updateSchool()">Update School</button>
+<button class="btn-delete" onclick="deleteSchool()">Delete School</button>
+<button class="btn-clear" onclick="clearForm()">Clear Form</button>
+
+<div id="message" class="success"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* FIREBASE */
+const app = initializeApp({
+  apiKey: "AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain: "newis-96304.firebaseapp.com",
+  projectId: "newis-96304"
+});
+const db = getFirestore(app);
+
+/* STATE */
+let currentSchoolId=null;
+let classes=[], streams=[];
+
+/* SAFE NORMALIZED ID */
+function makeSchoolId(name){
+  return "SCHOOL_" + name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g,"")
+    .replace(/\s+/g,"_");
+}
+
+/* CLEAR FORM */
+window.clearForm = ()=>{
+  currentSchoolId=null;
+  classes=[]; streams=[];
+  searchName.value="";
+  schoolName.value="";
+  schoolLevel.value="";
+  schoolCounty.value="";
+  schoolSubcounty.value="";
+  schoolPhone.value="";
+  classInput.value="";
+  streamInput.value="";
+  classesList.innerHTML="";
+  streamsList.innerHTML="";
+  subcountiesList.innerHTML="";
+  message.innerText="Form cleared";
+};
+
+/* RENDER CLASSES / STREAMS */
+function render(arr,box){
+  box.innerHTML="";
+  arr.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="item";
+    d.textContent=v;
+    const b=document.createElement("button");
+    b.textContent="×";
+    b.onclick=()=>{arr.splice(i,1);render(arr,box);}
+    d.appendChild(b);
+    box.appendChild(d);
+  });
+}
+
+classInput.onkeydown=e=>{
+  if(e.key==="Enter" && classInput.value){
+    classes.push(classInput.value.trim());
+    render(classes,classesList);
+    classInput.value="";
+  }
+};
+streamInput.onkeydown=e=>{
+  if(e.key==="Enter" && streamInput.value){
+    streams.push(streamInput.value.trim());
+    render(streams,streamsList);
+    streamInput.value="";
+  }
+};
+
+/* SEARCH SCHOOL */
+window.searchSchool = async ()=>{
+  if(!searchName.value) return alert("Enter school name");
+  const id = makeSchoolId(searchName.value);
+  const snap = await getDoc(doc(db,"schools",id));
+  if(!snap.exists()) return alert("School not found");
+
+  const d=snap.data();
+  currentSchoolId=id;
+
+  schoolName.value=d.name;
+  schoolLevel.value=d.level;
+  schoolCounty.value=d.county;
+  loadSubcounties();
+  schoolSubcounty.value=d.subcounty;
+  schoolPhone.value=d.phone||"";
+  classes=d.classes||[];
+  streams=d.streams||[];
+  render(classes,classesList);
+  render(streams,streamsList);
+
+  message.innerText="School loaded";
+};
+
+/* CREATE SCHOOL */
+window.createSchool = async ()=>{
+  if(!schoolName.value) return alert("Enter school name");
+  const id = makeSchoolId(schoolName.value);
+  currentSchoolId=id;
+
+  await setDoc(doc(db,"schools",id),{
+    name:schoolName.value,
+    level:schoolLevel.value,
+    county:schoolCounty.value,
+    subcounty:schoolSubcounty.value,
+    phone:schoolPhone.value,
+    classes,
+    streams,
+    createdAt:serverTimestamp()
+  });
+
+  message.innerText="School registered";
+  clearForm();
+};
+
+/* UPDATE SCHOOL */
+window.updateSchool = async ()=>{
+  if(!currentSchoolId) return alert("Search first");
+  await updateDoc(doc(db,"schools",currentSchoolId),{
+    name:schoolName.value,
+    level:schoolLevel.value,
+    county:schoolCounty.value,
+    subcounty:schoolSubcounty.value,
+    phone:schoolPhone.value,
+    classes,
+    streams,
+    updatedAt:serverTimestamp()
+  });
+  message.innerText="School updated";
+};
+
+/* DELETE SCHOOL */
+window.deleteSchool = async ()=>{
+  if(!currentSchoolId) return alert("Search first");
+  if(!confirm("Delete permanently?")) return;
+  await deleteDoc(doc(db,"schools",currentSchoolId));
+  message.innerText="School deleted";
+  clearForm();
+};
+
+/* COUNTIES & SUBCOUNTIES */
+const counties={
+  "Mombasa":["Changamwe","Jomvu","Kisauni","Likoni","Mvita","Nyali"],
+  "Kwale":["Kinango","Lunga Lunga","Msambweni","Matuga"],
+  "Kilifi":["Ganze","Kaloleni","Kilifi North","Kilifi South","Magarini","Malindi","Rabai"],
+  "Tana River":["Bura","Galole","Garsen"],
+  "Lamu":["Lamu East","Lamu West"],
+  "Taita Taveta":["Mwatate","Voi","Taveta","Wundanyi"],
+  "Garissa":["Balambala","Dadaab","Fafi","Garissa Township","Hulugho","Ijara","Lagdera"],
+  "Wajir":["Eldas","Tarbaj","Wajir East","Wajir North","Wajir South","Wajir West"],
+  "Mandera":["Banissa","Lafey","Mandera East","Mandera North","Mandera South","Mandera West"],
+  "Marsabit":["Laisamis","Moyale","North Horr","Saku"],
+  "Isiolo":["Isiolo North","Isiolo South"],
+  "Meru":["Buuri","Igembe Central","Igembe North","Igembe South","Imenti Central","Imenti North","Imenti South","Tigania East","Tigania West"],
+  "Tharaka Nithi":["Chuka/Igambang’ombe","Maara","Tharaka"],
+  "Embu":["Manyatta","Mbeere North","Mbeere South","Runyenjes"],
+  "Kitui":["Kitui Central","Kitui East","Kitui Rural","Kitui South","Kitui West","Mwingi Central","Mwingi North","Mwingi West"],
+  "Machakos":["Kathiani","Machakos Town","Masinga","Matungulu","Mavoko","Mwala","Yatta"],
+  "Makueni":["Kaiti","Kibwezi East","Kibwezi West","Kilome","Makueni","Mbooni"],
+  "Nairobi":["Dagoretti North","Dagoretti South","Embakasi Central","Embakasi East","Embakasi North","Embakasi South","Embakasi West","Kamukunji","Kasarani","Kibra","Langata","Makadara","Mathare","Roysambu","Ruaraka","Starehe","Westlands"]
+};
+
+Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
+
+function loadSubcounties(){
+  subcountiesList.innerHTML="";
+  (counties[schoolCounty.value]||[]).forEach(sc=>{
+    subcountiesList.appendChild(new Option(sc,sc));
+  });
+}
+schoolCounty.oninput=loadSubcounties;
+</script>
+</body>
+</html>

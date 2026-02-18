@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEWIS – AI Interventions</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+.container{
+  max-width:1200px;
+  margin:30px auto;
+  padding:30px;
+  background:rgba(255,255,255,.1);
+  border-radius:24px;
+}
+input,button{
+  padding:8px 14px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+}
+button{cursor:pointer}
+.card{
+  background:rgba(255,255,255,.15);
+  padding:18px;
+  border-radius:16px;
+  margin:15px 0;
+}
+.badge{
+  display:inline-block;
+  padding:6px 14px;
+  border-radius:18px;
+  margin:4px;
+  background:rgba(255,255,255,.25);
+}
+.obsolete{
+  opacity:.45;
+  text-decoration:line-through;
+}
+h3{margin-top:0}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>🇰🇪 NEWIS – AI Intervention Analysis</h2>
+
+<input id="adm" placeholder="Admission Number">
+<button onclick="loadStudent()">Analyze</button>
+<button onclick="location.href='riskprediction.html'">⬅ Back</button>
+<button onclick="location.href='index.html'">🏠 Home</button>
+
+<div id="info" class="card"></div>
+
+<div class="card">
+  <h3>📘 Current Academic Context</h3>
+  <div id="context"></div>
+</div>
+
+<div class="card">
+  <h3>📊 Risk Scores</h3>
+  <div id="risks"></div>
+</div>
+
+<div class="card">
+  <h3>📘 Academic Interventions (Kenyan Context)</h3>
+  <div id="academicInt"></div>
+</div>
+
+<div class="card">
+  <h3>🧠 Behavioural Interventions</h3>
+  <div id="behaviourInt"></div>
+</div>
+
+<div class="card">
+  <h3>👥 Social & Family Interventions</h3>
+  <div id="socialInt"></div>
+</div>
+
+<div class="card">
+  <h3>⭐ Holistic School-Based Recommendations</h3>
+  <div id="overallInt"></div>
+</div>
+
+<div class="card">
+  <h3>🗑 Obsolete / Low Priority Interventions</h3>
+  <div id="obsoleteInt"></div>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore, collection, query, where,
+  getDocs, getDoc, doc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* 🔹 FIREBASE CONFIG */
+const app = initializeApp({
+  apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
+  authDomain:"newis-96304.firebaseapp.com",
+  projectId:"newis-96304"
+});
+const db = getFirestore(app);
+
+const safe = v => Math.max(0, Math.min(100, Number(v)||0));
+
+async function getAcademicRisk(id){
+  const snap = await getDocs(collection(db,"students",id,"academics"));
+  if(snap.empty) return 50;
+
+  const recs = snap.docs.map(d=>d.data());
+  recs.sort((a,b)=>(b.year||0)-(a.year||0));
+  return safe(100 - (recs[0].average || 50));
+}
+
+window.loadStudent = async()=>{
+  const admNo = document.getElementById("adm").value.trim();
+  if(!admNo) return alert("Enter Admission Number");
+
+  const q = query(collection(db,"students"),where("studentId","==",admNo));
+  const snap = await getDocs(q);
+  if(snap.empty) return alert("Student not found");
+
+  const d = snap.docs[0];
+  const s = d.data();
+
+  const academic = await getAcademicRisk(d.id);
+
+  let behaviour=40, social=40;
+
+  const b = await getDoc(doc(db,"students",d.id,"behavioral","record"));
+  if(b.exists()) behaviour = safe(b.data().riskPercent);
+
+  const a = await getDoc(doc(db,"students",d.id,"assessment","record"));
+  if(a.exists()) social = safe(a.data().riskPercent);
+
+  const overall = safe(
+    academic*0.4 + behaviour*0.3 + social*0.3
+  );
+
+  document.getElementById("info").innerHTML=`
+    <b>Name:</b> ${s.studentName}<br>
+    <b>Admission No:</b> ${s.studentId}<br>
+    <b>School:</b> ${s.school||"-"}
+  `;
+
+  const currentTerm = s.currentTerm || "Term 1";
+  const currentClass = s.grade || "Not Assigned";
+
+  document.getElementById("context").innerHTML=`
+    <span class="badge">Current Term: ${currentTerm}</span>
+    <span class="badge">Current Class: ${currentClass}</span>
+  `;
+
+  document.getElementById("risks").innerHTML=`
+    <span class="badge">Academic ${academic}%</span>
+    <span class="badge">Behaviour ${behaviour}%</span>
+    <span class="badge">Social ${social}%</span>
+    <span class="badge"><b>Overall ${overall}%</b></span>
+  `;
+
+  generateInterventions({academic,behaviour,social,overall});
+};
+
+/* 🇰🇪 AI ENGINE - Kenyan Context */
+function generateInterventions(r){
+
+  const academic=[], behaviour=[], social=[], overallRec=[], obsolete=[];
+
+  /* ACADEMIC */
+  if(r.academic>=60){
+    academic.push(
+      "CBC competency remediation support",
+      "After-school remedial lessons supervised by subject teacher",
+      "Class teacher and parent academic review meeting",
+      "Structured holiday tuition program"
+    );
+  }else{
+    academic.push(
+      "Continuous assessment monitoring (CAT follow-up)",
+      "Peer study group participation",
+      "Homework supervision tracking"
+    );
+    obsolete.push("Excessive punishment for low grades");
+  }
+
+  /* BEHAVIOURAL */
+  if(r.behaviour>=50){
+    behaviour.push(
+      "Guidance & Counselling department intervention",
+      "Behaviour contract signed by student and parent",
+      "Positive discipline framework monitoring",
+      "Referral to Deputy Principal for structured support"
+    );
+  }else{
+    behaviour.push(
+      "Student leadership engagement (club or prefect role)",
+      "Mentorship under senior teacher"
+    );
+    obsolete.push("Corporal punishment approach");
+  }
+
+  /* SOCIAL */
+  if(r.social>=50){
+    social.push(
+      "Parent/Guardian home visit",
+      "Referral to school social support committee",
+      "Bursary or financial assistance review",
+      "Community-based mentorship (church/youth leader)"
+    );
+  }else{
+    social.push(
+      "Life skills education session",
+      "Peer support program participation"
+    );
+    obsolete.push("Ignoring minor absenteeism patterns");
+  }
+
+  /* HOLISTIC */
+  overallRec.push(
+    "Student Support Team (SST) review meeting",
+    "Board of Management (BOM) welfare oversight if required",
+    "Termly risk reassessment using NEWIS AI",
+    "Comprehensive learner progress documentation"
+  );
+
+  /* RENDER */
+  document.getElementById("academicInt").innerHTML =
+    academic.map(i=>`<span class="badge">${i}</span>`).join("");
+
+  document.getElementById("behaviourInt").innerHTML =
+    behaviour.map(i=>`<span class="badge">${i}</span>`).join("");
+
+  document.getElementById("socialInt").innerHTML =
+    social.map(i=>`<span class="badge">${i}</span>`).join("");
+
+  document.getElementById("overallInt").innerHTML =
+    overallRec.map(i=>`<span class="badge">${i}</span>`).join("");
+
+  document.getElementById("obsoleteInt").innerHTML =
+    obsolete.map(i=>`<span class="badge obsolete">${i}</span>`).join("");
+}
+</script>
+</body>
+</html>
