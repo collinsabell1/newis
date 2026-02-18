@@ -5,6 +5,9 @@
 <title>Student Registration - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- FACE API -->
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+
 <style>
 body{
 margin:0;
@@ -46,7 +49,6 @@ color:#00ff99;
 margin-top:10px;
 }
 
-/* floating buttons */
 .floating-actions{
 position:fixed;
 top:20px;
@@ -85,9 +87,9 @@ display:none;
 }
 
 #preview{
-width:120px;
+width:140px;
 margin-top:10px;
-border-radius:10px;
+border-radius:12px;
 display:none;
 }
 </style>
@@ -118,7 +120,6 @@ display:none;
 <select id="streamSelect"><option value="">Select Stream</option></select>
 
 <label>Student Photo</label>
-
 <input type="file" id="photoUpload" accept="image/*">
 
 <button class="btn-cam" onclick="startCamera()">📷 Take Live Photo</button>
@@ -132,7 +133,6 @@ display:none;
 <button class="btn-update" onclick="updateStudent()">Update Student</button>
 
 <hr>
-
 <h3>Live Student List</h3>
 <div id="liveList"></div>
 
@@ -142,10 +142,13 @@ display:none;
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabase = createClient(
+const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
 "YOUR_API_KEY"
 );
+
+/* LOAD FACE MODEL */
+await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
 
 /* ELEMENTS */
 const schoolSelect=document.getElementById("schoolSelect");
@@ -168,7 +171,7 @@ let currentStudentId=null;
 let cameraStream=null;
 let capturedBlob=null;
 
-/* AGE CALC */
+/* AGE */
 dateOfBirth.onchange=()=>{
 const birth=new Date(dateOfBirth.value);
 const today=new Date();
@@ -192,16 +195,14 @@ loadSchools();
 schoolSelect.onchange=()=>{
 gradeSelect.innerHTML="<option>Select Class</option>";
 streamSelect.innerHTML="<option>Select Stream</option>";
-
 const s=schoolsMap[schoolSelect.value];
 if(!s) return;
-
 levelDisplay.value=s.level||"";
 (s.classes||[]).forEach(c=>gradeSelect.add(new Option(c,c)));
 (s.streams||[]).forEach(st=>streamSelect.add(new Option(st,st)));
 };
 
-/* SEARCH STUDENT */
+/* SEARCH */
 window.searchStudent=async()=>{
 if(!studentId.value) return alert("Enter admission number");
 
@@ -243,6 +244,7 @@ const ctx=canvas.getContext("2d");
 canvas.width=video.videoWidth;
 canvas.height=video.videoHeight;
 ctx.drawImage(video,0,0);
+
 canvas.toBlob(blob=>{
 capturedBlob=blob;
 preview.src=URL.createObjectURL(blob);
@@ -250,30 +252,71 @@ preview.style.display="block";
 });
 };
 
-/* UPLOAD PHOTO */
+/* AI FACE CROP */
+async function optimizeImage(file){
+
+return new Promise(resolve=>{
+const img=new Image();
+img.onload=async()=>{
+
+const detection=await faceapi.detectSingleFace(img,new faceapi.TinyFaceDetectorOptions());
+
+let sx,sy,size;
+
+if(detection){
+const box=detection.box;
+size=Math.max(box.width,box.height)*1.6;
+sx=box.x+box.width/2-size/2;
+sy=box.y+box.height/2-size/2;
+
+sx=Math.max(0,sx);
+sy=Math.max(0,sy);
+size=Math.min(size,img.width-sx,img.height-sy);
+}else{
+size=Math.min(img.width,img.height);
+sx=(img.width-size)/2;
+sy=(img.height-size)/2;
+}
+
+const out=500;
+const c=document.createElement("canvas");
+c.width=out;
+c.height=out;
+
+const ctx=c.getContext("2d");
+ctx.drawImage(img,sx,sy,size,size,0,0,out,out);
+
+c.toBlob(blob=>resolve(blob),"image/jpeg",0.7);
+};
+img.src=URL.createObjectURL(file);
+});
+}
+
+/* UPLOAD */
 async function uploadPhoto(id){
-let file=photoUpload.files[0] || capturedBlob;
+
+let file=photoUpload.files[0]||capturedBlob;
 if(!file) return null;
 
+const optimized=await optimizeImage(file);
 const path=`students/${id}_${Date.now()}.jpg`;
-await supabase.storage.from("photos").upload(path,file);
+
+await supabase.storage.from("photos").upload(path,optimized);
 const {data}=supabase.storage.from("photos").getPublicUrl(path);
 return data.publicUrl;
 }
 
-/* VALID ID */
+/* VALID */
 function validId(id){
 return /^[A-Za-z0-9\-]{3,20}$/.test(id);
 }
 
 /* REGISTER */
 window.registerStudent=async()=>{
-
-if(!validId(studentId.value))
-return alert("Invalid ID format");
+if(!validId(studentId.value)) return alert("Invalid ID");
 
 if(!studentId.value||!studentName.value||!schoolSelect.value||!gradeSelect.value)
-return alert("Fill required fields");
+return alert("Fill required");
 
 const {data:exists}=await supabase
 .from("students")
@@ -281,7 +324,7 @@ const {data:exists}=await supabase
 .eq("studentId",studentId.value)
 .limit(1);
 
-if(exists.length) return alert("Student already exists");
+if(exists.length) return alert("Student exists");
 
 const photo=await uploadPhoto(studentId.value);
 
@@ -303,7 +346,6 @@ message.innerText="✔ Student Registered";
 
 /* UPDATE */
 window.updateStudent=async()=>{
-
 if(!currentStudentId) return alert("Search student first");
 
 let photo=await uploadPhoto(currentStudentId);
@@ -328,7 +370,7 @@ await supabase
 message.innerText="✔ Student Updated";
 };
 
-/* REALTIME LIST */
+/* REALTIME */
 supabase
 .channel("students")
 .on("postgres_changes",{event:"INSERT",schema:"public",table:"students"},
@@ -338,7 +380,7 @@ liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
 })
 .subscribe();
 
-/* LOAD EXISTING */
+/* LOAD */
 async function loadStudents(){
 const {data}=await supabase.from("students").select("*").limit(20);
 data.forEach(s=>{
