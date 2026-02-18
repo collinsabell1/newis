@@ -5,9 +5,6 @@
 <title>Student Registration - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
-
 <style>
 body{
 margin:0;
@@ -41,6 +38,7 @@ button{font-weight:bold;cursor:pointer;}
 .btn-create{background:#00c6ff;}
 .btn-search{background:#ffc107;color:black;}
 .btn-update{background:#28a745;}
+.btn-cam{background:#ff9800;}
 
 .success{
 text-align:center;
@@ -70,18 +68,27 @@ animation:gradientMove 6s ease infinite;
 box-shadow:0 8px 20px rgba(0,0,0,0.35);
 }
 
-.btn-home{
-background-image:linear-gradient(45deg,#ff416c,#ff4b2b,#ff6a00);
-}
-
-.btn-school{
-background-image:linear-gradient(45deg,#00c6ff,#0072ff,#00ffcc);
-}
+.btn-home{background-image:linear-gradient(45deg,#ff416c,#ff4b2b,#ff6a00);}
+.btn-school{background-image:linear-gradient(45deg,#00c6ff,#0072ff,#00ffcc);}
 
 @keyframes gradientMove{
 0%{background-position:0% 50%;}
 50%{background-position:100% 50%;}
 100%{background-position:0% 50%;}
+}
+
+#video{
+width:100%;
+border-radius:10px;
+margin-top:10px;
+display:none;
+}
+
+#preview{
+width:120px;
+margin-top:10px;
+border-radius:10px;
+display:none;
 }
 </style>
 </head>
@@ -111,15 +118,18 @@ background-image:linear-gradient(45deg,#00c6ff,#0072ff,#00ffcc);
 <select id="streamSelect"><option value="">Select Stream</option></select>
 
 <label>Student Photo</label>
-<input type="file" id="photoInput" accept="image/*">
+
+<input type="file" id="photoUpload" accept="image/*">
+
+<button class="btn-cam" onclick="startCamera()">📷 Take Live Photo</button>
+<button class="btn-cam" onclick="capturePhoto()">📸 Capture</button>
+
+<video id="video" autoplay></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<img id="preview">
 
 <button class="btn-create" onclick="registerStudent()">Register Student</button>
 <button class="btn-update" onclick="updateStudent()">Update Student</button>
-
-<hr>
-
-<h3>Scan QR Admission</h3>
-<div id="reader" style="width:100%"></div>
 
 <hr>
 
@@ -146,12 +156,17 @@ const studentId=document.getElementById("studentId");
 const studentName=document.getElementById("studentName");
 const dateOfBirth=document.getElementById("dateOfBirth");
 const ageField=document.getElementById("age");
-const photoInput=document.getElementById("photoInput");
+const photoUpload=document.getElementById("photoUpload");
+const preview=document.getElementById("preview");
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
 const message=document.getElementById("message");
 const liveList=document.getElementById("liveList");
 
 let schoolsMap={};
 let currentStudentId=null;
+let cameraStream=null;
+let capturedBlob=null;
 
 /* AGE CALC */
 dateOfBirth.onchange=()=>{
@@ -208,23 +223,47 @@ schoolSelect.onchange();
 gradeSelect.value=data.grade||"";
 streamSelect.value=data.stream||"";
 
+if(data.photo){
+preview.src=data.photo;
+preview.style.display="block";
+}
+
 message.innerText="Student loaded";
 };
 
-/* ID VALIDATION */
-function validId(id){
-return /^[A-Za-z0-9\-]{3,20}$/.test(id);
-}
+/* CAMERA */
+window.startCamera=async()=>{
+cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
+video.srcObject=cameraStream;
+video.style.display="block";
+};
 
-/* PHOTO UPLOAD */
+window.capturePhoto=()=>{
+const ctx=canvas.getContext("2d");
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+ctx.drawImage(video,0,0);
+canvas.toBlob(blob=>{
+capturedBlob=blob;
+preview.src=URL.createObjectURL(blob);
+preview.style.display="block";
+});
+};
+
+/* UPLOAD PHOTO */
 async function uploadPhoto(id){
-const file=photoInput.files[0];
+let file=photoUpload.files[0] || capturedBlob;
 if(!file) return null;
 
-const path=`students/${id}_${Date.now()}`;
+const path=`students/${id}_${Date.now()}.jpg`;
 await supabase.storage.from("photos").upload(path,file);
 const {data}=supabase.storage.from("photos").getPublicUrl(path);
 return data.publicUrl;
+}
+
+/* VALID ID */
+function validId(id){
+return /^[A-Za-z0-9\-]{3,20}$/.test(id);
 }
 
 /* REGISTER */
@@ -244,9 +283,7 @@ const {data:exists}=await supabase
 
 if(exists.length) return alert("Student already exists");
 
-let photo="";
-if(photoInput.files.length)
-photo=await uploadPhoto(studentId.value);
+const photo=await uploadPhoto(studentId.value);
 
 await supabase.from("students").insert([{
 studentId:studentId.value,
@@ -269,9 +306,7 @@ window.updateStudent=async()=>{
 
 if(!currentStudentId) return alert("Search student first");
 
-let photo=null;
-if(photoInput.files.length)
-photo=await uploadPhoto(currentStudentId);
+let photo=await uploadPhoto(currentStudentId);
 
 const updateData={
 studentName:studentName.value,
@@ -302,10 +337,6 @@ const s=payload.new;
 liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
 })
 .subscribe();
-
-/* QR SCANNER */
-const scanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
-scanner.render(text=>{studentId.value=text});
 
 /* LOAD EXISTING */
 async function loadStudents(){
