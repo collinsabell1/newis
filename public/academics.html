@@ -92,9 +92,9 @@ button{
 <input id="recordDate" readonly>
 
 <h3>Termly Average Scores</h3>
-<input type="number" id="term1" placeholder="Term 1 Average" max="100">
-<input type="number" id="term2" placeholder="Term 2 Average" max="100">
-<input type="number" id="term3" placeholder="Term 3 Average" max="100">
+<input type="number" id="term1" placeholder="Term 1 Average">
+<input type="number" id="term2" placeholder="Term 2 Average">
+<input type="number" id="term3" placeholder="Term 3 Average">
 
 <div style="text-align:center;">
 <button class="btn-add" onclick="addNew()">Add New</button>
@@ -116,12 +116,13 @@ button{
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// Initialize Supabase
+// Initialize the Supabase client
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
-  "YOUR_SUPABASE_ANON_KEY"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
+// ELEMENTS
 const studentId = document.getElementById("studentId");
 const studentName = document.getElementById("studentName");
 const school = document.getElementById("school");
@@ -137,14 +138,16 @@ const term3 = document.getElementById("term3");
 const circle = document.getElementById("averageCircle");
 
 let studentRowId = null;
+
+// DEFAULT YEAR
 year.value = new Date().getFullYear();
 
-// FIND STUDENT
+// FIND STUDENT WHEN ID ENTERED
 studentId.addEventListener("change", async () => {
   const { data, error } = await supabase
     .from("students")
     .select("*")
-    .eq("studentid", studentId.value)
+    .eq("studentid", studentId.value) // changed 'studentId' to 'studentid'
     .single();
 
   if (error || !data) return alert("Student not found");
@@ -158,14 +161,14 @@ studentId.addEventListener("change", async () => {
   parentName.value = data.parentname || "";
 });
 
-// CALCULATE AVERAGE
+// CALCULATE
 function calculate() {
   const t1 = +term1.value || 0;
   const t2 = +term2.value || 0;
   const t3 = +term3.value || 0;
   const avg = Math.round((t1 + t2 + t3) / 3);
   circle.innerText = avg + "%";
-  circle.style.background = `conic-gradient(#00ff99 ${avg*3.6}deg,#333 0deg)`;
+  circle.style.background = `conic-gradient(#00ff99 ${avg * 3.6}deg,#333 0deg)`;
   return avg;
 }
 
@@ -191,14 +194,7 @@ window.saveAcademic = async () => {
 
   const avg = calculate();
 
-  // Check total records <= 100
-  const { data: totalData } = await supabase
-    .from("academics")
-    .select("id", { count: "exact" });
-
-  if (totalData.length >= 100) return alert("Maximum 100 records reached!");
-
-  const { data: existing } = await supabase
+  const { data: existing, error } = await supabase
     .from("academics")
     .select("*")
     .eq("student_id", studentRowId)
@@ -209,7 +205,7 @@ window.saveAcademic = async () => {
     return updateAcademic();
   }
 
-  const { data, error } = await supabase
+  const { error: insertError } = await supabase
     .from("academics")
     .insert([{
       student_id: studentRowId,
@@ -217,15 +213,13 @@ window.saveAcademic = async () => {
       term1: +term1.value || 0,
       term2: +term2.value || 0,
       term3: +term3.value || 0,
-      average: avg
-    }])
-    .select()
-    .single();
+      average: avg,
+      record_date: new Date().toLocaleString()
+    }]);
 
-  if (error) return alert("Error saving: " + error.message);
-
-  // Show timestamp from DB
-  recordDate.value = new Date(data.record_date).toLocaleString();
+  if (insertError) {
+    return alert("Error saving data: " + insertError.message);
+  }
 
   alert("Saved ✔");
 }
@@ -234,26 +228,25 @@ window.saveAcademic = async () => {
 window.updateAcademic = async () => {
   if (!studentRowId) return alert("Enter student");
 
-  const avg = calculate();
-
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("academics")
     .update({
       term1: +term1.value || 0,
       term2: +term2.value || 0,
       term3: +term3.value || 0,
-      average: avg
+      average: calculate(),
+      record_date: new Date().toLocaleString()
     })
     .eq("student_id", studentRowId)
-    .eq("year", year.value)
-    .select()
-    .single();
+    .eq("year", year.value);
 
-  if (error) return alert("Error updating: " + error.message);
+  if (error) {
+    return alert("Error updating data: " + error.message);
+  }
 
-  recordDate.value = new Date(data.record_date).toLocaleString();
   alert("Updated ✔");
 }
 </script>
+
 </body>
 </html>
