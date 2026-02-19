@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socioeconomic Risk Assessment - NEWIS</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  margin:0;
+  color:#fff;
+}
+.container{
+  max-width:800px;
+  margin:20px auto;
+  padding:20px;
+  background: rgba(255,255,255,0.08);
+  border-radius:15px;
+  backdrop-filter: blur(15px);
+  box-shadow:0 0 40px rgba(0,0,0,0.5);
+}
+h1,h2{text-align:center;margin-bottom:20px;}
+.grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:20px;
+}
+.section{
+  background:#f4f6fa;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+  color:#000;
+}
+label{display:block;margin:6px 0;}
+input[type="text"]{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+.buttons{
+  margin-top:25px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+  min-width:120px;
+}
+.save{background:#28a745;color:#fff;}
+.update{background:#ffc107;}
+.delete{background:#dc3545;color:#fff;}
+.clear{background:#6c757d;color:#fff;}
+.circle{
+  width:170px;
+  height:170px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:bold;
+  margin:20px auto;
+  color:#fff;
+}
+.green{background:#28a745;}
+.yellow{background:#ffc107;color:black;}
+.red{background:#dc3545;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Socioeconomic Risk Assessment</h1>
+
+<div class="grid">
+
+<div class="section">
+<h3>Student Details</h3>
+<label>Admission Number:</label>
+<input type="text" id="studentId" placeholder="Enter Admission Number">
+<label>Student Name:</label>
+<input type="text" id="studentName">
+<label>Class:</label>
+<input type="text" id="studentClass">
+<button class="view" onclick="fetchStudent()">Fetch Student</button>
+</div>
+
+<div class="section">
+<h3>Socioeconomic Risk Indicators</h3>
+<label><input type="checkbox" class="risk" value="poverty"> Household poverty</label>
+<label><input type="checkbox" class="risk" value="fees"> Unable to pay school fees</label>
+<label><input type="checkbox" class="risk" value="orphan"> Orphan / vulnerable child</label>
+<label><input type="checkbox" class="risk" value="childlabour"> Child labour</label>
+<label><input type="checkbox" class="risk" value="singleparent"> Single parent</label>
+<label><input type="checkbox" class="risk" value="violence"> Domestic/community violence</label>
+<label><input type="checkbox" class="risk" value="largedependents"> Large dependent family</label>
+<label><input type="checkbox" class="risk" value="poorhousing"> Poor housing conditions</label>
+<label><input type="checkbox" class="risk" value="pregnancy"> Early pregnancy</label>
+<label><input type="checkbox" class="risk" value="absenteeism"> Chronic absenteeism</label>
+<label><input type="checkbox" class="risk" value="drought"> Drought / disaster</label>
+<label><input type="checkbox" class="risk" value="distance"> Long distance to school</label>
+</div>
+
+<div class="section">
+<h3>Socioeconomic Risk Level</h3>
+<div id="riskCircle" class="circle green">0%</div>
+<p style="text-align:center;font-weight:bold;" id="riskLevel">Low Risk</p>
+</div>
+
+</div>
+
+<div class="buttons">
+<button class="save" onclick="saveRecord()">Save</button>
+<button class="update" onclick="updateRecord()">Update</button>
+<button class="delete" onclick="deleteRecord()">Delete</button>
+<button class="clear" onclick="clearForm()">Clear</button>
+</div>
+
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+/* SUPABASE CONNECTION */
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
+
+/* ------------------- FETCH STUDENT DATA ------------------- */
+async function fetchStudent(){
+  const id = document.getElementById("studentId").value.trim();
+  if(!id) return;
+  const { data, error } = await supabase
+    .from("students")
+    .select("*")
+    .eq("studentid", id)
+    .single();
+  if(error){
+    alert("Student not found");
+    document.getElementById("studentName").value = "";
+    document.getElementById("studentClass").value = "";
+    return;
+  }
+  document.getElementById("studentName").value = data.studentname || "";
+  document.getElementById("studentClass").value = data.grade || "";
+}
+
+document.getElementById("studentId").addEventListener("blur", fetchStudent);
+
+/* ------------------- RISK CALCULATION ------------------- */
+function calculateRisk(){
+  const checked = [...document.querySelectorAll(".risk:checked")];
+  const factorCount = checked.length;
+
+  let total = 0;
+  if(factorCount > 0){
+    const weightPerFactor = 100 / factorCount;
+    total = weightPerFactor * factorCount; // can adjust scaling if needed
+  }
+
+  const circle = document.getElementById("riskCircle");
+  const level = document.getElementById("riskLevel");
+
+  if(total > 100) total = 100;
+  circle.textContent = Math.round(total) + "%";
+
+  if(total < 45){
+    circle.className = "circle green";
+    level.textContent = "Low Risk";
+  } else if(total <= 55){
+    circle.className = "circle yellow";
+    level.textContent = "Medium Risk";
+  } else {
+    circle.className = "circle red";
+    level.textContent = "High Risk";
+  }
+
+  return Math.round(total);
+}
+
+document.querySelectorAll(".risk").forEach(cb => cb.addEventListener("change", calculateRisk));
+
+/* ------------------- SAVE/UPDATE/DELETE ------------------- */
+window.saveRecord = async () => {
+  const id = studentId.value.trim();
+  if(!
+zzzzz
