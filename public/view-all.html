@@ -116,7 +116,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // Supabase config
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+  "YOUR_SUPABASE_ANON_KEY"
 );
 
 let allData = [];
@@ -138,11 +138,9 @@ async function loadData() {
 
   if (error) return alert("Error loading records: " + error.message);
 
-  // Merge data for display
   allData = academics.map(a => {
-    const student = a.students; // joined table
+    const student = a.students;
     const avg = a.average ?? ((a.term1 + a.term2 + a.term3) / 3);
-
     return {
       ...a,
       adm: student?.studentid || 'N/A',
@@ -156,7 +154,7 @@ async function loadData() {
   renderTable();
 }
 
-// Populate year and class filters
+// Populate filters
 function populateFilters() {
   const yearFilter = document.getElementById('yearFilter');
   const classFilter = document.getElementById('classFilter');
@@ -168,7 +166,7 @@ function populateFilters() {
   classFilter.innerHTML = `<option value="All">All Classes</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
-// Render table
+// Render table with search, filters, and ranking
 function renderTable() {
   const tbody = document.querySelector('#recordsTable tbody');
   const searchValue = document.getElementById('searchInput').value.toLowerCase();
@@ -178,7 +176,7 @@ function renderTable() {
 
   currentFiltered = allData.filter(r => {
     let match = true;
-    if (searchValue) match = r.adm.toLowerCase().includes(searchValue);
+    if (searchValue) match = r.adm.toString().includes(searchValue);
     if (yearValue !== 'All') match = match && r.year == yearValue;
     if (classValue !== 'All') match = match && r.class == classValue;
     if (avgValue !== 'All') {
@@ -189,7 +187,7 @@ function renderTable() {
     return match;
   });
 
-  // Calculate rank per year/class
+  // Calculate rank per year/class (highest first)
   const grouped = {};
   currentFiltered.forEach(r => {
     const key = `${r.year}_${r.class}`;
@@ -198,7 +196,7 @@ function renderTable() {
   });
 
   Object.values(grouped).forEach(group => {
-    group.sort((a, b) => b.avg - a.avg);
+    group.sort((a, b) => b.avg - a.avg); // descending
     group.forEach((r, i) => r.rank = i + 1);
   });
 
@@ -226,7 +224,7 @@ function renderTable() {
   });
 }
 
-// Select All
+// Select All functionality
 document.getElementById('selectAll').addEventListener('change', function() {
   document.querySelectorAll(".rowCheck").forEach(cb => cb.checked = this.checked);
 });
@@ -250,7 +248,7 @@ async function deleteSelected() {
   loadData();
 }
 
-// Download CSV
+// Download CSV helper
 function downloadCSV(rows, filename) {
   let csv = "AdmNo,Name,Class,Year,T1,T2,T3,Average,Rank\n";
   rows.forEach(r => {
@@ -265,7 +263,9 @@ function downloadCSV(rows, filename) {
 
 window.downloadAll = () => downloadCSV(currentFiltered, "All_Academic_Records.csv");
 window.downloadSelected = () => {
-  const sel = [...document.querySelectorAll(".rowCheck")].filter(c => c.checked).map(c => currentFiltered[c.dataset.index]);
+  const sel = [...document.querySelectorAll(".rowCheck")]
+    .filter(c => c.checked)
+    .map(c => currentFiltered[c.dataset.index]);
   if (!sel.length) return alert("Select students first!");
   downloadCSV(sel, "Selected_Records.csv");
 }
@@ -284,9 +284,8 @@ window.printReport = function(data) {
   `);
 };
 
-// Initial load
+// Auto-load data
 loadData();
-
 </script>
 </body>
 </html>
