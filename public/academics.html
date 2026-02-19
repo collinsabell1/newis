@@ -92,9 +92,9 @@ button{
 <input id="recordDate" readonly>
 
 <h3>Termly Average Scores (in %)</h3>
-<input type="number" id="term1" placeholder="Term 1 Average" min="0" max="100">
-<input type="number" id="term2" placeholder="Term 2 Average" min="0" max="100">
-<input type="number" id="term3" placeholder="Term 3 Average" min="0" max="100">
+<input type="number" id="term1" placeholder="Term 1 Average" min="0">
+<input type="number" id="term2" placeholder="Term 2 Average" min="0">
+<input type="number" id="term3" placeholder="Term 3 Average" min="0">
 
 <div style="text-align:center;">
 <button class="btn-add" onclick="addNew()">Add New</button>
@@ -122,7 +122,7 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-// ELEMENTS
+// Elements
 const studentId = document.getElementById("studentId");
 const studentName = document.getElementById("studentName");
 const school = document.getElementById("school");
@@ -140,7 +140,7 @@ const circle = document.getElementById("averageCircle");
 let studentRowId = null;
 year.value = new Date().getFullYear();
 
-// CALCULATE AGE FROM DATE OF BIRTH
+// Calculate age from DOB
 function calculateAge(dob) {
   if (!dob) return "";
   const birth = new Date(dob);
@@ -151,7 +151,17 @@ function calculateAge(dob) {
   return age;
 }
 
-// FIND STUDENT
+// Clear field if >100
+function validateTermInput(e) {
+  if (+e.target.value > 100) e.target.value = "";
+  calculate();
+}
+
+term1.addEventListener("input", validateTermInput);
+term2.addEventListener("input", validateTermInput);
+term3.addEventListener("input", validateTermInput);
+
+// Find student
 studentId.addEventListener("change", async () => {
   const { data, error } = await supabase
     .from("students")
@@ -170,7 +180,7 @@ studentId.addEventListener("change", async () => {
   gender.value = data.gender || "";
   parentName.value = data.parentname || "";
 
-  // Load last academic record if exists
+  // Load last academic record
   const { data: acad } = await supabase
     .from("academics")
     .select("*")
@@ -179,48 +189,45 @@ studentId.addEventListener("change", async () => {
     .single();
 
   if (acad) {
-    term1.value = acad.term1 || 0;
-    term2.value = acad.term2 || 0;
-    term3.value = acad.term3 || 0;
-    calculate();
+    term1.value = acad.term1 || "";
+    term2.value = acad.term2 || "";
+    term3.value = acad.term3 || "";
     recordDate.value = acad.record_date ? new Date(acad.record_date).toLocaleString() : "";
+    calculate();
   } else {
-    recordDate.value = "";
     term1.value = term2.value = term3.value = "";
+    recordDate.value = "";
     calculate();
   }
 });
 
-// CALCULATE AVERAGE
+// Calculate average
 function calculate() {
-  term1.value = Math.min(Math.max(+term1.value || 0, 0), 100);
-  term2.value = Math.min(Math.max(+term2.value || 0, 0), 100);
-  term3.value = Math.min(Math.max(+term3.value || 0, 0), 100);
-
-  const avg = Math.round((+term1.value + +term2.value + +term3.value) / 3);
+  const t1 = +term1.value || 0;
+  const t2 = +term2.value || 0;
+  const t3 = +term3.value || 0;
+  const avg = Math.round((t1 + t2 + t3) / 3);
   circle.innerText = avg + "%";
   circle.style.background = `conic-gradient(#00ff99 ${avg*3.6}deg,#333 0deg)`;
   return avg;
 }
 
-term1.oninput = term2.oninput = term3.oninput = calculate;
-
-// CLEAR
+// Clear fields
 window.clearFields = () => {
   term1.value = term2.value = term3.value = "";
+  recordDate.value = "";
   calculate();
 }
 
-// ADD NEW
+// Add new
 window.addNew = () => {
   studentId.value = "";
   studentRowId = null;
   studentName.value = school.value = grade.value = age.value = gender.value = parentName.value = "";
   clearFields();
-  recordDate.value = "";
 }
 
-// SAVE
+// Save
 window.saveAcademic = async () => {
   if (!studentRowId) return alert("Enter student");
 
@@ -243,9 +250,9 @@ window.saveAcademic = async () => {
     .insert([{
       student_id: studentRowId,
       year: year.value,
-      term1: +term1.value || 0,
-      term2: +term2.value || 0,
-      term3: +term3.value || 0,
+      term1: term1.value ? +term1.value : null,
+      term2: term2.value ? +term2.value : null,
+      term3: term3.value ? +term3.value : null,
       average: avg,
       record_date: now
     }])
@@ -258,7 +265,7 @@ window.saveAcademic = async () => {
   alert("Saved ✔");
 }
 
-// UPDATE
+// Update
 window.updateAcademic = async () => {
   if (!studentRowId) return alert("Enter student");
 
@@ -268,9 +275,9 @@ window.updateAcademic = async () => {
   const { data, error } = await supabase
     .from("academics")
     .update({
-      term1: +term1.value || 0,
-      term2: +term2.value || 0,
-      term3: +term3.value || 0,
+      term1: term1.value ? +term1.value : null,
+      term2: term2.value ? +term2.value : null,
+      term3: term3.value ? +term3.value : null,
       average: avg,
       record_date: now
     })
