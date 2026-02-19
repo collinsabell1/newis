@@ -123,6 +123,7 @@ tr:nth-child(even){background: rgba(255,255,255,0.05);}
 <input type="text" id="studentName">
 <label>Class:</label>
 <input type="text" id="studentClass">
+<button class="view" onclick="fetchStudent()">Fetch Student</button>
 </div>
 
 <div class="section">
@@ -187,7 +188,29 @@ const supabase = createClient(
 
 let allData=[];
 
-/* RISK CALCULATION */
+/* ------------------- FETCH STUDENT DATA ------------------- */
+async function fetchStudent(){
+  const id = document.getElementById("studentId").value.trim();
+  if(!id) return;
+  const { data, error } = await supabase
+    .from("students")
+    .select("*")
+    .eq("studentid", id)
+    .single();
+  if(error){
+    alert("Student not found");
+    document.getElementById("studentName").value = "";
+    document.getElementById("studentClass").value = "";
+    return;
+  }
+  document.getElementById("studentName").value = data.studentname || "";
+  document.getElementById("studentClass").value = data.grade || "";
+}
+
+// Optional: fetch when field loses focus
+document.getElementById("studentId").addEventListener("blur", fetchStudent);
+
+/* ------------------- RISK CALCULATION ------------------- */
 function calculateRisk(){
   let total=0;
   document.querySelectorAll(".risk:checked").forEach(cb=>{
