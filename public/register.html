@@ -163,181 +163,152 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-const el=id=>document.getElementById(id);
-let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
+const el = id => document.getElementById(id);
+let schoolsMap = {}, currentStudentId = null, capturedBlob = null, cameraStream = null;
 const alertEl = el("registeredAlert");
 
 /* ------------------- ALERT FUNCTION ------------------- */
-function showAlert(msg="✅ Registered Successfully!"){
+function showAlert(msg = "✅ Registered Successfully!") {
   alertEl.innerText = msg;
   alertEl.classList.add("show");
-  setTimeout(()=> alertEl.classList.remove("show"),2500);
+  setTimeout(() => alertEl.classList.remove("show"), 2500);
 }
 
-/* ------------------- AGE CALC ------------------- */
-el("dateOfBirth").addEventListener("change",()=>{ 
-  const val=el("dateOfBirth").value; 
-  if(!val){ el("age").value=""; return; } 
-  const b=new Date(val), t=new Date();
-  let a=t.getFullYear()-b.getFullYear();
-  if(t.getMonth()<b.getMonth()||(t.getMonth()==b.getMonth()&&t.getDate()<b.getDate())) a--;
-  el("age").value=a>0?a:""; 
-});
+/* ------------------- CHECK FOR DUPLICATE ------------------- */
+async function checkDuplicate(studentId) {
+  const { data, error } = await supabase
+    .from("students")
+    .select("*")
+    .eq("studentid", studentId)
+    .single();
 
-/* ------------------- LOAD SCHOOLS ------------------- */
-async function loadSchools(){
-  const {data,error}=await supabase.from("schools").select("*").order("name");
-  if(error){ alert(error.message); return; }
-  if(!data || data.length===0){ el("schoolSelect").innerHTML="<option>No schools found</option>"; return; }
-  el("schoolSelect").innerHTML="<option value=''>Select School</option>";
-  data.forEach(s=>{ schoolsMap[s.name]=s; el("schoolSelect").add(new Option(s.name,s.name)); });
-}
-loadSchools();
-
-el("schoolSelect").onchange = ()=>{
-  const s=schoolsMap[el("schoolSelect").value];
-  el("gradeSelect").innerHTML="<option>Select Class</option>";
-  el("streamSelect").innerHTML="<option>Select Stream</option>";
-  if(!s) return;
-  el("levelDisplay").value=s.level||"";
-  (s.classes||[]).forEach(c=>el("gradeSelect").add(new Option(c,c)));
-  (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
-};
-
-/* ------------------- SEARCH STUDENT ------------------- */
-window.searchStudent = async ()=>{
-  const id=el("studentId").value.trim();
-  if(!id) return alert("Enter admission number");
-  if(!navigator.onLine){
-    const student=await getOffline(id);
-    if(student){ fillForm(student); return; } 
-    else { alert("Student not found offline"); return; }
+  if (error && error.code !== 'PGRST116') {  // No student found
+    return false;
   }
-  const {data,error}=await supabase.from("students").select("*").eq("studentid",id).single();
-  if(error){ alert("Student not found"); return; }
-  fillForm(data);
+
+  return data !== null;  // Return true if a student with this ID exists
+}
+
+/* ------------------- REGISTER STUDENT ------------------- */
+window.registerStudent = async () => {
+  const studentId = el("studentId").value.trim();
+  if (!studentId) return alert("Admission number required");
+
+  const isDuplicate = await checkDuplicate(studentId);
+  if (isDuplicate) {
+    return alert("This admission number is already registered.");
+  }
+
+  await saveStudent(); // Proceed with the registration if no duplicate
 };
-function fillForm(data){
-  currentStudentId=data.studentid;
-  el("studentName").value=data.studentname||"";
-  el("dateOfBirth").value=data.dateofbirth||"";
-  el("age").value=data.age||"";
-  el("schoolSelect").value=data.school||"";
-  el("schoolSelect").dispatchEvent(new Event("change"));
-  el("gradeSelect").value=data.grade||"";
-  el("streamSelect").value=data.stream||"";
-  if(data.photo){ el("preview").src=data.photo; cropBox.style.display="block"; }
-}
 
-/* ------------------- CAMERA ------------------- */
-async function startCamera(){
-  cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-  el("video").srcObject=cameraStream;
-  el("video").style.display="block";
-}
-function capturePhoto(){
-  const video=el("video");
-  const canvas=el("canvas");
-  const size=Math.min(video.videoWidth,video.videoHeight);
-  const x=(video.videoWidth-size)/2;
-  const y=(video.videoHeight-size)/2;
-  canvas.width=300; canvas.height=300;
-  const ctx=canvas.getContext("2d");
-  ctx.drawImage(video,x,y,size,size,0,0,300,300);
-  canvas.toBlob(b=>{ capturedBlob=b; el("preview").src=URL.createObjectURL(b); cropBox.style.display="block"; });
-  cameraStream?.getTracks().forEach(t=>t.stop());
-  video.style.display="none";
-}
+/* ------------------- SAVE STUDENT ------------------- */
+async function saveStudent(online = true) {
+  const id = el("studentId").value.trim();
+  if (!id) return alert("Admission number required");
+  const photo = await uploadPhoto(id);
+  const student = {
+    studentid: id,
+    studentname: el("studentName").value,
+    dateofbirth: el("dateOfBirth").value || null,
+    age: Number(el("age").value) || null,
+    school: el("schoolSelect").value || null,
+    level: el("levelDisplay").value || null,
+    grade: el("gradeSelect").value || null,
+    stream: el("streamSelect").value || null,
+    photo
+  };
 
-/* ------------------- DRAGGABLE CROP ------------------- */
-const cropBox = el("cropBox");
-let drag=false, startX, startY;
-cropBox.addEventListener("mousedown", e=>{ drag=true; startX=e.offsetX; startY=e.offsetY; });
-document.addEventListener("mouseup", ()=>{ drag=false; });
-document.addEventListener("mousemove", e=>{
-  if(!drag) return;
-  const rect=cropBox.parentElement.getBoundingClientRect();
-  let left=e.clientX-rect.left-startX;
-  let top=e.clientY-rect.top-startY;
-  left=Math.max(0, Math.min(left, rect.width-cropBox.offsetWidth));
-  top=Math.max(0, Math.min(top, rect.height-cropBox.offsetHeight));
-  cropBox.style.left=left+"px"; cropBox.style.top=top+"px";
-});
+  if (!navigator.onLine || !online) {
+    await saveOffline(student);
+    showAlert("✅ Saved Offline!");
+  } else {
+    const { error } = await supabase.from("students").upsert([student]);
+    if (error) {
+      await saveOffline(student);
+      showAlert("✅ Saved Offline!");
+    } else {
+      showAlert("✅ Registered Successfully!");
+    }
+  }
+  clearForm();
+  loadLiveStudents();
+}
 
 /* ------------------- UPLOAD PHOTO ------------------- */
-async function uploadPhoto(id){
-  if(!el("preview").src) return null;
-  const img=new Image();
-  img.src=el("preview").src;
+async function uploadPhoto(id) {
+  if (!el("preview").src) return null;
+  const img = new Image();
+  img.src = el("preview").src;
   await img.decode();
-  const canvas=el("canvas");
-  canvas.width=cropBox.offsetWidth; canvas.height=cropBox.offsetHeight;
-  const ctx=canvas.getContext("2d");
-  const imgRect=el("preview").getBoundingClientRect();
-  const scaleX=img.naturalWidth/imgRect.width;
-  const scaleY=img.naturalHeight/imgRect.height;
-  const sx=cropBox.offsetLeft*scaleX;
-  const sy=cropBox.offsetTop*scaleY;
-  const sw=cropBox.offsetWidth*scaleX;
-  const sh=cropBox.offsetHeight*scaleY;
-  ctx.drawImage(img,sx,sy,sw,sh,0,0,cropBox.offsetWidth,cropBox.offsetHeight);
-  return new Promise(resolve=>{
-    canvas.toBlob(b=>{
-      const reader=new FileReader();
-      reader.onloadend=()=>resolve(reader.result);
+  const canvas = el("canvas");
+  canvas.width = cropBox.offsetWidth;
+  canvas.height = cropBox.offsetHeight;
+  const ctx = canvas.getContext("2d");
+  const imgRect = el("preview").getBoundingClientRect();
+  const scaleX = img.naturalWidth / imgRect.width;
+  const scaleY = img.naturalHeight / imgRect.height;
+  const sx = cropBox.offsetLeft * scaleX;
+  const sy = cropBox.offsetTop * scaleY;
+  const sw = cropBox.offsetWidth * scaleX;
+  const sh = cropBox.offsetHeight * scaleY;
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cropBox.offsetWidth, cropBox.offsetHeight);
+  return new Promise(resolve => {
+    canvas.toBlob(b => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(b);
     });
   });
 }
 
 /* ------------------- CLEAR FORM ------------------- */
-function clearForm(){
-  currentStudentId=null;
-  el("studentId").value="";
-  el("studentName").value="";
-  el("dateOfBirth").value="";
-  el("age").value="";
-  el("schoolSelect").value="";
+function clearForm() {
+  currentStudentId = null;
+  el("studentId").value = "";
+  el("studentName").value = "";
+  el("dateOfBirth").value = "";
+  el("age").value = "";
+  el("schoolSelect").value = "";
   el("schoolSelect").dispatchEvent(new Event("change"));
-  el("gradeSelect").value="";
-  el("streamSelect").value="";
-  el("preview").src="";
-  cropBox.style.display="none";
-  capturedBlob=null;
+  el("gradeSelect").value = "";
+  el("streamSelect").value = "";
+  el("preview").src = "";
+  cropBox.style.display = "none";
+  capturedBlob = null;
 }
 
-/* ------------------- REGISTER / UPDATE ------------------- */
-async function saveStudent(online=true){
-  const id=el("studentId").value.trim();
-  if(!id) return alert("Admission number required");
-  const photo=await uploadPhoto(id);
-  const student={
-    studentid:id,
-    studentname:el("studentName").value,
-    dateofbirth:el("dateOfBirth").value||null,
-    age:Number(el("age").value)||null,
-    school:el("schoolSelect").value||null,
-    level:el("levelDisplay").value||null,
-    grade:el("gradeSelect").value||null,
-    stream:el("streamSelect").value||null,
-    photo
-  };
-  if(!navigator.onLine || !online){
-    await saveOffline(student);
-    showAlert("✅ Saved Offline!");
-  } else {
-    const {error}=await supabase.from("students").upsert([student]);
-    if(error){ await saveOffline(student); showAlert("✅ Saved Offline!"); }
-    else showAlert("✅ Registered Successfully!");
+/* ------------------- LOAD LIVE STUDENTS ------------------- */
+async function loadLiveStudents() {
+  const { data, error } = await supabase.from("students").select("*").order("studentid", { ascending: true });
+  if (error) return alert("Error loading live students");
+  const liveList = el("liveList");
+  liveList.innerHTML = data.map(student => `<div>${student.studentid} - ${student.studentname}</div>`).join("");
+}
+
+/* ------------------- SEARCH STUDENT ------------------- */
+window.searchStudent = async () => {
+  const id = el("studentId").value.trim();
+  if (!id) return alert("Enter admission number");
+  const { data, error } = await supabase.from("students").select("*").eq("studentid", id).single();
+  if (error) return alert("Student not found");
+  fillForm(data);
+};
+
+function fillForm(data) {
+  currentStudentId = data.studentid;
+  el("studentName").value = data.studentname || "";
+  el("dateOfBirth").value = data.dateofbirth || "";
+  el("age").value = data.age || "";
+  el("schoolSelect").value = data.school || "";
+  el("schoolSelect").dispatchEvent(new Event("change"));
+  el("gradeSelect").value = data.grade || "";
+  el("streamSelect").value = data.stream || "";
+  if (data.photo) {
+    el("preview").src = data.photo;
+    cropBox.style.display = "block";
   }
-  clearForm();
-  loadLiveStudents();
 }
-window.registerStudent = ()=>saveStudent();
-window.updateStudent = ()=>saveStudent();
-
-/* ------------------- OFFLINE DB / BULK / LIVE STUDENTS (existing) ------------------- */
-// Keep all your existing functions: saveOffline, getOffline, bulkUploadExcel, downloadCSVTemplate, loadLiveStudents, etc.
 
 </script>
 
