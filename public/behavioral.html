@@ -13,29 +13,39 @@
     }
     .container {
       max-width: 1200px;
-      margin: 30px auto;
-      padding: 30px;
+      margin: 20px auto;
+      padding: 20px;
       background: rgba(255, 255, 255, 0.08);
       border-radius: 20px;
       backdrop-filter: blur(15px);
       box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
     }
-    h2 { text-align: center; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-    .section { padding: 20px; border-radius: 15px; background: rgba(255,255,255,0.1); }
-    input { width: 100%; padding: 10px; border-radius: 10px; border: none; margin-bottom: 10px; }
+    h2 { text-align: center; font-size: 1.8rem; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .section { padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.1); }
+    input { width: 100%; padding: 10px; border-radius: 10px; border: none; margin-bottom: 10px; font-size: 1rem; }
     input[readonly] { background: #e0e0e0; font-weight: bold; }
     .attendance-card { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-top: 15px; }
-    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .oval { width: 220px; height: 120px; border-radius: 100px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 30px auto; }
+    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .checkbox-grid label { font-size: 0.95rem; cursor: pointer; }
+    .oval { width: 200px; height: 100px; border-radius: 100px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; }
     .green { background: #28a745; }
     .yellow { background: #ffc107; color: black; }
     .red { background: #dc3545; }
-    button { padding: 10px 18px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; }
+    button { padding: 12px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 1rem; }
     .save { background: #28a745; color: white; }
     .view { background: #6f42c1; color: white; }
     .reset { background: #17a2b8; color: white; }
     .back { background: #6c757d; color: white; }
+
+    /* MOBILE RESPONSIVE */
+    @media screen and (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .oval { width: 90%; height: 90px; font-size: 22px; }
+      button { width: 90%; margin: 8px auto; display: block; }
+      .checkbox-grid { grid-template-columns: 1fr; }
+      .container { padding: 15px; margin: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -106,7 +116,7 @@ behaviorFactors.forEach(f => {
   checklist.appendChild(label);
 });
 
-let currentId = null; // this will store student UUID
+let currentId = null; // UUID of student
 let attendanceRisk = 0;
 
 /* FETCH STUDENT DATA */
@@ -114,7 +124,6 @@ document.getElementById("studentId").addEventListener("change", async () => {
   const admissionNumber = document.getElementById("studentId").value.trim();
   if(!admissionNumber) return;
 
-  // Fetch student using admission number
   const { data: student, error } = await supabase
     .from("students")
     .select("*")
@@ -127,15 +136,14 @@ document.getElementById("studentId").addEventListener("change", async () => {
     return;
   }
 
-  // Use UUID from student table
-  currentId = student.id; // UUID primary key
+  currentId = student.id; // UUID
   document.getElementById("studentName").value = student.studentname || "";
   document.getElementById("studentClass").value = student.grade || student.level || "";
   document.getElementById("studentAge").value = student.age || "";
   document.getElementById("studentGender").value = student.gender || "";
   document.getElementById("studentSchool").value = student.school || "";
 
-  // Load existing behavior record if any
+  // Load existing behavior record
   const { data: behavior } = await supabase
     .from("behavior")
     .select("*")
@@ -226,9 +234,8 @@ async function saveRecord(){
   const totalDays = parseFloat(document.getElementById("inputTotalDays").value) || 0;
   const daysPresent = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
 
-  // UPSERT using UUID as student_id
   const { error } = await supabase.from("behavior").upsert({
-    student_id: currentId, // UUID
+    student_id: currentId,
     total_days: totalDays,
     days_present: daysPresent,
     behavior_risks: risks,
