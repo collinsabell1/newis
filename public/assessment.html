@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socioeconomic Risk Assessment - NEWIS</title>
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  margin:0;
+  color:#fff;
+}
+.container{
+  max-width:600px;
+  margin:30px auto;
+  background:#fff;
+  padding:30px;
+  border-radius:15px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+  color:#000;
+}
+h2{text-align:center;color:#203a43;margin-bottom:20px;}
+.section{
+  background:#f4f6fa;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:20px;
+}
+label{display:block;margin:6px 0;}
+input[type="text"]{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+.buttons{
+  margin-top:25px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+  min-width:120px;
+}
+.save{background:#28a745;color:#fff;}
+.update{background:#ffc107;}
+.delete{background:#dc3545;color:#fff;}
+.clear{background:#6c757d;color:#fff;}
+.nav{background:#203a43;color:#fff;}
+.circle{
+  width:170px;
+  height:170px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:bold;
+  margin:20px auto;
+  color:#fff;
+}
+.green{background:#28a745;}
+.yellow{background:#ffc107;color:black;}
+.red{background:#dc3545;}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Socioeconomic Dropout Risk Assessment</h2>
+
+<div class="section">
+<h3>Student Details</h3>
+<label>Admission Number:</label>
+<input type="text" id="studentId" placeholder="Enter Admission Number">
+<label>Student Name:</label>
+<input type="text" id="studentName">
+<label>Class:</label>
+<input type="text" id="studentClass">
+</div>
+
+<div class="section">
+<h3>Socioeconomic Risk Indicators</h3>
+<label><input type="checkbox" class="risk" value="poverty"> Household poverty</label>
+<label><input type="checkbox" class="risk" value="fees"> Unable to pay school fees</label>
+<label><input type="checkbox" class="risk" value="orphan"> Orphan / vulnerable child</label>
+<label><input type="checkbox" class="risk" value="childlabour"> Child labour</label>
+<label><input type="checkbox" class="risk" value="singleparent"> Single parent</label>
+<label><input type="checkbox" class="risk" value="violence"> Domestic/community violence</label>
+<label><input type="checkbox" class="risk" value="largedependents"> Large dependent family</label>
+<label><input type="checkbox" class="risk" value="poorhousing"> Poor housing conditions</label>
+<label><input type="checkbox" class="risk" value="pregnancy"> Early pregnancy</label>
+<label><input type="checkbox" class="risk" value="absenteeism"> Chronic absenteeism</label>
+<label><input type="checkbox" class="risk" value="drought"> Drought / disaster</label>
+<label><input type="checkbox" class="risk" value="distance"> Long distance to school</label>
+</div>
+
+<div class="section">
+<h3>Socioeconomic Risk Level</h3>
+<div id="riskCircle" class="circle green">0%</div>
+<p style="text-align:center;font-weight:bold;" id="riskLevel">Low Risk</p>
+</div>
+
+<div class="buttons">
+<button class="save" onclick="saveRecord()">Save</button>
+<button class="update" onclick="updateRecord()">Update</button>
+<button class="delete" onclick="deleteRecord()">Delete</button>
+<button class="clear" onclick="clearForm()">Clear</button>
+<button class="nav" onclick="location.href='previous.html'">⬅ Previous</button>
+<button class="nav" onclick="location.href='next.html'">Next ➡</button>
+</div>
+
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+/* SUPABASE CONNECTION */
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
+
+/* RISK CALCULATION: 100 / number of checked factors */
+function calculateRisk(){
+  const checked=document.querySelectorAll(".risk:checked");
+  const numChecked = checked.length;
+  let total=0;
+  if(numChecked>0){
+    const weightPerFactor = 100 / numChecked;
+    total = Math.min(100, Math.round(weightPerFactor * numChecked));
+  }
+  const circle=document.getElementById("riskCircle");
+  const level=document.getElementById("riskLevel");
+  circle.textContent = total + "%";
+  if(total<45){
+    circle.className="circle green";
+    level.textContent="Low Risk";
+  } else if(total<=55){
+    circle.className="circle yellow";
+    level.textContent="Medium Risk";
+  } else{
+    circle.className="circle red";
+    level.textContent="High Risk";
+  }
+  return total;
+}
+
+document.querySelectorAll(".risk").forEach(cb=>cb.addEventListener("change",calculateRisk));
+
+/* SAVE */
+window.saveRecord=async()=>{
+  const id=studentId.value.trim();
+  if(!id) return alert("Enter admission number");
+
+  const { error } = await supabase
+    .from("assessments")
+    .insert({
+      admission_no:id,
+      name:studentName.value,
+      class:studentClass.value,
+      risk_percent:calculateRisk(),
+      risks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
+      date_recorded:new Date()
+    });
+  if(error) return alert(error.message);
+  alert("Saved successfully");
+};
+
+/* UPDATE */
+window.updateRecord=async()=>{
+  const id=studentId.value.trim();
+  if(!id) return alert("Enter admission number");
+  const { error } = await supabase
+    .from("assessments")
+    .update({
+      name:studentName.value,
+      class:studentClass.value,
+      risk_percent:calculateRisk(),
+      risks:[...document.querySelectorAll(".risk:checked")].map(c=>c.value),
+      date_recorded:new Date()
+    })
+    .eq("admission_no",id);
+  if(error) return alert(error.message);
+  alert("Updated successfully");
+};
+
+/* DELETE */
+window.deleteRecord=async()=>{
+  const id=studentId.value.trim();
+  if(!id) return alert("Enter admission number");
+  if(!confirm("Delete this record?")) return;
+  const { error } = await supabase
+    .from("assessments")
+    .delete()
+    .eq("admission_no",id);
+  if(error) return alert(error.message);
+  alert("Deleted successfully");
+  clearForm();
+};
+
+/* CLEAR FORM */
+window.clearForm=()=>{
+  studentId.value="";
+  studentName.value="";
+  studentClass.value="";
+  document.querySelectorAll(".risk").forEach(cb=>cb.checked=false);
+  calculateRisk();
+};
+
+/* INITIAL CALCULATION */
+calculateRisk();
+</script>
+
+</body>
+</html>

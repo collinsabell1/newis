@@ -170,77 +170,78 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-let allData=[];
+let allData = [];
 
-async function loadData(){
-  const { data, error } = await supabase
-    .from("behavior")
-    .select(`
-      id,
-      total_risk,
-      recorded_at,
-      total_days,
-      days_present,
-      behavior_risks,
-      student:student_id (
-        studentid,
-        studentname,
-        grade,
-        school
-      )
-    `)
-    .order("recorded_at", { ascending: false });
+async function loadData() {
+  try {
+    const { data, error } = await supabase
+      .from("behavior")
+      .select(`
+        id,
+        total_risk,
+        recorded_at,
+        student:student_id (
+          studentid,
+          studentname,
+          grade,
+          school
+        )
+      `)
+      .order("recorded_at", { ascending: false });
 
-  if (error) { 
-    alert(error.message); 
-    return; 
+    if (error) throw error;
+
+    allData = data.map(r => {
+      return {
+        id: r.id,
+        adm: r.student?.studentid || "N/A",
+        name: r.student?.studentname || "N/A",
+        class: r.student?.grade || "N/A",
+        school: r.student?.school || "N/A",
+        risk: r.total_risk,
+        status: r.total_risk > 50 ? "High" : r.total_risk == 50 ? "Medium" : "Low",
+        date: new Date(r.recorded_at)
+      };
+    });
+
+    populateClassFilter();
+    renderTable();
+  } catch (err) {
+    alert("Error fetching data: " + err.message);
   }
-
-  allData = data.map(r => ({
-    id: r.id,
-    adm: r.student.studentid,
-    name: r.student.studentname,
-    class: r.student.grade,
-    school: r.student.school,
-    risk: r.total_risk,
-    status: r.total_risk > 50 ? "High" : r.total_risk == 50 ? "Medium" : "Low",
-    date: new Date(r.recorded_at)
-  }));
-
-  populateClassFilter();
-  renderTable();
 }
 
-function populateClassFilter(){
-  const select=document.getElementById("classFilter");
-  const classes=[...new Set(allData.map(x=>x.class))];
-  select.innerHTML='<option value="All">All Classes</option>';
-  classes.forEach(c=>{
-    const o=document.createElement("option");
-    o.value=c; o.textContent=c;
-    select.appendChild(o);
+function populateClassFilter() {
+  const select = document.getElementById("classFilter");
+  const classes = [...new Set(allData.map(x => x.class))].filter(c => c !== "N/A");
+  select.innerHTML = '<option value="All">All Classes</option>';
+  classes.forEach(c => {
+    const option = document.createElement("option");
+    option.value = c;
+    option.textContent = c;
+    select.appendChild(option);
   });
 }
 
 window.renderTable = () => {
-  const tbody=document.querySelector("#recordsTable tbody");
-  tbody.innerHTML="";
-  const search=document.getElementById("searchInput").value.toLowerCase();
-  const classFilter=document.getElementById("classFilter").value;
-  const riskFilter=document.getElementById("riskFilter").value;
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const classFilter = document.getElementById("classFilter").value;
+  const riskFilter = document.getElementById("riskFilter").value;
 
-  const filtered=allData.filter(r=>{
-    return r.adm.toLowerCase().includes(search) &&
-      (classFilter==="All"||r.class===classFilter) &&
-      (riskFilter==="All"||
-        (riskFilter==="High"&&r.risk>50)||
-        (riskFilter==="Medium"&&r.risk==50)||
-        (riskFilter==="Low"&&r.risk<50));
-  });
+  const filtered = allData.filter(r => 
+    r.adm.toLowerCase().includes(search) &&
+    (classFilter === "All" || r.class === classFilter) &&
+    (riskFilter === "All" ||
+      (riskFilter === "High" && r.risk > 50) ||
+      (riskFilter === "Medium" && r.risk == 50) ||
+      (riskFilter === "Low" && r.risk < 50))
+  );
 
-  filtered.forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
+  filtered.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
       <td><input type="checkbox" class="rowCheck" data-id="${r.id}"></td>
       <td>${r.adm}</td>
       <td>${r.name}</td>
@@ -248,46 +249,49 @@ window.renderTable = () => {
       <td>${r.school}</td>
       <td>${r.risk}%</td>
       <td>${r.date.toLocaleDateString()}</td>
-      <td class="${r.status==='High'?'red':r.status==='Medium'?'yellow':'green'}">${r.status}</td>
+      <td class="${r.status === 'High' ? 'red' : r.status === 'Medium' ? 'yellow' : 'green'}">${r.status}</td>
       <td><button onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
     `;
     tbody.appendChild(tr);
   });
 };
 
-document.getElementById("selectAll").addEventListener("change",function(){
-  document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
+document.getElementById("selectAll").addEventListener("change", function() {
+  document.querySelectorAll(".rowCheck").forEach(cb => cb.checked = this.checked);
 });
 
 window.deleteSelected = async () => {
-  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
-  if(!ids.length) return alert("No records selected");
-  if(!confirm("Delete selected records?")) return;
-  await supabase.from("behavior").delete().in("id",ids);
+  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb => cb.dataset.id);
+  if (!ids.length) return alert("No records selected");
+  if (!confirm("Delete selected records?")) return;
+
+  const { error } = await supabase.from("behavior").delete().in("id", ids);
+  if (error) return alert("Error deleting records: " + error.message);
+
   loadData();
 };
 
-function downloadCSV(rows,name){
-  if(!rows.length) return alert("No data");
-  let csv="AdmNo,Name,Class,School,Risk,Status,Date\n";
-  rows.forEach(r=>{
-    csv+=`${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
+function downloadCSV(rows, filename) {
+  if (!rows.length) return alert("No data to download");
+  let csv = "AdmNo,Name,Class,School,Risk,Status,Date\n";
+  rows.forEach(r => {
+    csv += `${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
   });
-  const blob=new Blob([csv],{type:"text/csv"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=name;
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
   a.click();
 }
-window.downloadAll=()=>downloadCSV(allData,"All_Behavioral.csv");
-window.downloadSelected=()=>{
-  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
-  const rows=allData.filter(r=>ids.includes(r.id));
-  downloadCSV(rows,"Selected_Behavioral.csv");
+window.downloadAll = () => downloadCSV(allData, "All_Behavioral.csv");
+window.downloadSelected = () => {
+  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb => cb.dataset.id);
+  const rows = allData.filter(r => ids.includes(r.id));
+  downloadCSV(rows, "Selected_Behavioral.csv");
 };
 
-window.printReport=(r)=>{
-  const win=window.open("","_blank");
+window.printReport = (r) => {
+  const win = window.open("", "_blank");
   win.document.write(`
     <h2>Behavioral Report</h2>
     Admission: ${r.adm}<br>
@@ -302,17 +306,17 @@ window.printReport=(r)=>{
 };
 
 function printReportList(rows){
-  const win=window.open("","_blank");
-  let html="<h2>Behavioral Records</h2>";
-  rows.forEach(r=>{
-    html+=`<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
+  const win = window.open("", "_blank");
+  let html = "<h2>Behavioral Records</h2>";
+  rows.forEach(r => {
+    html += `<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
   });
-  win.document.write(html+"<br><button onclick='window.print()'>Print</button>");
+  win.document.write(html + "<br><button onclick='window.print()'>Print</button>");
 }
-window.printAll=()=>printReportList(allData);
-window.printSelected=()=>{
-  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
-  const rows=allData.filter(r=>ids.includes(r.id));
+window.printAll = () => printReportList(allData);
+window.printSelected = () => {
+  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb => cb.dataset.id);
+  const rows = allData.filter(r => ids.includes(r.id));
   printReportList(rows);
 };
 
