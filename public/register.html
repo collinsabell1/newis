@@ -33,6 +33,7 @@ border:none;
 border-radius:10px;
 }
 button{font-weight:bold;cursor:pointer}
+.navbtn{background:#17a2b8}
 .btn-create{background:#00c6ff}
 .btn-search{background:#ffc107;color:black}
 .btn-update{background:#28a745}
@@ -50,14 +51,19 @@ button{font-weight:bold;cursor:pointer}
 
 <h2>Student Registration</h2>
 
+<button class="navbtn" onclick="location.href='index.html'">🏠 Home</button>
+<button class="navbtn" onclick="location.href='register-school.html'">🏫 Register School</button>
+
+<hr>
+
 <input id="studentId" placeholder="Admission Number">
-<button class="btn-search" onclick="searchStudent()">🔍 Search Student</button>
+<button class="btn-search" onclick="searchStudent()">Search Student</button>
 
 <input id="studentName" placeholder="Student Full Name">
 <input type="date" id="dateOfBirth">
 <input id="age" placeholder="Age" readonly>
 
-<select id="schoolSelect"><option value="">Select School</option></select>
+<select id="schoolSelect"><option value="">Loading schools...</option></select>
 <input id="levelDisplay" placeholder="School Level" readonly>
 
 <select id="gradeSelect"><option value="">Select Class</option></select>
@@ -95,7 +101,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 );
 
 await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
@@ -104,7 +110,7 @@ const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* AGE AUTO */
+/* AGE */
 el("dateOfBirth").onchange=()=>{
 const b=new Date(el("dateOfBirth").value);
 const t=new Date();
@@ -114,11 +120,23 @@ el("age").value=a;
 };
 
 /* LOAD SCHOOLS */
-const {data:schools}=await supabase.from("schools").select("*");
-schools.forEach(s=>{
+async function loadSchools(){
+const {data,error}=await supabase.from("schools").select("*");
+
+if(error){
+el("schoolSelect").innerHTML="<option>Error loading schools</option>";
+alert(error.message);
+return;
+}
+
+el("schoolSelect").innerHTML="<option value=''>Select School</option>";
+
+data.forEach(s=>{
 schoolsMap[s.name]=s;
 el("schoolSelect").add(new Option(s.name,s.name));
 });
+}
+loadSchools();
 
 /* SCHOOL CHANGE */
 el("schoolSelect").onchange=()=>{
@@ -133,7 +151,7 @@ el("levelDisplay").value=s.level||"";
 (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 };
 
-/* SEARCH STUDENT */
+/* SEARCH */
 window.searchStudent=async()=>{
 const id=el("studentId").value.trim();
 if(!id)return alert("Enter admission number");
@@ -181,55 +199,19 @@ el("preview").src=URL.createObjectURL(b);
 el("preview").style.display="block";
 });
 
-if(cameraStream){
-cameraStream.getTracks().forEach(t=>t.stop());
+cameraStream?.getTracks().forEach(t=>t.stop());
 el("video").style.display="none";
-}
 };
 
-/* FACE CROP */
-async function optimize(file){
-return new Promise(res=>{
-const img=new Image();
-img.onload=async()=>{
-const d=await faceapi.detectSingleFace(img,new faceapi.TinyFaceDetectorOptions());
-let sx,sy,size;
-
-if(d){
-const b=d.box;
-size=Math.max(b.width,b.height)*1.6;
-sx=b.x+b.width/2-size/2;
-sy=b.y+b.height/2-size/2;
-}else{
-size=Math.min(img.width,img.height);
-sx=(img.width-size)/2;
-sy=(img.height-size)/2;
-}
-
-const out=500;
-const c=document.createElement("canvas");
-c.width=out;
-c.height=out;
-const ctx=c.getContext("2d");
-ctx.fillStyle="white";
-ctx.fillRect(0,0,out,out);
-ctx.drawImage(img,sx,sy,size,size,0,0,out,out);
-
-c.toBlob(blob=>res(blob),"image/jpeg",0.75);
-};
-img.src=URL.createObjectURL(file);
-});
-}
-
-/* UPLOAD PHOTO */
+/* PHOTO UPLOAD */
 async function uploadPhoto(id){
 let f=el("photoUpload").files[0]||capturedBlob;
 if(!f)return null;
 
-const opt=await optimize(f);
 const path=`students/${id}_${Date.now()}.jpg`;
+const {error}=await supabase.storage.from("photos").upload(path,f);
+if(error){alert(error.message);return null;}
 
-await supabase.storage.from("photos").upload(path,opt);
 return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 }
 
@@ -237,10 +219,6 @@ return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 window.registerStudent=async()=>{
 const id=el("studentId").value.trim();
 if(!id)return alert("Admission number required");
-if(!el("studentName").value)return alert("Enter name");
-
-const {data:exists}=await supabase.from("students").select("studentId").eq("studentId",id);
-if(exists.length)return alert("Student already exists");
 
 const photo=await uploadPhoto(id);
 
@@ -256,7 +234,7 @@ stream:el("streamSelect").value||null,
 photo
 }]);
 
-if(error)return alert(error.message);
+if(error){alert(error.message);return;}
 
 el("message").innerText="Student Registered ✔";
 };
@@ -278,37 +256,38 @@ stream:el("streamSelect").value
 };
 if(photo)data.photo=photo;
 
-await supabase.from("students").update(data).eq("studentId",currentStudentId);
+const {error}=await supabase.from("students").update(data).eq("studentId",currentStudentId);
+
+if(error){alert(error.message);return;}
 
 el("message").innerText="Student Updated ✔";
 };
 
-/* BULK UPLOAD */
+/* BULK */
 window.bulkUpload=async()=>{
 const file=el("excelFile").files[0];
-if(!file)return alert("Upload Excel");
+if(!file)return;
 
 const data=await file.arrayBuffer();
 const wb=XLSX.read(data);
 const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
 for(const r of rows){
-if(!r.studentId||!r.studentName)continue;
 await supabase.from("students").insert([r]);
 }
 
-alert("Bulk upload done");
+alert("Bulk upload complete");
 };
 
-/* REALTIME LIST */
+/* REALTIME */
 supabase.channel("students")
 .on("postgres_changes",{event:"INSERT",schema:"public",table:"students"},
-p=>liveList.innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`)
-.subscribe();
+p=>liveList.innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
+).subscribe();
 
-/* INITIAL LOAD */
+/* INITIAL LIST */
 const {data:list}=await supabase.from("students").select("*").limit(20);
-list.forEach(s=>liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`);
+list?.forEach(s=>liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`);
 </script>
 </body>
 </html>
