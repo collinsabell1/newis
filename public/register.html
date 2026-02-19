@@ -16,13 +16,14 @@ body{
   color:white;
   display:flex;
   justify-content:center;
-  padding-top:20px;
+  padding:10px;
 }
 .container{
   background:rgba(255,255,255,.12);
-  padding:30px;
-  border-radius:20px;
-  width:560px;
+  padding:20px;
+  border-radius:15px;
+  width:100%;
+  max-width:550px;
   backdrop-filter:blur(15px);
 }
 input,select,button{
@@ -31,6 +32,7 @@ input,select,button{
   margin:6px 0;
   border:none;
   border-radius:10px;
+  font-size:1em;
 }
 button{font-weight:bold;cursor:pointer}
 .navbtn{background:#17a2b8}
@@ -41,16 +43,21 @@ button{font-weight:bold;cursor:pointer}
 .success{text-align:center;color:#00ff99;margin-top:10px}
 #error{text-align:center;color:#ff4d4d;margin-top:10px}
 #video{width:100%;display:none;border-radius:10px;object-fit:cover;}
-#previewContainer{position:relative;width:300px;height:300px;margin-top:10px;}
-#preview{width:100%;height:100%;border-radius:12px;object-fit:cover;cursor:pointer;}
+#previewContainer{position:relative;width:100%;padding-top:100%;margin-top:10px;}
+#preview{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;object-fit:cover;cursor:pointer;}
 #cropBox{
   position:absolute;
   border:2px dashed #00ff99;
-  width:100px;height:100px;
+  width:80px;height:80px;
   cursor:move;
   display:none;
 }
 .info{text-align:left;color:#ccc;font-size:0.85em;margin:5px 0;}
+@media(max-width:480px){
+  .container{padding:15px;}
+  input, select, button{font-size:0.9em;}
+  #cropBox{width:60px;height:60px;}
+}
 </style>
 </head>
 
@@ -131,6 +138,33 @@ const supabase = createClient(
 const el=id=>document.getElementById(id);
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
+/* ------------------- OFFLINE DB ------------------- */
+const dbName="studentsOffline";
+let db;
+const request=indexedDB.open(dbName,1);
+request.onupgradeneeded=e=>{
+  db=e.target.result;
+  db.createObjectStore("students",{keyPath:"studentid"});
+};
+request.onsuccess=e=>{ db=e.target.result; console.log("Offline DB ready"); };
+request.onerror=e=>{ console.error("DB error",e); };
+
+async function saveOffline(student){
+  return new Promise(resolve=>{
+    const tx=db.transaction("students","readwrite");
+    tx.objectStore("students").put(student);
+    tx.oncomplete=()=>resolve(true);
+  });
+}
+
+async function getOffline(studentid){
+  return new Promise(resolve=>{
+    const tx=db.transaction("students","readonly");
+    const req=tx.objectStore("students").get(studentid);
+    req.onsuccess=e=>resolve(e.target.result);
+  });
+}
+
 /* ------------------- AGE CALC ------------------- */
 el("dateOfBirth").addEventListener("change",()=>{
   const val=el("dateOfBirth").value;
@@ -166,9 +200,18 @@ el("schoolSelect").onchange = ()=>{
 window.searchStudent = async ()=>{
   const id=el("studentId").value.trim();
   if(!id) return alert("Enter admission number");
+  if(!navigator.onLine){
+    const student=await getOffline(id);
+    if(student){
+      fillForm(student); return;
+    } else { alert("Student not found offline"); return; }
+  }
   const {data,error}=await supabase.from("students").select("*").eq("studentid",id).single();
   if(error){ alert("Student not found"); return; }
-  currentStudentId=id;
+  fillForm(data);
+};
+function fillForm(data){
+  currentStudentId=data.studentid;
   el("studentName").value=data.studentname||"";
   el("dateOfBirth").value=data.dateofbirth||"";
   el("age").value=data.age||"";
@@ -177,7 +220,7 @@ window.searchStudent = async ()=>{
   el("gradeSelect").value=data.grade||"";
   el("streamSelect").value=data.stream||"";
   if(data.photo){ el("preview").src=data.photo; cropBox.style.display="block"; }
-};
+}
 
 /* ------------------- CAMERA ------------------- */
 async function startCamera(){
@@ -185,7 +228,6 @@ async function startCamera(){
   el("video").srcObject=cameraStream;
   el("video").style.display="block";
 }
-
 function capturePhoto(){
   const video=el("video");
   const canvas=el("canvas");
@@ -203,7 +245,6 @@ function capturePhoto(){
 /* ------------------- DRAGGABLE CROP ------------------- */
 const cropBox = el("cropBox");
 let drag=false, startX, startY;
-
 cropBox.addEventListener("mousedown", e=>{ drag=true; startX=e.offsetX; startY=e.offsetY; });
 document.addEventListener("mouseup", ()=>{ drag=false; });
 document.addEventListener("mousemove", e=>{
@@ -226,30 +267,28 @@ async function uploadPhoto(id){
   canvas.width=cropBox.offsetWidth; canvas.height=cropBox.offsetHeight;
   const ctx=canvas.getContext("2d");
   const imgRect=el("preview").getBoundingClientRect();
-  const parentRect=el("previewContainer").getBoundingClientRect();
   const scaleX=img.naturalWidth/imgRect.width;
   const scaleY=img.naturalHeight/imgRect.height;
-  const sx=(cropBox.offsetLeft)*scaleX;
-  const sy=(cropBox.offsetTop)*scaleY;
+  const sx=cropBox.offsetLeft*scaleX;
+  const sy=cropBox.offsetTop*scaleY;
   const sw=cropBox.offsetWidth*scaleX;
   const sh=cropBox.offsetHeight*scaleY;
   ctx.drawImage(img,sx,sy,sw,sh,0,0,cropBox.offsetWidth,cropBox.offsetHeight);
   return new Promise(resolve=>{
-    canvas.toBlob(async b=>{
-      const path=`students/${id}_${Date.now()}.jpg`;
-      const {error}=await supabase.storage.from("photos").upload(path,b);
-      if(error){alert(error.message); resolve(null); return;}
-      resolve(supabase.storage.from("photos").getPublicUrl(path).data.publicUrl);
+    canvas.toBlob(b=>{
+      const reader=new FileReader();
+      reader.onloadend=()=>resolve(reader.result); // offline: base64
+      reader.readAsDataURL(b);
     });
   });
 }
 
 /* ------------------- REGISTER / UPDATE ------------------- */
-window.registerStudent = async ()=>{
+async function saveStudent(online=true){
   const id=el("studentId").value.trim();
   if(!id) return alert("Admission number required");
-  const photo = await uploadPhoto(id);
-  const {error} = await supabase.from("students").insert([{
+  const photo=await uploadPhoto(id);
+  const student={
     studentid:id,
     studentname:el("studentName").value,
     dateofbirth:el("dateOfBirth").value||null,
@@ -259,28 +298,18 @@ window.registerStudent = async ()=>{
     grade:el("gradeSelect").value||null,
     stream:el("streamSelect").value||null,
     photo
-  }]);
-  if(error) return alert(error.message);
-  el("message").innerText="Student Registered ✔";
-};
-
-window.updateStudent = async ()=>{
-  if(!currentStudentId) return alert("Search student first");
-  const photo = await uploadPhoto(currentStudentId);
-  let data = {
-    studentname:el("studentName").value,
-    dateofbirth:el("dateOfBirth").value,
-    age:Number(el("age").value)||null,
-    school:el("schoolSelect").value,
-    level:el("levelDisplay").value,
-    grade:el("gradeSelect").value,
-    stream:el("streamSelect").value
   };
-  if(photo) data.photo=photo;
-  const {error}=await supabase.from("students").update(data).eq("studentid",currentStudentId);
-  if(error) return alert(error.message);
-  el("message").innerText="Student Updated ✔";
-};
+  if(!navigator.onLine || !online){
+    await saveOffline(student);
+    el("message").innerText="Saved Offline ✔";
+  } else {
+    const {error}=await supabase.from("students").upsert([student]);
+    if(error){ await saveOffline(student); el("message").innerText="Saved Offline ✔"; }
+    else el("message").innerText="Saved Online ✔";
+  }
+}
+window.registerStudent = ()=>saveStudent();
+window.updateStudent = ()=>saveStudent();
 
 /* ------------------- BULK EXCEL ------------------- */
 async function bulkUploadExcel(){
@@ -299,8 +328,13 @@ async function bulkUploadExcel(){
       grade:r.grade||null, stream:r.stream||null
     })).filter(r=>r.studentid && r.studentname);
     if(students.length===0) return alert("No valid students found");
+    if(!navigator.onLine){
+      for(const s of students) await saveOffline(s);
+      el("message").innerText=`Bulk saved offline: ${students.length}`;
+      return;
+    }
     const {error}=await supabase.from("students").insert(students);
-    if(error) return el("error").innerText=error.message;
+    if(error){ el("error").innerText=error.message; return; }
     el("message").innerText=`Bulk upload successful: ${students.length} students`;
     el("bulkExcel").value="";
   };
@@ -317,11 +351,22 @@ function downloadCSVTemplate(){
 }
 
 /* ------------------- LIVE STUDENTS ------------------- */
-(async()=>{
+async function loadLiveStudents(){
+  el("liveList").innerHTML="";
+  if(!navigator.onLine){
+    const tx=db.transaction("students","readonly");
+    const req=tx.objectStore("students").getAll();
+    req.onsuccess=e=>{
+      e.target.result.forEach(s=>el("liveList").innerHTML+=`<div>${s.studentid} — ${s.studentname}</div>`);
+    };
+    return;
+  }
   const {data,error}=await supabase.from("students").select("*").limit(20);
   if(error) return alert(error.message);
   data.forEach(s=>el("liveList").innerHTML+=`<div>${s.studentid} — ${s.studentname}</div>`);
-})();
+}
+loadLiveStudents();
+
 </script>
 
 </body>
