@@ -5,7 +5,6 @@
 <title>All Behavioral Records - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-/* --- Body & Container --- */
 body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
@@ -22,8 +21,6 @@ body {
   box-shadow: 0 0 40px rgba(0,0,0,0.5);
 }
 h1 { text-align: center; margin-bottom: 20px; font-size: 1.8rem; }
-
-/* --- Filters & Actions --- */
 .filters, .actions {
   display: flex;
   flex-wrap: wrap;
@@ -44,24 +41,13 @@ h1 { text-align: center; margin-bottom: 20px; font-size: 1.8rem; }
 .btn-filter{ background:#ffc107; color:black; }
 .btn-print{ background:#28a745; color:white; }
 .btn-delete{ background:#dc3545; color:white; }
-
-/* --- Status Colors --- */
 .green{ color:lightgreen; font-weight:bold; }
 .yellow{ color:yellow; font-weight:bold; }
 .red{ color:#ff4d4d; font-weight:bold; }
-
-/* --- Table Styling --- */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  font-size: 0.9rem;
-}
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
 th, td { padding: 8px; text-align: center; }
 th { background: rgba(255,255,255,0.2); }
 tr:nth-child(even) { background: rgba(255,255,255,0.05); }
-
-/* --- Responsive Mobile Table --- */
 @media screen and (max-width:768px){
   table, thead, tbody, th, td, tr { display: block; width: 100%; }
   thead { display: none; }
@@ -72,13 +58,7 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
     position: relative;
     word-break: break-word;
   }
-  td::before {
-    position: absolute;
-    left: 15px;
-    width: 45%;
-    white-space: nowrap;
-    font-weight: bold;
-  }
+  td::before { position: absolute; left: 15px; width: 45%; white-space: nowrap; font-weight: bold; }
   td:nth-of-type(1)::before{content:"Select";}
   td:nth-of-type(2)::before{content:"Adm No";}
   td:nth-of-type(3)::before{content:"Name";}
@@ -88,10 +68,7 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
   td:nth-of-type(7)::before{content:"Date Recorded";}
   td:nth-of-type(8)::before{content:"Status";}
   td:nth-of-type(9)::before{content:"Report";}
-  .filters input, .filters select, .actions button {
-    flex: 1 1 100%;
-    font-size: 1rem;
-  }
+  .filters input, .filters select, .actions button { flex: 1 1 100%; font-size: 1rem; }
 }
 @media screen and (max-width:480px){
   .actions button, .filters input, .filters select { width: 100%; }
@@ -102,13 +79,11 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
 <div class="container">
   <h1>📊 All Students Behavioral Risk Records</h1>
 
-  <!-- Navigation Buttons -->
   <div class="actions">
     <button class="btn-nav" onclick="window.location.href='behavioral.html'">⬅ Back</button>
     <button class="btn-nav" onclick="window.location.href='assessment.html'">Next ➡</button>
   </div>
 
-  <!-- Filters -->
   <div class="filters">
     <input type="text" id="searchInput" placeholder="Search Admission Number">
     <select id="classFilter"><option value="All">All Classes</option></select>
@@ -121,7 +96,6 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
     <button class="btn-filter" onclick="renderTable()">Apply</button>
   </div>
 
-  <!-- Action Buttons -->
   <div class="actions">
     <button class="btn-download" onclick="downloadAll()">Download All</button>
     <button class="btn-download" onclick="downloadSelected()">Download Selected</button>
@@ -130,7 +104,6 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
     <button class="btn-delete" onclick="deleteSelected()">Delete Selected</button>
   </div>
 
-  <!-- Records Table -->
   <table id="recordsTable">
     <thead>
       <tr>
@@ -152,6 +125,7 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+// --- Initialize Supabase
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
@@ -159,51 +133,51 @@ const supabase = createClient(
 
 let allData = [];
 
+// --- Load Data
 async function loadData() {
   try {
-    // Fetch behavior records
     const { data: behaviors, error: bError } = await supabase
       .from("behavior")
       .select("*")
       .order("recorded_at", { ascending: false });
-    if (bError) throw bError;
+    if(bError) throw bError;
 
-    // Fetch students
     const { data: students, error: sError } = await supabase
       .from("students")
       .select("*");
-    if (sError) throw sError;
+    if(sError) throw sError;
 
-    // Map behavior to students with UUID comparison
+    console.log("Behaviors:", behaviors);
+    console.log("Students:", students);
+
     allData = behaviors.map(b => {
-      const student = students.find(s => 
-        s.id.toLowerCase() === b.student_id.toLowerCase()
-      ) || {};
+      const student = students.find(s => s.id === b.student_id) || {};
       return {
         id: b.id,
         adm: student.studentid || "N/A",
         name: student.studentname || "N/A",
         class: student.grade || "N/A",
         school: student.school || "N/A",
-        risk: b.total_risk,
-        status: b.total_risk > 50 ? "High" : b.total_risk == 50 ? "Medium" : "Low",
-        date: new Date(b.recorded_at)
+        risk: b.total_risk || 0,
+        status: (b.total_risk || 0) > 50 ? "High" : (b.total_risk || 0) === 50 ? "Medium" : "Low",
+        date: b.recorded_at ? new Date(b.recorded_at) : new Date()
       };
     });
 
     populateClassFilter();
     renderTable();
-  } catch (err) {
+  } catch(err) {
     alert("Error fetching data: " + err.message);
     console.error(err);
   }
 }
 
-function populateClassFilter() {
+// --- Populate Class Filter
+function populateClassFilter(){
   const select = document.getElementById("classFilter");
-  const classes = [...new Set(allData.map(x => x.class))].filter(c => c !== "N/A");
+  const classes = [...new Set(allData.map(x => x.class))].filter(c=>c!=="N/A");
   select.innerHTML = '<option value="All">All Classes</option>';
-  classes.forEach(c => {
+  classes.forEach(c=>{
     const option = document.createElement("option");
     option.value = c;
     option.textContent = c;
@@ -211,23 +185,25 @@ function populateClassFilter() {
   });
 }
 
+// --- Render Table
 window.renderTable = () => {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
+
   const search = document.getElementById("searchInput").value.toLowerCase();
   const classFilter = document.getElementById("classFilter").value;
   const riskFilter = document.getElementById("riskFilter").value;
 
   const filtered = allData.filter(r =>
     r.adm.toLowerCase().includes(search) &&
-    (classFilter === "All" || r.class === classFilter) &&
-    (riskFilter === "All" ||
-      (riskFilter === "High" && r.risk > 50) ||
-      (riskFilter === "Medium" && r.risk == 50) ||
-      (riskFilter === "Low" && r.risk < 50))
+    (classFilter==="All" || r.class===classFilter) &&
+    (riskFilter==="All" ||
+      (riskFilter==="High" && r.risk>50) ||
+      (riskFilter==="Medium" && r.risk===50) ||
+      (riskFilter==="Low" && r.risk<50))
   );
 
-  filtered.forEach(r => {
+  filtered.forEach(r=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" class="rowCheck" data-id="${r.id}"></td>
@@ -244,12 +220,12 @@ window.renderTable = () => {
   });
 };
 
-// Select all checkbox
+// --- Select All
 document.getElementById("selectAll").addEventListener("change", function(){
   document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
 });
 
-// Delete selected
+// --- Delete Selected
 window.deleteSelected = async () => {
   const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
   if(!ids.length) return alert("No records selected");
@@ -259,29 +235,28 @@ window.deleteSelected = async () => {
   loadData();
 };
 
-// CSV download
+// --- CSV Download
 function downloadCSV(rows,name){
   if(!rows.length) return alert("No data");
   let csv="AdmNo,Name,Class,School,Risk,Status,Date\n";
   rows.forEach(r=>{
     csv+=`${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
   });
-  const blob=new Blob([csv],{type:"text/csv"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=name;
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
   a.click();
 }
-window.downloadAll=()=>downloadCSV(allData,"All_Behavioral.csv");
-window.downloadSelected=()=> {
-  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
-  const rows=allData.filter(r=>ids.includes(r.id));
-  downloadCSV(rows,"Selected_Behavioral.csv");
+window.downloadAll = () => downloadCSV(allData,"All_Behavioral.csv");
+window.downloadSelected = () => {
+  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  downloadCSV(allData.filter(r=>ids.includes(r.id)),"Selected_Behavioral.csv");
 };
 
-// Print
-window.printReport=(r)=>{
-  const win=window.open("","_blank");
+// --- Print
+window.printReport = r => {
+  const win = window.open("","_blank");
   win.document.write(`
     <h2>Behavioral Report</h2>
     Admission: ${r.adm}<br>
@@ -298,19 +273,16 @@ window.printReport=(r)=>{
 function printReportList(rows){
   const win=window.open("","_blank");
   let html="<h2>Behavioral Records</h2>";
-  rows.forEach(r=>{
-    html+=`<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
-  });
+  rows.forEach(r=>{ html+=`<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`; });
   win.document.write(html+"<br><button onclick='window.print()'>Print</button>");
 }
-window.printAll=()=>printReportList(allData);
-window.printSelected=()=>{
+window.printAll = () => printReportList(allData);
+window.printSelected = () => {
   const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
-  const rows=allData.filter(r=>ids.includes(r.id));
-  printReportList(rows);
+  printReportList(allData.filter(r=>ids.includes(r.id)));
 };
 
-// Initial load
+// --- Initial Load
 loadData();
 </script>
 </body>
