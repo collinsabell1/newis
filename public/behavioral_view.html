@@ -21,13 +21,7 @@ body {
   backdrop-filter: blur(15px);
   box-shadow: 0 0 40px rgba(0,0,0,0.5);
 }
-
-/* --- Headings --- */
-h1 { 
-  text-align: center; 
-  margin-bottom: 20px; 
-  font-size: 1.8rem; 
-}
+h1 { text-align: center; margin-bottom: 20px; font-size: 1.8rem; }
 
 /* --- Filters & Actions --- */
 .filters, .actions {
@@ -63,10 +57,7 @@ table {
   margin-top: 10px;
   font-size: 0.9rem;
 }
-th, td {
-  padding: 8px;
-  text-align: center;
-}
+th, td { padding: 8px; text-align: center; }
 th { background: rgba(255,255,255,0.2); }
 tr:nth-child(even) { background: rgba(255,255,255,0.05); }
 
@@ -102,12 +93,8 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
     font-size: 1rem;
   }
 }
-
-/* --- Buttons Full Width on Very Small Screens --- */
 @media screen and (max-width:480px){
-  .actions button, .filters input, .filters select {
-    width: 100%;
-  }
+  .actions button, .filters input, .filters select { width: 100%; }
 }
 </style>
 </head>
@@ -174,20 +161,24 @@ let allData = [];
 
 async function loadData() {
   try {
-    // 1️⃣ Fetch all behavior records
-    const { data: behaviors, error: bError } = await supabase.from("behavior")
+    // Fetch behavior records
+    const { data: behaviors, error: bError } = await supabase
+      .from("behavior")
       .select("*")
       .order("recorded_at", { ascending: false });
     if (bError) throw bError;
 
-    // 2️⃣ Fetch all students
-    const { data: students, error: sError } = await supabase.from("students")
+    // Fetch students
+    const { data: students, error: sError } = await supabase
+      .from("students")
       .select("*");
     if (sError) throw sError;
 
-    // 3️⃣ Map behavior to student manually
+    // Map behavior to students with UUID comparison
     allData = behaviors.map(b => {
-      const student = students.find(s => s.id === b.student_id) || {};
+      const student = students.find(s => 
+        s.id.toLowerCase() === b.student_id.toLowerCase()
+      ) || {};
       return {
         id: b.id,
         adm: student.studentid || "N/A",
@@ -204,6 +195,7 @@ async function loadData() {
     renderTable();
   } catch (err) {
     alert("Error fetching data: " + err.message);
+    console.error(err);
   }
 }
 
@@ -252,12 +244,12 @@ window.renderTable = () => {
   });
 };
 
-// --- Select All Checkbox ---
+// Select all checkbox
 document.getElementById("selectAll").addEventListener("change", function(){
   document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
 });
 
-// --- Delete Selected ---
+// Delete selected
 window.deleteSelected = async () => {
   const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
   if(!ids.length) return alert("No records selected");
@@ -267,7 +259,7 @@ window.deleteSelected = async () => {
   loadData();
 };
 
-// --- Download CSV ---
+// CSV download
 function downloadCSV(rows,name){
   if(!rows.length) return alert("No data");
   let csv="AdmNo,Name,Class,School,Risk,Status,Date\n";
@@ -281,13 +273,13 @@ function downloadCSV(rows,name){
   a.click();
 }
 window.downloadAll=()=>downloadCSV(allData,"All_Behavioral.csv");
-window.downloadSelected=()=>{
+window.downloadSelected=()=> {
   const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
   const rows=allData.filter(r=>ids.includes(r.id));
   downloadCSV(rows,"Selected_Behavioral.csv");
 };
 
-// --- Print ---
+// Print
 window.printReport=(r)=>{
   const win=window.open("","_blank");
   win.document.write(`
@@ -318,6 +310,7 @@ window.printSelected=()=>{
   printReportList(rows);
 };
 
+// Initial load
 loadData();
 </script>
 </body>
