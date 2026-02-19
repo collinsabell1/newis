@@ -128,8 +128,6 @@ img.student-photo{width:50px;height:50px;object-fit:cover;border-radius:6px;}
     <div class="section-title">🏫 Upload School Logo</div>
     <input type="file" id="logoUpload" accept="image/*">
     <button onclick="uploadLogo()">Upload Logo</button>
-    <button onclick="deleteLogo()">Delete Logo</button>
-    <button onclick="previewLogo()">Preview Logo</button>
     <span id="logoStatus" style="margin-left:10px;"></span>
   </div>
 
@@ -204,67 +202,149 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-let students = [], filteredStudents = [], schoolLogo = null;
+let students=[], filteredStudents=[], currentPage=1, perPage=20;
+let sortField="studentid", sortAsc=true;
+let schoolLogo=null;
 
-// Upload logo to Supabase storage
-window.uploadLogo = async () => {
-  const file = document.getElementById("logoUpload").files[0];
-  if (!file) return alert("Select a logo file first.");
-  
-  // Upload logo to Supabase Storage
-  const { data, error } = await supabase.storage.from('schoollogo').upload('logos/' + file.name, file);
-  
-  if (error) {
-    console.error(error);
-    return alert("Error uploading logo.");
+// IndexedDB offline
+const dbRequest = indexedDB.open('NEWIS_Students',1);
+let db;
+dbRequest.onupgradeneeded = e => {db=e.target.result; db.createObjectStore('students',{keyPath:'id'});}
+dbRequest.onsuccess = e => {db=e.target.result; loadOffline();}
+dbRequest.onerror = e => console.error(e);
+
+// Save/load offline
+function saveOffline(){if(!db) return; const tx=db.transaction('students','readwrite'); const store=tx.objectStore('students'); students.forEach(s=>store.put(s));}
+function loadOffline(){
+  if(!db) return;
+  const tx=db.transaction('students','readonly');
+  const store=tx.objectStore('students');
+  const req=store.getAll();
+  req.onsuccess = ()=>{
+    if(req.result.length>0){students=req.result; filteredStudents=[...students]; populateClassFilter(); renderTable(); renderIDPreview();}
+    else{loadStudents();}
   }
+}
 
-  schoolLogo = data.Key; // Store the logo URL path
-  document.getElementById("logoStatus").textContent = "Logo uploaded successfully!";
+// Load students
+async function loadStudents(){
+  try{
+    const {data,error} = await supabase.from("students").select("*").order("created_at",{ascending:false});
+    if(error) throw error;
+    students = data.map(s=>({...s,status:s.status||"Active"}));
+    filteredStudents=[...students];
+    populateClassFilter();
+    renderTable();
+    renderIDPreview();
+    saveOffline();
+  }catch(err){console.error(err);}
+}
+
+function populateClassFilter(){
+  const classSet = new Set(students.map(s=>s.grade).filter(Boolean));
+  const cf=document.getElementById("classFilter");
+  cf.innerHTML='<option value="All">All Classes</option>';
+  classSet.forEach(c=>{cf.innerHTML+=`<option>${c}</option>`});
+}
+
+function renderTable(){
+  filteredStudents.sort((a,b)=>{
+    let va=a[sortField]||"", vb=b[sortField]||"";
+    if(typeof va==="string") va=va.toLowerCase();
+    if(typeof vb==="string") vb=vb.toLowerCase();
+    if(va<vb) return sortAsc?-1:1;
+    if(va>vb) return sortAsc?1:-1;
+    return 0;
+  });
+  const start=(currentPage-1)*perPage;
+  const page=filteredStudents.slice(start,start+perPage);
+  const tbody=document.querySelector("#studentsTable tbody");
+  tbody.innerHTML="";
+  page.forEach(s=>{
+    let sc="status-active";
+    if(s.status==="Suspended") sc="status-suspended";
+    if(s.status==="Expelled") sc="status-expelled";
+    tbody.innerHTML+=`
+    <tr>
+      <td><input type="checkbox" class="selectBox" value="${s.id}"></td>
+      <td>${s.studentid||""}</td>
+      <td>${s.studentname||""}</td>
+      <td>${s.dateofbirth||""}</td>
+      <td>${s.age||""}</td>
+      <td>${s.school||""}</td>
+      <td>${s.level||""}</td>
+      <td>${s.grade||""}</td>
+      <td>${s.stream||""}</td>
+      <td>${s.photo?`<img class="student-photo" src="${s.photo}">`:""}</td>
+      <td class="${sc}">${s.status}</td>
+      <td>${s.created_at?new Date(s.created_at).toLocaleString():""}</td>
+      <td>
+        <button onclick="changeStatus('${s.id}','Active')">Restore</button>
+        <button onclick="changeStatus('${s.id}','Suspended')">Suspend</button>
+        <button onclick="changeStatus('${s.id}','Expelled')">Expel</button>
+        <button class="delete-btn" onclick="deleteStudent('${s.id}')">Delete</button>
+      </td>
+    </tr>`;
+  });
+  renderPagination();
   renderIDPreview();
+}
+
+function renderPagination(){
+  const p=document.getElementById("pagination");
+  p.innerHTML="";
+  const total=Math.ceil(filteredStudents.length/perPage);
+  for(let i=1;i<=total;i++) p.innerHTML+=`<button onclick="goToPage(${i})">${i}</button>`;
+}
+
+window.goToPage=p=>{currentPage=p; renderTable();}
+window.sortTable=f=>{ if(sortField===f) sortAsc=!sortAsc; else{sortField=f; sortAsc=true;} renderTable();}
+window.toggleSelectAll=m=>{document.querySelectorAll(".selectBox").forEach(cb=>cb.checked=m.checked);}
+window.applyFilters=()=>{
+  const search=document.getElementById("searchInput").value.toLowerCase();
+  const classF=document.getElementById("classFilter").value;
+  const statusF=document.getElementById("statusFilter").value;
+  filteredStudents=students.filter(s=>{
+    const matchSearch=s.studentid.toLowerCase().includes(search)||(s.studentname||"").toLowerCase().includes(search);
+    const matchClass=classF==="All"||s.grade===classF;
+    const matchStatus=statusF==="All"||s.status===statusF;
+    return matchSearch&&matchClass&&matchStatus;
+  });
+  currentPage=1; renderTable();
 };
 
-// Delete the logo from Supabase storage
-window.deleteLogo = async () => {
-  if (!schoolLogo) return alert("No logo to delete.");
+// Status & delete actions
+window.changeStatus=async(id,status)=>{await supabase.from("students").update({status}).eq("id",id); loadStudents();}
+window.deleteStudent=async(id)=>{if(!confirm("Delete this student permanently?")) return; await supabase.from("students").delete().eq("id",id); loadStudents();}
+window.bulkAction=async(status)=>{const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value); for(const id of ids){await supabase.from("students").update({status}).eq("id",id);} loadStudents();}
+window.deleteSelected=async()=>{const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value); if(ids.length===0) return alert("No students selected."); if(!confirm(`Delete ${ids.length} student(s)?`)) return; for(const id of ids){await supabase.from("students").delete().eq("id",id);} loadStudents();}
 
-  const { error } = await supabase.storage.from('schoollogo').remove([`logos/${schoolLogo}`]);
-  
-  if (error) {
-    console.error(error);
-    return alert("Error deleting logo.");
-  }
-
-  schoolLogo = null;
-  document.getElementById("logoStatus").textContent = "Logo deleted successfully!";
-  renderIDPreview();
+// Logo Upload
+window.uploadLogo=async()=>{
+  const file=document.getElementById("logoUpload").files[0];
+  if(!file) return alert("Select a logo file first.");
+  const reader=new FileReader();
+  reader.onload=e=>{
+    schoolLogo=e.target.result;
+    document.getElementById("logoStatus").textContent=" Logo loaded!";
+    renderIDPreview();
+    localStorage.setItem('schoolLogo',schoolLogo);
+  };
+  reader.readAsDataURL(file);
 };
-
-// Preview the current logo
-window.previewLogo = async () => {
-  if (!schoolLogo) return alert("No logo uploaded.");
-  
-  const { publicURL, error } = await supabase.storage.from('schoollogo').getPublicUrl(`logos/${schoolLogo}`);
-  
-  if (error) {
-    console.error(error);
-    return alert("Error retrieving logo.");
-  }
-
-  const logoPreviewWindow = window.open("", "Logo Preview", "width=600,height=600");
-  logoPreviewWindow.document.write(`<img src="${publicURL}" alt="Logo Preview" style="width:100%">`);
-};
+if(localStorage.getItem('schoolLogo')) schoolLogo=localStorage.getItem('schoolLogo');
 
 // ID Card Preview
-function renderIDPreview() {
-  const previewDiv = document.getElementById("idPreview");
-  previewDiv.innerHTML = "";
-  filteredStudents.slice(0, 10).forEach(s => {
-    const div = document.createElement("div");
-    div.className = "id-card";
-    div.innerHTML = `
-      ${schoolLogo ? `<img class="logo" src="${schoolLogo}">` : ''}
-      ${s.photo ? `<img class="photo" src="${s.photo}">` : ''}
+function renderIDPreview(){
+  const previewDiv=document.getElementById("idPreview");
+  previewDiv.innerHTML="";
+  const page=filteredStudents.slice(0,10);
+  page.forEach(s=>{
+    const div=document.createElement("div");
+    div.className="id-card";
+    div.innerHTML=`
+      ${schoolLogo?`<img class="logo" src="${schoolLogo}">`:''}
+      ${s.photo?`<img class="photo" src="${s.photo}">`:''}
       <div class="text">
         <div><strong>${s.studentname}</strong></div>
         <div>Adm No: ${s.studentid}</div>
@@ -276,9 +356,58 @@ function renderIDPreview() {
   });
 }
 
-// Back button
-window.goBack = () => { location.href = "register.html"; }
-</script>
+// Export PDF & Excel & ID cards
+window.downloadPDF=function(){
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF();
+  pdf.text("Registered Students - NEWIS",10,10);
+  let y=20;
+  filteredStudents.forEach(s=>{
+    pdf.text(`${s.studentid} | ${s.studentname} | ${s.grade} | ${s.stream} | ${s.status}`,10,y);
+    y+=6;if(y>280){pdf.addPage(); y=20;}
+  });
+  pdf.save("Students.pdf");
+};
+window.downloadExcel=function(){
+  const data=[["Adm No","Name","DOB","Age","School","Level","Class","Stream","Status","Registered At"]];
+  filteredStudents.forEach(s=>{data.push([s.studentid,s.studentname,s.dateofbirth,s.age,s.school,s.level,s.grade,s.stream,s.status,s.created_at]);});
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),"Students");
+  XLSX.writeFile(wb,"Students.xlsx");
+};
+window.downloadIDCards=function(){
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF({unit:'mm', format:'a4'});
+  let x=10,y=10,w=85,h=55,gap=10;
+  filteredStudents.forEach(s=>{
+    pdf.rect(x,y,w,h);
+    pdf.setFontSize(12);
+    if(schoolLogo) pdf.addImage(schoolLogo,'JPEG',x+5,y+2,20,20);
+    if(s.photo) pdf.addImage(s.photo,'JPEG',x+w-25,y+5,20,30);
+    pdf.text("School Name", x+30, y+12);
+    pdf.text(`Name: ${s.studentname}`, x+5, y+25);
+    pdf.text(`Adm No: ${s.studentid}`, x+5, y+33);
+    pdf.text(`Class: ${s.grade}`, x+5, y+41);
+    pdf.text(`Stream: ${s.stream}`, x+5, y+49);
+    x+=w+gap;if(x+ w>210){x=10; y+=h+gap;} if(y+h>297){pdf.addPage(); x=10; y=10;}
+  });
+  pdf.save("IDCards.pdf");
+};
 
+// Bulk promote
+window.bulkPromote=async()=>{
+  const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value);
+  for(const id of ids){
+    const s=students.find(st=>st.id===id);
+    if(!s) continue;
+    let nextClass=s.grade.match(/\d+/)?parseInt(s.grade.match(/\d+/)[0])+1:"";
+    await supabase.from("students").update({grade:nextClass.toString()}).eq("id",id);
+  }
+  loadStudents();
+};
+
+// Back button
+window.goBack=()=>{location.href="register.html";}
+</script>
 </body>
 </html>
