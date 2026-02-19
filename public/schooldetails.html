@@ -49,11 +49,7 @@ button{cursor:pointer;font-weight:bold}
 .btn-danger{background:#dc3545;color:white}
 .btn-clear{background:#6c757d;color:white}
 .item-list{display:flex;flex-wrap:wrap;gap:6px}
-.item{
- background:rgba(0,0,0,.4);
- padding:5px 10px;
- border-radius:12px;
-}
+.item{background:rgba(0,0,0,.4);padding:5px 10px;border-radius:12px;}
 .spinner{display:none;text-align:center}
 .search-results{
  background:#111;
@@ -70,8 +66,6 @@ button{cursor:pointer;font-weight:bold}
  border-radius:10px;
  margin-top:15px;
 }
-
-/* FLOATING BACK BUTTON */
 .back-btn{
 position:fixed;
 top:20px;
@@ -156,25 +150,21 @@ z-index:9999;
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+/* SUPABASE */
 const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"YOUR_PUBLIC_ANON_KEY"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* BACK BUTTON */
-window.goBack=()=>{
-if(document.referrer){
-history.back();
-}else{
-location.href="index.html";
-}
-};
+/* BACK */
+window.goBack=()=> document.referrer?history.back():location.href="index.html";
 
 /* STATE */
 let currentId=null;
 let classes=[];
 let streams=[];
 const loader=document.getElementById("loader");
+const message=document.getElementById("message");
 function load(x){loader.style.display=x?"block":"none"}
 
 /* THEME */
@@ -183,7 +173,8 @@ window.toggleTheme=()=>document.body.classList.toggle("light")
 /* CLEAR */
 window.clearForm=()=>{
 currentId=null;
-classes=[];streams=[];
+classes=[];
+streams=[];
 document.querySelectorAll("input").forEach(i=>i.value="")
 classesList.innerHTML="";
 streamsList.innerHTML="";
@@ -215,20 +206,13 @@ streamInput.value="";
 
 /* REGIONS */
 const regions={
-"Nairobi":"Nairobi Region",
-"Mombasa":"Coast",
-"Kwale":"Coast",
-"Kilifi":"Coast",
-"Taita Taveta":"Coast",
-"Lamu":"Coast",
-"Tana River":"Coast",
-"Garissa":"North Eastern",
-"Wajir":"North Eastern",
-"Mandera":"North Eastern"
+"Nairobi":"Nairobi Region","Mombasa":"Coast","Kwale":"Coast","Kilifi":"Coast",
+"Taita Taveta":"Coast","Lamu":"Coast","Tana River":"Coast",
+"Garissa":"North Eastern","Wajir":"North Eastern","Mandera":"North Eastern"
 };
 
-/* COUNTIES */
-const counties={
+/* FULL COUNTIES + SUBCOUNTIES */
+const counties = {
 "Nairobi":["Westlands","Dagoretti North","Dagoretti South","Langata","Kibra","Roysambu","Kasarani","Ruaraka","Embakasi South","Embakasi North","Embakasi Central","Embakasi East","Embakasi West","Makadara","Kamukunji","Starehe","Mathare"],
 "Mombasa":["Changamwe","Jomvu","Kisauni","Nyali","Likoni","Mvita"],
 "Kwale":["Msambweni","Lunga Lunga","Matuga","Kinango"],
@@ -238,7 +222,44 @@ const counties={
 "Taita Taveta":["Taveta","Wundanyi","Mwatate","Voi"],
 "Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara"],
 "Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Eldas","Wajir South"],
-"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"]
+"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"],
+"Marsabit":["Moyale","North Horr","Saku","Laisamis"],
+"Isiolo":["Isiolo North","Isiolo South"],
+"Meru":["Igembe South","Igembe Central","Igembe North","Tigania West","Tigania East","North Imenti","Buuri","Central Imenti","South Imenti"],
+"Tharaka-Nithi":["Maara","Chuka","Tharaka"],
+"Embu":["Manyatta","Runyenjes","Mbeere South","Mbeere North"],
+"Kitui":["Mwingi North","Mwingi West","Mwingi Central","Kitui West","Kitui Rural","Kitui Central","Kitui East","Kitui South"],
+"Machakos":["Masinga","Yatta","Kangundo","Matungulu","Kathiani","Mavoko","Machakos Town","Mwala"],
+"Makueni":["Mbooni","Kilome","Kaiti","Makueni","Kibwezi West","Kibwezi East"],
+"Nyandarua":["Kinangop","Kipipiri","Ol Kalou","Ol Jorok","Ndaragwa"],
+"Nyeri":["Tetu","Kieni","Mathira","Othaya","Mukurweini","Nyeri Town"],
+"Kirinyaga":["Mwea","Gichugu","Ndia","Kirinyaga Central"],
+"Murang'a":["Kangema","Mathioya","Kiharu","Kigumo","Maragwa","Kandara","Gatanga"],
+"Kiambu":["Gatundu South","Gatundu North","Juja","Thika Town","Ruiru","Githunguri","Kiambu","Kiambaa","Kabete","Kikuyu","Limuru","Lari"],
+"Turkana":["Turkana North","Turkana West","Turkana Central","Loima","Turkana South","Turkana East"],
+"West Pokot":["Kapenguria","Sigor","Kacheliba","Pokot South"],
+"Samburu":["Samburu West","Samburu North","Samburu East"],
+"Trans Nzoia":["Kwanza","Endebess","Saboti","Kiminini","Cherangany"],
+"Uasin Gishu":["Soy","Turbo","Moiben","Ainabkoi","Kapseret","Kesses"],
+"Elgeyo-Marakwet":["Marakwet East","Marakwet West","Keiyo North","Keiyo South"],
+"Nandi":["Tindiret","Aldai","Nandi Hills","Chesumei","Emgwen","Mosop"],
+"Baringo":["Tiaty","Baringo North","Baringo Central","Baringo South","Mogotio","Eldama Ravine"],
+"Laikipia":["Laikipia West","Laikipia East","Laikipia North"],
+"Nakuru":["Molo","Njoro","Naivasha","Gilgil","Kuresoi South","Kuresoi North","Subukia","Rongai","Bahati","Nakuru Town West","Nakuru Town East"],
+"Narok":["Kilgoris","Emurua Dikirr","Narok North","Narok East","Narok South","Narok West"],
+"Kajiado":["Kajiado North","Kajiado Central","Kajiado East","Kajiado West","Kajiado South"],
+"Kericho":["Kipkelion East","Kipkelion West","Ainamoi","Bureti","Belgut","Sigowet/Soin"],
+"Bomet":["Sotik","Chepalungu","Bomet East","Bomet Central","Konoin"],
+"Kakamega":["Lugari","Likuyani","Malava","Lurambi","Navakholo","Mumias West","Mumias East","Matungu","Butere","Khwisero","Shinyalu","Ikolomani"],
+"Vihiga":["Vihiga","Sabatia","Hamisi","Luanda","Emuhaya"],
+"Bungoma":["Mt Elgon","Sirisia","Kabuchai","Bumula","Kanduyi","Webuye East","Webuye West","Kimilili","Tongaren"],
+"Busia":["Teso North","Teso South","Nambale","Matayos","Butula","Funyula","Budalangi"],
+"Siaya":["Ugenya","Ugunja","Alego Usonga","Gem","Bondo","Rarieda"],
+"Kisumu":["Kisumu East","Kisumu West","Kisumu Central","Seme","Nyando","Muhoroni","Nyakach"],
+"Homa Bay":["Kasipul","Kabondo","Karachuonyo","Rangwe","Homa Bay Town","Ndhiwa","Suba North","Suba South"],
+"Migori":["Rongo","Awendo","Suna East","Suna West","Uriri","Nyatike","Kuria West","Kuria East"],
+"Kisii":["Bonchari","South Mugirango","Bomachoge Borabu","Bobasi","Bomachoge Chache","Nyaribari Masaba","Nyaribari Chache","Kitutu Chache North","Kitutu Chache South"],
+"Nyamira":["Kitutu Masaba","West Mugirango","North Mugirango","Borabu"]
 };
 
 /* LOAD COUNTIES */
@@ -247,67 +268,97 @@ Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
 schoolCounty.oninput=()=>{
 schoolRegion.value=regions[schoolCounty.value]||"Other Region";
 subcountiesList.innerHTML="";
-(counties[schoolCounty.value]||[]).forEach(s=>{
-subcountiesList.appendChild(new Option(s,s))
-})
+(counties[schoolCounty.value]||[]).forEach(s=>subcountiesList.appendChild(new Option(s,s)))
 }
 
-/* GPS DETECTOR FIX */
+/* GPS */
 window.detectGPS=()=>{
-if(!navigator.geolocation){
-alert("GPS not supported");
-return;
-}
-
+if(!navigator.geolocation)return alert("GPS not supported");
 load(true);
-
 navigator.geolocation.getCurrentPosition(async pos=>{
 try{
-const lat=pos.coords.latitude;
-const lon=pos.coords.longitude;
-
-/* reverse geocode using openstreetmap */
-const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
 const data=await res.json();
-
-let county=
-data.address.county ||
-data.address.state_district ||
-data.address.state ||
-"";
-
-/* clean county names */
-county=county.replace(" County","").trim();
-
-/* set fields */
+let county=(data.address.county||data.address.state||"").replace(" County","").trim();
 schoolCounty.value=county;
 schoolCounty.dispatchEvent(new Event("input"));
-
 message.innerText="Detected: "+county;
-}
-catch(err){
-alert("Location detected but county not found");
-console.error(err);
-}
+}catch{alert("Location detected but county not found")}
 load(false);
-},
-err=>{
-load(false);
-alert("Location permission denied");
-});
+},()=>{load(false);alert("Permission denied")})
+}
+
+/* CREATE */
+window.createSchool=async()=>{
+load(true)
+const {data,error}=await supabase.from("schools").insert([{
+name:schoolName.value,
+level:schoolLevel.value,
+county:schoolCounty.value,
+region:schoolRegion.value,
+subcounty:schoolSubcounty.value,
+phone:schoolPhone.value,
+classes,streams
+}]).select()
+if(error) message.innerText=error.message
+else{currentId=data[0].id;message.innerText="Saved"}
+loadStats();load(false)
+}
+
+/* UPDATE */
+window.updateSchool=async()=>{
+if(!currentId)return alert("Search school first")
+const {error}=await supabase.from("schools").update({
+name:schoolName.value,level:schoolLevel.value,county:schoolCounty.value,
+region:schoolRegion.value,subcounty:schoolSubcounty.value,
+phone:schoolPhone.value,classes,streams
+}).eq("id",currentId)
+message.innerText=error?error.message:"Updated";loadStats()
+}
+
+/* DELETE */
+window.deleteSchool=async()=>{
+if(!currentId)return alert("Search first")
+await supabase.from("schools").delete().eq("id",currentId)
+clearForm();message.innerText="Deleted";loadStats()
+}
+
+/* SEARCH */
+searchName.oninput=async()=>{
+const q=searchName.value
+if(!q){results.innerHTML="";return}
+const {data}=await supabase.from("schools").select("*").ilike("name","%"+q+"%").limit(5)
+results.innerHTML=""
+data.forEach(s=>{
+const d=document.createElement("div")
+d.textContent=s.name
+d.onclick=()=>{
+currentId=s.id
+schoolName.value=s.name
+schoolLevel.value=s.level
+schoolCounty.value=s.county
+schoolCounty.dispatchEvent(new Event("input"))
+schoolSubcounty.value=s.subcounty
+schoolPhone.value=s.phone
+classes=s.classes||[]
+streams=s.streams||[]
+render(classes,classesList)
+render(streams,streamsList)
+results.innerHTML=""
+}
+results.appendChild(d)
+})
 }
 
 /* STATS */
 async function loadStats(){
-const {data}=await supabase.from("schools").select("county");
-let counts={};
-data.forEach(s=>counts[s.county]=(counts[s.county]||0)+1);
-statsBox.innerHTML="";
-Object.entries(counts).forEach(([c,n])=>{
-statsBox.innerHTML+=`<div>${c}: ${n} schools</div>`;
-});
+const {data}=await supabase.from("schools").select("county")
+let c={}
+data.forEach(s=>c[s.county]=(c[s.county]||0)+1)
+statsBox.innerHTML=""
+Object.entries(c).forEach(([k,v])=>statsBox.innerHTML+=`<div>${k}: ${v}</div>`)
 }
-loadStats();
+loadStats()
 </script>
 </body>
 </html>
