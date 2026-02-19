@@ -213,7 +213,7 @@ render(streams,streamsList);
 streamInput.value="";
 }}
 
-/* REGIONS */
+/* REGIONS (UNCHANGED) */
 const regions={
 "Nairobi":"Nairobi Region",
 "Mombasa":"Coast",
@@ -227,13 +227,55 @@ const regions={
 "Mandera":"North Eastern"
 };
 
-/* COUNTIES */
+/* ALL COUNTIES + SUBCOUNTIES */
 const counties={
-"Nairobi":["Westlands","Dagoretti","Langata","Embakasi","Kasaran","Makadara","Kamukunji","Starehe","Mathare"],
-"Mombasa":["Nyali","Likoni","Kisauni","Changamwe","Jomvu","Mvita"],
-"Kwale":["Msambweni","Matuga","Kinango","Lunga Lunga"],
+"Nairobi":["Westlands","Dagoretti North","Dagoretti South","Langata","Kibra","Roysambu","Kasarani","Ruaraka","Embakasi South","Embakasi North","Embakasi Central","Embakasi East","Embakasi West","Makadara","Kamukunji","Starehe","Mathare"],
+"Mombasa":["Changamwe","Jomvu","Kisauni","Nyali","Likoni","Mvita"],
+"Kwale":["Msambweni","Lunga Lunga","Matuga","Kinango"],
 "Kilifi":["Kilifi North","Kilifi South","Kaloleni","Rabai","Ganze","Malindi","Magarini"],
-"Taita Taveta":["Voi","Wundanyi","Taveta","Mwatate"]
+"Tana River":["Garsen","Galole","Bura"],
+"Lamu":["Lamu East","Lamu West"],
+"Taita Taveta":["Taveta","Wundanyi","Mwatate","Voi"],
+"Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara"],
+"Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Eldas","Wajir South"],
+"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"],
+"Marsabit":["Moyale","North Horr","Saku","Laisamis"],
+"Isiolo":["Isiolo North","Isiolo South"],
+"Meru":["Igembe South","Igembe Central","Igembe North","Tigania West","Tigania East","North Imenti","Buuri","Central Imenti","South Imenti"],
+"Tharaka-Nithi":["Maara","Chuka","Tharaka"],
+"Embu":["Manyatta","Runyenjes","Mbeere South","Mbeere North"],
+"Kitui":["Mwingi North","Mwingi West","Mwingi Central","Kitui West","Kitui Rural","Kitui Central","Kitui East","Kitui South"],
+"Machakos":["Masinga","Yatta","Kangundo","Matungulu","Kathiani","Mavoko","Machakos Town","Mwala"],
+"Makueni":["Mbooni","Kilome","Kaiti","Makueni","Kibwezi West","Kibwezi East"],
+"Nyandarua":["Kinangop","Kipipiri","Ol Kalou","Ol Jorok","Ndaragwa"],
+"Nyeri":["Tetu","Kieni","Mathira","Othaya","Mukurweini","Nyeri Town"],
+"Kirinyaga":["Mwea","Gichugu","Ndia","Kirinyaga Central"],
+"Murang'a":["Kangema","Mathioya","Kiharu","Kigumo","Maragwa","Kandara","Gatanga"],
+"Kiambu":["Gatundu South","Gatundu North","Juja","Thika Town","Ruiru","Githunguri","Kiambu","Kiambaa","Kabete","Kikuyu","Limuru","Lari"],
+"Turkana":["Turkana North","Turkana West","Turkana Central","Loima","Turkana South","Turkana East"],
+"West Pokot":["Kapenguria","Sigor","Kacheliba","Pokot South"],
+"Samburu":["Samburu West","Samburu North","Samburu East"],
+"Trans Nzoia":["Kwanza","Endebess","Saboti","Kiminini","Cherangany"],
+"Uasin Gishu":["Soy","Turbo","Moiben","Ainabkoi","Kapseret","Kesses"],
+"Elgeyo-Marakwet":["Marakwet East","Marakwet West","Keiyo North","Keiyo South"],
+"Nandi":["Tindiret","Aldai","Nandi Hills","Chesumei","Emgwen","Mosop"],
+"Baringo":["Tiaty","Baringo North","Baringo Central","Baringo South","Mogotio","Eldama Ravine"],
+"Laikipia":["Laikipia West","Laikipia East","Laikipia North"],
+"Nakuru":["Molo","Njoro","Naivasha","Gilgil","Kuresoi South","Kuresoi North","Subukia","Rongai","Bahati","Nakuru Town West","Nakuru Town East"],
+"Narok":["Kilgoris","Emurua Dikirr","Narok North","Narok East","Narok South","Narok West"],
+"Kajiado":["Kajiado North","Kajiado Central","Kajiado East","Kajiado West","Kajiado South"],
+"Kericho":["Kipkelion East","Kipkelion West","Ainamoi","Bureti","Belgut","Sigowet/Soin"],
+"Bomet":["Sotik","Chepalungu","Bomet East","Bomet Central","Konoin"],
+"Kakamega":["Lugari","Likuyani","Malava","Lurambi","Navakholo","Mumias West","Mumias East","Matungu","Butere","Khwisero","Shinyalu","Ikolomani"],
+"Vihiga":["Vihiga","Sabatia","Hamisi","Luanda","Emuhaya"],
+"Bungoma":["Mt Elgon","Sirisia","Kabuchai","Bumula","Kanduyi","Webuye East","Webuye West","Kimilili","Tongaren"],
+"Busia":["Teso North","Teso South","Nambale","Matayos","Butula","Funyula","Budalangi"],
+"Siaya":["Ugenya","Ugunja","Alego Usonga","Gem","Bondo","Rarieda"],
+"Kisumu":["Kisumu East","Kisumu West","Kisumu Central","Seme","Nyando","Muhoroni","Nyakach"],
+"Homa Bay":["Kasipul","Kabondo","Karachuonyo","Rangwe","Homa Bay Town","Ndhiwa","Suba North","Suba South"],
+"Migori":["Rongo","Awendo","Suna East","Suna West","Uriri","Nyatike","Kuria West","Kuria East"],
+"Kisii":["Bonchari","South Mugirango","Bomachoge Borabu","Bobasi","Bomachoge Chache","Nyaribari Masaba","Nyaribari Chache","Kitutu Chache North","Kitutu Chache South"],
+"Nyamira":["Kitutu Masaba","West Mugirango","North Mugirango","Borabu"]
 };
 
 /* LOAD COUNTIES */
@@ -245,110 +287,6 @@ subcountiesList.innerHTML="";
 (counties[schoolCounty.value]||[]).forEach(s=>{
 subcountiesList.appendChild(new Option(s,s))
 })
-}
-
-/* SEARCH */
-searchName.oninput=async()=>{
-const q=searchName.value;
-if(q.length<2){results.innerHTML="";return}
-const {data}=await supabase.from("schools").select("name").ilike("name",`%${q}%`).limit(5);
-results.innerHTML="";
-data.forEach(s=>{
-const d=document.createElement("div");
-d.textContent=s.name;
-d.onclick=()=>loadSchool(s.name);
-results.appendChild(d);
-})
-}
-
-/* LOAD SCHOOL */
-async function loadSchool(name){
-load(true);
-results.innerHTML="";
-const id=name.toLowerCase().replace(/\s+/g,"_");
-currentId=id;
-
-const {data}=await supabase.from("schools").select("*").eq("id",id).single();
-if(!data){alert("Not found");load(false);return}
-
-schoolName.value=data.name;
-schoolLevel.value=data.level;
-schoolCounty.value=data.county;
-schoolRegion.value=regions[data.county]||"Other Region";
-schoolSubcounty.value=data.subcounty;
-schoolPhone.value=data.phone;
-classes=data.classes||[];
-streams=data.streams||[];
-render(classes,classesList);
-render(streams,streamsList);
-load(false);
-}
-
-/* CREATE */
-window.createSchool=async()=>{
-if(!schoolName.value)return alert("Enter school name");
-if(!schoolLevel.value)return alert("Select level");
-load(true);
-
-const id=schoolName.value.toLowerCase().replace(/\s+/g,"_");
-const {data:exists}=await supabase.from("schools").select("id").eq("id",id).single();
-if(exists){load(false);return alert("School already exists")}
-
-const {error}=await supabase.from("schools").insert({
-id,
-name:schoolName.value,
-level:schoolLevel.value,
-county:schoolCounty.value,
-subcounty:schoolSubcounty.value,
-phone:schoolPhone.value,
-classes,
-streams
-});
-load(false);
-if(error)return alert(error.message);
-message.innerText="Created ✔";
-loadStats();
-}
-
-/* UPDATE */
-window.updateSchool=async()=>{
-if(!currentId)return alert("Search school first");
-load(true);
-await supabase.from("schools").update({
-name:schoolName.value,
-level:schoolLevel.value,
-county:schoolCounty.value,
-subcounty:schoolSubcounty.value,
-phone:schoolPhone.value,
-classes,
-streams
-}).eq("id",currentId);
-load(false);
-message.innerText="Updated ✔";
-loadStats();
-}
-
-/* DELETE */
-window.deleteSchool=async()=>{
-if(!currentId)return alert("Search first");
-if(!confirm("Delete?"))return;
-load(true);
-await supabase.from("schools").delete().eq("id",currentId);
-load(false);
-message.innerText="Deleted ✔";
-clearForm();
-loadStats();
-}
-
-/* GPS */
-window.detectGPS=()=>{
-navigator.geolocation.getCurrentPosition(pos=>{
-const lat=pos.coords.latitude;
-if(lat>-2&&lat<2) schoolCounty.value="Nairobi";
-else if(lat<-3) schoolCounty.value="Mombasa";
-else schoolCounty.value="Garissa";
-schoolCounty.oninput();
-});
 }
 
 /* STATS */
