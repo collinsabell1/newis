@@ -38,8 +38,9 @@ button{font-weight:bold;cursor:pointer}
 .btn-update{background:#28a745}
 .btn-cam{background:#ff9800}
 .success{text-align:center;color:#00ff99;margin-top:10px}
-#video{width:100%;display:none;border-radius:10px}
-#preview{width:150px;margin-top:10px;border-radius:12px;display:none}
+#error{text-align:center;color:#ff4d4d;margin-top:10px}
+#video{width:100%;display:none;border-radius:10px;object-fit:cover;}
+#preview{width:150px;margin-top:10px;border-radius:12px;display:none;object-fit:cover;}
 </style>
 </head>
 
@@ -67,12 +68,12 @@ button{font-weight:bold;cursor:pointer}
 <select id="streamSelect"><option>Select Stream</option></select>
 
 <label>Upload Photo</label>
-<input type="file" id="photoUpload">
+<input type="file" id="photoUpload" accept="image/*" capture="environment">
 
 <button class="btn-cam" onclick="startCamera()">Start Camera</button>
 <button class="btn-cam" onclick="capturePhoto()">Capture Photo</button>
 
-<video id="video" autoplay></video>
+<video id="video" autoplay playsinline></video>
 <canvas id="canvas" style="display:none"></canvas>
 <img id="preview">
 
@@ -80,10 +81,20 @@ button{font-weight:bold;cursor:pointer}
 <button class="btn-update" onclick="updateStudent()">Update Student</button>
 
 <hr>
+
+<h3>Bulk Upload Students (CSV)</h3>
+<p style="font-size:0.9em;color:#ccc">
+Format: studentid,studentname,dateofbirth(YYYY-MM-DD),school,grade,stream
+</p>
+<input type="file" id="bulkCSV" accept=".csv">
+<button class="btn-create" onclick="bulkUpload()">Upload CSV</button>
+
+<hr>
 <h3>Live Students</h3>
 <div id="liveList"></div>
 
 <div id="message" class="success"></div>
+<div id="error"></div>
 
 </div>
 
@@ -117,7 +128,6 @@ el("dateOfBirth").addEventListener("change",()=>{
 /* ------------------- LOAD SCHOOLS ------------------- */
 async function loadSchools(){
   const {data,error}=await supabase.from("schools").select("*").order("name");
-
   if(error){ alert(error.message); return; }
   if(!data || data.length===0){
     el("schoolSelect").innerHTML="<option>No schools found</option>";
@@ -125,7 +135,6 @@ async function loadSchools(){
   }
 
   el("schoolSelect").innerHTML="<option value=''>Select School</option>";
-
   data.forEach(s=>{
     schoolsMap[s.name] = s;
     el("schoolSelect").add(new Option(s.name, s.name));
@@ -181,7 +190,7 @@ window.searchStudent = async ()=>{
 
 /* ------------------- CAMERA ------------------- */
 async function startCamera(){
-  cameraStream = await navigator.mediaDevices.getUserMedia({video:true});
+  cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
   el("video").srcObject = cameraStream;
   el("video").style.display = "block";
 }
@@ -190,9 +199,15 @@ function capturePhoto(){
   const video = el("video");
   const canvas = el("canvas");
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video,0,0);
+  // Square crop (AI-like)
+  const size = Math.min(video.videoWidth,video.videoHeight);
+  const x = (video.videoWidth-size)/2;
+  const y = (video.videoHeight-size)/2;
+
+  canvas.width = 300; 
+  canvas.height = 300;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video,x,y,size,size,0,0,300,300);
 
   canvas.toBlob(b=>{
     capturedBlob = b;
@@ -265,6 +280,30 @@ window.updateStudent = async ()=>{
 
   el("message").innerText="Student Updated ✔";
 };
+
+/* ------------------- BULK UPLOAD ------------------- */
+async function bulkUpload(){
+  const file = el("bulkCSV").files[0];
+  if(!file) return alert("Select CSV file first");
+
+  const text = await file.text();
+  const rows = text.split("\n").map(r=>r.trim()).filter(r=>r);
+  const students = [];
+
+  for(let row of rows){
+    const [studentid,studentname,dateofbirth,school,grade,stream] = row.split(",");
+    if(!studentid || !studentname) continue;
+    students.push({studentid,studentname,dateofbirth,school,grade,stream});
+  }
+
+  if(students.length===0) return alert("No valid students found");
+
+  const {error} = await supabase.from("students").insert(students);
+  if(error) return el("error").innerText=error.message;
+
+  el("message").innerText=`Bulk upload successful: ${students.length} students`;
+  el("bulkCSV").value="";
+}
 
 /* ------------------- LIVE STUDENT LIST ------------------- */
 (async()=>{
