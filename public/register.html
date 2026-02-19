@@ -89,54 +89,43 @@ button{font-weight:bold;cursor:pointer}
 
 <script>
 
-/* GLOBAL ERROR ALERT */
-window.onerror = function(msg, src, line, col){
-alert(
-"JS ERROR:\n"+msg+
-"\nFile: "+src+
-"\nLine: "+line+
-"\nColumn: "+col
-);
-};
+/* GLOBAL ERROR LOGGER */
+window.onerror=(msg,src,line,col)=>alert(`ERROR:\n${msg}\nLine:${line}`);
 
-/* SUPABASE INIT */
+/* SUPABASE CONNECTED */
 const supabase = window.supabase.createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"YOUR_PUBLIC_ANON_KEY"
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
 const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* AGE CALCULATION — FIXED */
+/* AGE CALCULATION (RELIABLE) */
 function calcAge(){
-const val = el("dateOfBirth").value;
-if(!val){ el("age").value=""; return; }
+const v=el("dateOfBirth").value;
+if(!v){el("age").value="";return;}
 
-const birth = new Date(val);
-if(isNaN(birth)){ el("age").value=""; return; }
+const b=new Date(v+"T00:00:00");
+const t=new Date();
 
-const today=new Date();
-let age=today.getFullYear()-birth.getFullYear();
-const m=today.getMonth()-birth.getMonth();
+let age=t.getFullYear()-b.getFullYear();
+if(
+t.getMonth()<b.getMonth() ||
+(t.getMonth()==b.getMonth() && t.getDate()<b.getDate())
+) age--;
 
-if(m<0 || (m===0 && today.getDate()<birth.getDate()))
-age--;
-
-el("age").value = age>=0 ? age : "";
+el("age").value=age>=0?age:"";
 }
 el("dateOfBirth").addEventListener("input",calcAge);
-el("dateOfBirth").addEventListener("change",calcAge);
 
 /* LOAD SCHOOLS */
 async function loadSchools(){
-try{
-
 const {data,error}=await supabase.from("schools").select("*");
 
-if(error) return alert("School Load Error:\n"+error.message);
-if(!data || data.length===0) return alert("No schools in database");
+if(error){alert("School Load Error:\n"+error.message);return;}
+if(!data||!data.length){alert("No schools found");return;}
 
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
@@ -149,10 +138,6 @@ if(typeof s.streams==="string") s.streams=JSON.parse(s.streams||"[]");
 schoolsMap[s.name]=s;
 el("schoolSelect").add(new Option(s.name,s.name));
 });
-
-}catch(err){
-alert("Fatal school load:\n"+err.message);
-}
 }
 loadSchools();
 
@@ -162,8 +147,7 @@ const s=schoolsMap[el("schoolSelect").value];
 
 el("gradeSelect").innerHTML="<option>Select Class</option>";
 el("streamSelect").innerHTML="<option>Select Stream</option>";
-
-if(!s) return;
+if(!s)return;
 
 el("levelDisplay").value=s.level||"";
 
@@ -171,12 +155,10 @@ el("levelDisplay").value=s.level||"";
 (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 };
 
-/* SEARCH STUDENT */
+/* SEARCH */
 async function searchStudent(){
-try{
-
 const id=el("studentId").value.trim();
-if(!id) return alert("Enter admission number");
+if(!id)return alert("Enter admission number");
 
 const {data,error}=await supabase
 .from("students")
@@ -184,8 +166,8 @@ const {data,error}=await supabase
 .eq("studentId",id)
 .maybeSingle();
 
-if(error) return alert("Search Error:\n"+error.message);
-if(!data) return alert("Student not found");
+if(error)return alert(error.message);
+if(!data)return alert("Student not found");
 
 currentStudentId=id;
 
@@ -203,63 +185,47 @@ if(data.photo){
 el("preview").src=data.photo;
 el("preview").style.display="block";
 }
-
-}catch(err){
-alert("Search crash:\n"+err.message);
-}
 }
 
 /* CAMERA */
 async function startCamera(){
-try{
 cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
 el("video").srcObject=cameraStream;
 el("video").style.display="block";
-}catch(err){ alert(err.message); }
 }
 
 function capturePhoto(){
-try{
-const video=el("video");
-const canvas=el("canvas");
+const v=el("video"),c=el("canvas");
+c.width=v.videoWidth;
+c.height=v.videoHeight;
+c.getContext("2d").drawImage(v,0,0);
 
-canvas.width=video.videoWidth;
-canvas.height=video.videoHeight;
-canvas.getContext("2d").drawImage(video,0,0);
-
-canvas.toBlob(b=>{
+c.toBlob(b=>{
 capturedBlob=b;
 el("preview").src=URL.createObjectURL(b);
 el("preview").style.display="block";
 });
 
 cameraStream?.getTracks().forEach(t=>t.stop());
-video.style.display="none";
-}catch(err){ alert(err.message); }
+v.style.display="none";
 }
 
-/* UPLOAD PHOTO */
+/* UPLOAD */
 async function uploadPhoto(id){
-try{
 let f=el("photoUpload").files[0]||capturedBlob;
-if(!f) return null;
+if(!f)return null;
 
 const path=`students/${id}_${Date.now()}.jpg`;
-
 const {error}=await supabase.storage.from("photos").upload(path,f);
-if(error){ alert(error.message); return null; }
+if(error){alert(error.message);return null;}
 
 return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
-
-}catch(err){ alert(err.message); }
 }
 
 /* REGISTER */
 async function registerStudent(){
-try{
-
 const id=el("studentId").value.trim();
-if(!id) return alert("Admission number required");
+if(!id)return alert("Admission number required");
 
 const photo=await uploadPhoto(id);
 
@@ -275,18 +241,14 @@ stream:el("streamSelect").value||null,
 photo
 }]);
 
-if(error) return alert("Insert Error:\n"+error.message);
+if(error)return alert(error.message);
 
 el("message").innerText="Student Registered ✔";
-
-}catch(err){ alert(err.message); }
 }
 
 /* UPDATE */
 async function updateStudent(){
-try{
-
-if(!currentStudentId) return alert("Search student first");
+if(!currentStudentId)return alert("Search student first");
 
 const photo=await uploadPhoto(currentStudentId);
 
@@ -299,36 +261,30 @@ level:el("levelDisplay").value||null,
 grade:el("gradeSelect").value||null,
 stream:el("streamSelect").value||null
 };
-
-if(photo) data.photo=photo;
+if(photo)data.photo=photo;
 
 const {error}=await supabase
 .from("students")
 .update(data)
 .eq("studentId",currentStudentId);
 
-if(error) return alert("Update Error:\n"+error.message);
+if(error)return alert(error.message);
 
 el("message").innerText="Student Updated ✔";
-
-}catch(err){ alert(err.message); }
 }
 
-/* REALTIME LIST */
+/* LIVE LIST */
 supabase.channel("students")
 .on("postgres_changes",
 {event:"INSERT",schema:"public",table:"students"},
 p=>el("liveList").innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
 ).subscribe();
 
-/* INITIAL LOAD */
+/* INITIAL LIST */
 (async()=>{
 const {data,error}=await supabase.from("students").select("*").limit(20);
-if(error) return alert(error.message);
-
-data?.forEach(s=>{
-el("liveList").innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
-});
+if(error)return alert(error.message);
+data?.forEach(s=>el("liveList").innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`);
 })();
 </script>
 </body>
