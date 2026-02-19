@@ -70,8 +70,6 @@ button{cursor:pointer;font-weight:bold}
  border-radius:10px;
  margin-top:15px;
 }
-
-/* FLOATING BACK BUTTON */
 .back-btn{
 position:fixed;
 top:20px;
@@ -106,114 +104,32 @@ z-index:9999;
 
 <h2>School Manager</h2>
 
-<input id="searchName" placeholder="Search school...">
-<div id="results" class="search-results"></div>
-
-<input id="schoolName" placeholder="School Name">
-
-<select id="schoolLevel">
-<option value="">Level</option>
-<option>Pre-primary</option>
-<option>Primary</option>
-<option>Junior Secondary</option>
-<option>Senior Secondary</option>
-<option>College / TVET</option>
-</select>
-
 <input list="countiesList" id="schoolCounty" placeholder="County">
 <datalist id="countiesList"></datalist>
 
 <input id="schoolRegion" placeholder="Region" readonly>
 
-<input list="subcountiesList" id="schoolSubcounty" placeholder="Subcounty">
-<datalist id="subcountiesList"></datalist>
-
 <button onclick="detectGPS()">📍 Detect County Automatically</button>
 
-<input id="schoolPhone" placeholder="Phone">
-
-<input id="classInput" placeholder="Enter class + Enter">
-<div id="classesList" class="item-list"></div>
-
-<input id="streamInput" placeholder="Enter stream + Enter">
-<div id="streamsList" class="item-list"></div>
-
-<button class="btn" onclick="createSchool()">Create</button>
-<button class="btn-edit" onclick="updateSchool()">Update</button>
-<button class="btn-danger" onclick="deleteSchool()">Delete</button>
-<button class="btn-clear" onclick="clearForm()">Clear</button>
-
-<div class="spinner" id="loader">⏳ Processing...</div>
+<div id="loader" class="spinner">📡 Detecting location...</div>
 <div id="message"></div>
 
-<div class="stats">
-<h3>Dashboard Stats</h3>
-<div id="statsBox">Loading stats...</div>
 </div>
 
-</div>
-
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-const supabase=createClient(
-"https://xnvnskxcsphbvkxhndui.supabase.co",
-"YOUR_PUBLIC_ANON_KEY"
-);
+<script>
 
 /* BACK BUTTON */
-window.goBack=()=>{
-if(document.referrer){
-history.back();
-}else{
-location.href="index.html";
+function goBack(){
+if(document.referrer) history.back();
+else location.href="index.html";
 }
-};
-
-/* STATE */
-let currentId=null;
-let classes=[];
-let streams=[];
-const loader=document.getElementById("loader");
-function load(x){loader.style.display=x?"block":"none"}
 
 /* THEME */
-window.toggleTheme=()=>document.body.classList.toggle("light")
-
-/* CLEAR */
-window.clearForm=()=>{
-currentId=null;
-classes=[];streams=[];
-document.querySelectorAll("input").forEach(i=>i.value="")
-classesList.innerHTML="";
-streamsList.innerHTML="";
+function toggleTheme(){
+document.body.classList.toggle("light")
 }
 
-/* TAG INPUTS */
-function render(arr,box){
-box.innerHTML="";
-arr.forEach((v,i)=>{
-const d=document.createElement("div");
-d.className="item";
-d.innerHTML=v+" ✕";
-d.onclick=()=>{arr.splice(i,1);render(arr,box)}
-box.appendChild(d);
-})
-}
-classInput.onkeydown=e=>{
-if(e.key==="Enter"&&classInput.value){
-classes.push(classInput.value);
-render(classes,classesList);
-classInput.value="";
-}}
-streamInput.onkeydown=e=>{
-if(e.key==="Enter"&&streamInput.value){
-streams.push(streamInput.value);
-render(streams,streamsList);
-streamInput.value="";
-}}
-
-/* REGIONS (UNCHANGED) */
+/* REGIONS */
 const regions={
 "Nairobi":"Nairobi Region",
 "Mombasa":"Coast",
@@ -227,79 +143,114 @@ const regions={
 "Mandera":"North Eastern"
 };
 
-/* ALL COUNTIES + SUBCOUNTIES */
+/* COUNTIES */
 const counties={
-"Nairobi":["Westlands","Dagoretti North","Dagoretti South","Langata","Kibra","Roysambu","Kasarani","Ruaraka","Embakasi South","Embakasi North","Embakasi Central","Embakasi East","Embakasi West","Makadara","Kamukunji","Starehe","Mathare"],
-"Mombasa":["Changamwe","Jomvu","Kisauni","Nyali","Likoni","Mvita"],
-"Kwale":["Msambweni","Lunga Lunga","Matuga","Kinango"],
-"Kilifi":["Kilifi North","Kilifi South","Kaloleni","Rabai","Ganze","Malindi","Magarini"],
-"Tana River":["Garsen","Galole","Bura"],
-"Lamu":["Lamu East","Lamu West"],
-"Taita Taveta":["Taveta","Wundanyi","Mwatate","Voi"],
-"Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara"],
-"Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Eldas","Wajir South"],
-"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"],
-"Marsabit":["Moyale","North Horr","Saku","Laisamis"],
-"Isiolo":["Isiolo North","Isiolo South"],
-"Meru":["Igembe South","Igembe Central","Igembe North","Tigania West","Tigania East","North Imenti","Buuri","Central Imenti","South Imenti"],
-"Tharaka-Nithi":["Maara","Chuka","Tharaka"],
-"Embu":["Manyatta","Runyenjes","Mbeere South","Mbeere North"],
-"Kitui":["Mwingi North","Mwingi West","Mwingi Central","Kitui West","Kitui Rural","Kitui Central","Kitui East","Kitui South"],
-"Machakos":["Masinga","Yatta","Kangundo","Matungulu","Kathiani","Mavoko","Machakos Town","Mwala"],
-"Makueni":["Mbooni","Kilome","Kaiti","Makueni","Kibwezi West","Kibwezi East"],
-"Nyandarua":["Kinangop","Kipipiri","Ol Kalou","Ol Jorok","Ndaragwa"],
-"Nyeri":["Tetu","Kieni","Mathira","Othaya","Mukurweini","Nyeri Town"],
-"Kirinyaga":["Mwea","Gichugu","Ndia","Kirinyaga Central"],
-"Murang'a":["Kangema","Mathioya","Kiharu","Kigumo","Maragwa","Kandara","Gatanga"],
-"Kiambu":["Gatundu South","Gatundu North","Juja","Thika Town","Ruiru","Githunguri","Kiambu","Kiambaa","Kabete","Kikuyu","Limuru","Lari"],
-"Turkana":["Turkana North","Turkana West","Turkana Central","Loima","Turkana South","Turkana East"],
-"West Pokot":["Kapenguria","Sigor","Kacheliba","Pokot South"],
-"Samburu":["Samburu West","Samburu North","Samburu East"],
-"Trans Nzoia":["Kwanza","Endebess","Saboti","Kiminini","Cherangany"],
-"Uasin Gishu":["Soy","Turbo","Moiben","Ainabkoi","Kapseret","Kesses"],
-"Elgeyo-Marakwet":["Marakwet East","Marakwet West","Keiyo North","Keiyo South"],
-"Nandi":["Tindiret","Aldai","Nandi Hills","Chesumei","Emgwen","Mosop"],
-"Baringo":["Tiaty","Baringo North","Baringo Central","Baringo South","Mogotio","Eldama Ravine"],
-"Laikipia":["Laikipia West","Laikipia East","Laikipia North"],
-"Nakuru":["Molo","Njoro","Naivasha","Gilgil","Kuresoi South","Kuresoi North","Subukia","Rongai","Bahati","Nakuru Town West","Nakuru Town East"],
-"Narok":["Kilgoris","Emurua Dikirr","Narok North","Narok East","Narok South","Narok West"],
-"Kajiado":["Kajiado North","Kajiado Central","Kajiado East","Kajiado West","Kajiado South"],
-"Kericho":["Kipkelion East","Kipkelion West","Ainamoi","Bureti","Belgut","Sigowet/Soin"],
-"Bomet":["Sotik","Chepalungu","Bomet East","Bomet Central","Konoin"],
-"Kakamega":["Lugari","Likuyani","Malava","Lurambi","Navakholo","Mumias West","Mumias East","Matungu","Butere","Khwisero","Shinyalu","Ikolomani"],
-"Vihiga":["Vihiga","Sabatia","Hamisi","Luanda","Emuhaya"],
-"Bungoma":["Mt Elgon","Sirisia","Kabuchai","Bumula","Kanduyi","Webuye East","Webuye West","Kimilili","Tongaren"],
-"Busia":["Teso North","Teso South","Nambale","Matayos","Butula","Funyula","Budalangi"],
-"Siaya":["Ugenya","Ugunja","Alego Usonga","Gem","Bondo","Rarieda"],
-"Kisumu":["Kisumu East","Kisumu West","Kisumu Central","Seme","Nyando","Muhoroni","Nyakach"],
-"Homa Bay":["Kasipul","Kabondo","Karachuonyo","Rangwe","Homa Bay Town","Ndhiwa","Suba North","Suba South"],
-"Migori":["Rongo","Awendo","Suna East","Suna West","Uriri","Nyatike","Kuria West","Kuria East"],
-"Kisii":["Bonchari","South Mugirango","Bomachoge Borabu","Bobasi","Bomachoge Chache","Nyaribari Masaba","Nyaribari Chache","Kitutu Chache North","Kitutu Chache South"],
-"Nyamira":["Kitutu Masaba","West Mugirango","North Mugirango","Borabu"]
+"Nairobi":[],
+"Mombasa":[],
+"Kwale":[],
+"Kilifi":[],
+"Taita Taveta":[],
+"Lamu":[],
+"Tana River":[],
+"Garissa":[],
+"Wajir":[],
+"Mandera":[],
+"Kisumu":[],
+"Nakuru":[],
+"Kiambu":[],
+"Machakos":[],
+"Meru":[],
+"Nyeri":[],
+"Kakamega":[],
+"Uasin Gishu":[],
+"Narok":[],
+"Kajiado":[],
+"Kericho":[],
+"Bomet":[],
+"Bungoma":[],
+"Busia":[],
+"Siaya":[],
+"Homa Bay":[],
+"Migori":[],
+"Kisii":[],
+"Nyamira":[],
+"Embu":[],
+"Kitui":[],
+"Makueni":[],
+"Murang'a":[],
+"Kirinyaga":[],
+"Nyandarua":[],
+"Laikipia":[],
+"Baringo":[],
+"Nandi":[],
+"Elgeyo-Marakwet":[],
+"Trans Nzoia":[],
+"West Pokot":[],
+"Samburu":[],
+"Turkana":[],
+"Marsabit":[],
+"Isiolo":[],
+"Tharaka-Nithi":[]
 };
 
-/* LOAD COUNTIES */
-Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
-
-schoolCounty.oninput=()=>{
-schoolRegion.value=regions[schoolCounty.value]||"Other Region";
-subcountiesList.innerHTML="";
-(counties[schoolCounty.value]||[]).forEach(s=>{
-subcountiesList.appendChild(new Option(s,s))
-})
-}
-
-/* STATS */
-async function loadStats(){
-const {data}=await supabase.from("schools").select("county");
-let counts={};
-data.forEach(s=>counts[s.county]=(counts[s.county]||0)+1);
-statsBox.innerHTML="";
-Object.entries(counts).forEach(([c,n])=>{
-statsBox.innerHTML+=`<div>${c}: ${n} schools</div>`;
+/* LOAD COUNTY LIST */
+Object.keys(counties).forEach(c=>{
+countiesList.appendChild(new Option(c,c))
 });
+
+/* GPS DETECTOR (REAL VERSION) */
+async function detectGPS(){
+
+loader.style.display="block";
+message.innerText="Requesting GPS permission...";
+
+if(!navigator.geolocation){
+alert("GPS not supported");
+return;
 }
-loadStats();
+
+navigator.geolocation.getCurrentPosition(async pos=>{
+
+try{
+const lat=pos.coords.latitude;
+const lon=pos.coords.longitude;
+
+message.innerText="Detecting county from satellite...";
+
+/* REVERSE GEOCODE */
+const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+const data=await res.json();
+
+let county=
+data.address.county ||
+data.address.state_district ||
+data.address.state ||
+"";
+
+county=county.replace(" County","").trim();
+
+/* FILL FIELD */
+schoolCounty.value=county;
+schoolRegion.value=regions[county] || "Other Region";
+
+message.innerText="✔ Location detected: "+county;
+
+}catch(err){
+alert("Location detection failed");
+}
+
+loader.style.display="none";
+
+},
+()=>{
+loader.style.display="none";
+alert("Permission denied or GPS off");
+},
+{enableHighAccuracy:true,timeout:15000}
+);
+
+}
+
 </script>
 </body>
 </html>
