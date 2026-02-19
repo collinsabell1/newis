@@ -91,10 +91,10 @@ button{
 <label>Date Recorded</label>
 <input id="recordDate" readonly>
 
-<h3>Termly Average Scores</h3>
-<input type="number" id="term1" placeholder="Term 1 Average" max="100">
-<input type="number" id="term2" placeholder="Term 2 Average" max="100">
-<input type="number" id="term3" placeholder="Term 3 Average" max="100">
+<h3>Termly Average Scores (in %)</h3>
+<input type="number" id="term1" placeholder="Term 1 Average" min="0" max="100">
+<input type="number" id="term2" placeholder="Term 2 Average" min="0" max="100">
+<input type="number" id="term3" placeholder="Term 3 Average" min="0" max="100">
 
 <div style="text-align:center;">
 <button class="btn-add" onclick="addNew()">Add New</button>
@@ -190,13 +190,6 @@ window.saveAcademic = async () => {
   if (!studentRowId) return alert("Enter student");
 
   const avg = calculate();
-
-  // Check total records <= 100
-  const { data: totalData } = await supabase
-    .from("academics")
-    .select("id", { count: "exact" });
-
-  if (totalData.length >= 100) return alert("Maximum 100 records reached!");
 
   const { data: existing } = await supabase
     .from("academics")
