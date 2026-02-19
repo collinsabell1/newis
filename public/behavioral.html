@@ -106,18 +106,19 @@ behaviorFactors.forEach(f => {
   checklist.appendChild(label);
 });
 
-let currentId = null;
+let currentId = null; // this will store student UUID
 let attendanceRisk = 0;
 
 /* FETCH STUDENT DATA */
 document.getElementById("studentId").addEventListener("change", async () => {
-  const id = document.getElementById("studentId").value.trim();
-  if(!id) return;
+  const admissionNumber = document.getElementById("studentId").value.trim();
+  if(!admissionNumber) return;
 
+  // Fetch student using admission number
   const { data: student, error } = await supabase
     .from("students")
     .select("*")
-    .eq("studentid", id)
+    .eq("studentid", admissionNumber)
     .single();
 
   if(error || !student){
@@ -126,14 +127,15 @@ document.getElementById("studentId").addEventListener("change", async () => {
     return;
   }
 
-  currentId = student.studentid;
+  // Use UUID from student table
+  currentId = student.id; // UUID primary key
   document.getElementById("studentName").value = student.studentname || "";
   document.getElementById("studentClass").value = student.grade || student.level || "";
   document.getElementById("studentAge").value = student.age || "";
   document.getElementById("studentGender").value = student.gender || "";
   document.getElementById("studentSchool").value = student.school || "";
 
-  // Load existing behavior record
+  // Load existing behavior record if any
   const { data: behavior } = await supabase
     .from("behavior")
     .select("*")
@@ -144,7 +146,6 @@ document.getElementById("studentId").addEventListener("change", async () => {
   if(behavior){
     document.getElementById("inputTotalDays").value = behavior.total_days || 0;
     document.getElementById("inputDaysPresent").value = behavior.days_present || 0;
-
     if(Array.isArray(behavior.behavior_risks)){
       document.querySelectorAll(".factor").forEach(cb => {
         cb.checked = behavior.behavior_risks.includes(cb.parentElement.textContent.trim());
@@ -225,8 +226,9 @@ async function saveRecord(){
   const totalDays = parseFloat(document.getElementById("inputTotalDays").value) || 0;
   const daysPresent = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
 
+  // UPSERT using UUID as student_id
   const { error } = await supabase.from("behavior").upsert({
-    student_id: currentId,
+    student_id: currentId, // UUID
     total_days: totalDays,
     days_present: daysPresent,
     behavior_risks: risks,
