@@ -52,7 +52,7 @@ button{font-weight:bold;cursor:pointer}
 <h2>Student Registration</h2>
 
 <button class="navbtn" onclick="location.href='index.html'">🏠 Home</button>
-<button class="navbtn" onclick="location.href='register-school.html'">🏫 Register School</button>
+<button class="navbtn" onclick="location.href='schooldetails.html'">🏫 Register School</button>
 
 <hr>
 
@@ -63,14 +63,14 @@ button{font-weight:bold;cursor:pointer}
 <input type="date" id="dateOfBirth">
 <input id="age" placeholder="Age" readonly>
 
-<select id="schoolSelect"><option value="">Loading schools...</option></select>
+<select id="schoolSelect"><option>Loading schools...</option></select>
 <input id="levelDisplay" placeholder="School Level" readonly>
 
-<select id="gradeSelect"><option value="">Select Class</option></select>
-<select id="streamSelect"><option value="">Select Stream</option></select>
+<select id="gradeSelect"><option>Select Class</option></select>
+<select id="streamSelect"><option>Select Stream</option></select>
 
 <label>Upload Photo</label>
-<input type="file" id="photoUpload" accept="image/*">
+<input type="file" id="photoUpload">
 
 <button class="btn-cam" onclick="startCamera()">Start Camera</button>
 <button class="btn-cam" onclick="capturePhoto()">Capture Photo</button>
@@ -81,12 +81,6 @@ button{font-weight:bold;cursor:pointer}
 
 <button class="btn-create" onclick="registerStudent()">Register Student</button>
 <button class="btn-update" onclick="updateStudent()">Update Student</button>
-
-<hr>
-
-<h3>Bulk Upload Excel</h3>
-<input type="file" id="excelFile">
-<button class="btn-bulk" onclick="bulkUpload()">Upload</button>
 
 <hr>
 <h3>Live Students</h3>
@@ -110,7 +104,7 @@ const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* AGE */
+/* AGE AUTO */
 el("dateOfBirth").onchange=()=>{
 const b=new Date(el("dateOfBirth").value);
 const t=new Date();
@@ -121,10 +115,10 @@ el("age").value=a;
 
 /* LOAD SCHOOLS */
 async function loadSchools(){
+
 const {data,error}=await supabase.from("schools").select("*");
 
 if(error){
-el("schoolSelect").innerHTML="<option>Error loading schools</option>";
 alert(error.message);
 return;
 }
@@ -132,8 +126,14 @@ return;
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
 data.forEach(s=>{
+
+/* ensure arrays */
+if(typeof s.classes==="string") s.classes=JSON.parse(s.classes);
+if(typeof s.streams==="string") s.streams=JSON.parse(s.streams);
+
 schoolsMap[s.name]=s;
 el("schoolSelect").add(new Option(s.name,s.name));
+
 });
 }
 loadSchools();
@@ -141,8 +141,10 @@ loadSchools();
 /* SCHOOL CHANGE */
 el("schoolSelect").onchange=()=>{
 const s=schoolsMap[el("schoolSelect").value];
-el("gradeSelect").innerHTML="<option value=''>Select Class</option>";
-el("streamSelect").innerHTML="<option value=''>Select Stream</option>";
+
+el("gradeSelect").innerHTML="<option>Select Class</option>";
+el("streamSelect").innerHTML="<option>Select Stream</option>";
+
 if(!s)return;
 
 el("levelDisplay").value=s.level||"";
@@ -165,50 +167,49 @@ return;
 
 currentStudentId=id;
 
-el("studentName").value=data.studentName||"";
-el("dateOfBirth").value=data.dateOfBirth||"";
-el("age").value=data.age||"";
-el("schoolSelect").value=data.school||"";
-el("schoolSelect").onchange();
-el("gradeSelect").value=data.grade||"";
-el("streamSelect").value=data.stream||"";
+studentName.value=data.studentName||"";
+dateOfBirth.value=data.dateOfBirth||"";
+age.value=data.age||"";
+schoolSelect.value=data.school||"";
+schoolSelect.onchange();
+gradeSelect.value=data.grade||"";
+streamSelect.value=data.stream||"";
 
 if(data.photo){
-el("preview").src=data.photo;
-el("preview").style.display="block";
+preview.src=data.photo;
+preview.style.display="block";
 }
 };
 
 /* CAMERA */
 window.startCamera=async()=>{
 cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
-el("video").srcObject=cameraStream;
-el("video").style.display="block";
+video.srcObject=cameraStream;
+video.style.display="block";
 };
 
 window.capturePhoto=()=>{
-const v=el("video");
-const c=el("canvas");
-c.width=v.videoWidth;
-c.height=v.videoHeight;
-c.getContext("2d").drawImage(v,0,0);
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+canvas.getContext("2d").drawImage(video,0,0);
 
-c.toBlob(b=>{
+canvas.toBlob(b=>{
 capturedBlob=b;
-el("preview").src=URL.createObjectURL(b);
-el("preview").style.display="block";
+preview.src=URL.createObjectURL(b);
+preview.style.display="block";
 });
 
 cameraStream?.getTracks().forEach(t=>t.stop());
-el("video").style.display="none";
+video.style.display="none";
 };
 
-/* PHOTO UPLOAD */
+/* UPLOAD PHOTO */
 async function uploadPhoto(id){
-let f=el("photoUpload").files[0]||capturedBlob;
+let f=photoUpload.files[0]||capturedBlob;
 if(!f)return null;
 
 const path=`students/${id}_${Date.now()}.jpg`;
+
 const {error}=await supabase.storage.from("photos").upload(path,f);
 if(error){alert(error.message);return null;}
 
@@ -217,26 +218,26 @@ return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 
 /* REGISTER */
 window.registerStudent=async()=>{
-const id=el("studentId").value.trim();
+const id=studentId.value.trim();
 if(!id)return alert("Admission number required");
 
 const photo=await uploadPhoto(id);
 
 const {error}=await supabase.from("students").insert([{
 studentId:id,
-studentName:el("studentName").value,
-dateOfBirth:el("dateOfBirth").value||null,
-age:Number(el("age").value)||null,
-school:el("schoolSelect").value||null,
-level:el("levelDisplay").value||null,
-grade:el("gradeSelect").value||null,
-stream:el("streamSelect").value||null,
+studentName:studentName.value,
+dateOfBirth:dateOfBirth.value||null,
+age:Number(age.value)||null,
+school:schoolSelect.value||null,
+level:levelDisplay.value||null,
+grade:gradeSelect.value||null,
+stream:streamSelect.value||null,
 photo
 }]);
 
-if(error){alert(error.message);return;}
+if(error)return alert(error.message);
 
-el("message").innerText="Student Registered ✔";
+message.innerText="Student Registered ✔";
 };
 
 /* UPDATE */
@@ -246,37 +247,21 @@ if(!currentStudentId)return alert("Search student first");
 const photo=await uploadPhoto(currentStudentId);
 
 let data={
-studentName:el("studentName").value,
-dateOfBirth:el("dateOfBirth").value,
-age:Number(el("age").value)||null,
-school:el("schoolSelect").value,
-level:el("levelDisplay").value,
-grade:el("gradeSelect").value,
-stream:el("streamSelect").value
+studentName:studentName.value,
+dateOfBirth:dateOfBirth.value,
+age:Number(age.value)||null,
+school:schoolSelect.value,
+level:levelDisplay.value,
+grade:gradeSelect.value,
+stream:streamSelect.value
 };
 if(photo)data.photo=photo;
 
 const {error}=await supabase.from("students").update(data).eq("studentId",currentStudentId);
 
-if(error){alert(error.message);return;}
+if(error)return alert(error.message);
 
-el("message").innerText="Student Updated ✔";
-};
-
-/* BULK */
-window.bulkUpload=async()=>{
-const file=el("excelFile").files[0];
-if(!file)return;
-
-const data=await file.arrayBuffer();
-const wb=XLSX.read(data);
-const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-for(const r of rows){
-await supabase.from("students").insert([r]);
-}
-
-alert("Bulk upload complete");
+message.innerText="Student Updated ✔";
 };
 
 /* REALTIME */
