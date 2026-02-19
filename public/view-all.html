@@ -122,25 +122,27 @@ const supabase = createClient(
 let allData = [];
 let currentFiltered = [];
 
+// Load academics with joined student info
 async function loadData() {
-  // Fetch students
-  const { data: students, error: sError } = await supabase
-    .from('students')
-    .select('*');
-
-  if (sError) return alert("Error loading students: " + sError.message);
-
-  // Fetch academics
-  const { data: academics, error: aError } = await supabase
+  const { data: academics, error } = await supabase
     .from('academics')
-    .select('*');
+    .select(`
+      *,
+      students (
+        studentid,
+        name,
+        studentname,
+        grade
+      )
+    `);
 
-  if (aError) return alert("Error loading academics: " + aError.message);
+  if (error) return alert("Error loading records: " + error.message);
 
-  // Merge data
+  // Merge data for display
   allData = academics.map(a => {
-    const student = students.find(s => s.studentid === a.student_id);
+    const student = a.students; // joined table
     const avg = a.average ?? ((a.term1 + a.term2 + a.term3) / 3);
+
     return {
       ...a,
       adm: student?.studentid || 'N/A',
@@ -154,6 +156,7 @@ async function loadData() {
   renderTable();
 }
 
+// Populate year and class filters
 function populateFilters() {
   const yearFilter = document.getElementById('yearFilter');
   const classFilter = document.getElementById('classFilter');
@@ -165,6 +168,7 @@ function populateFilters() {
   classFilter.innerHTML = `<option value="All">All Classes</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
+// Render table
 function renderTable() {
   const tbody = document.querySelector('#recordsTable tbody');
   const searchValue = document.getElementById('searchInput').value.toLowerCase();
@@ -211,9 +215,9 @@ function renderTable() {
         <td>${r.name}</td>
         <td>${r.class}</td>
         <td>${r.year}</td>
-        <td>${r.term1 ?? r.t1 ?? 0}</td>
-        <td>${r.term2 ?? r.t2 ?? 0}</td>
-        <td>${r.term3 ?? r.t3 ?? 0}</td>
+        <td>${r.term1 ?? 0}</td>
+        <td>${r.term2 ?? 0}</td>
+        <td>${r.term3 ?? 0}</td>
         <td style="color:${color};font-weight:bold">${r.avg.toFixed(1)}%</td>
         <td>${r.rank}</td>
         <td><button class="btn-print" onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
