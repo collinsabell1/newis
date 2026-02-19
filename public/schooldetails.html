@@ -70,6 +70,8 @@ button{cursor:pointer;font-weight:bold}
  border-radius:10px;
  margin-top:15px;
 }
+
+/* FLOATING BACK BUTTON */
 .back-btn{
 position:fixed;
 top:20px;
@@ -104,30 +106,112 @@ z-index:9999;
 
 <h2>School Manager</h2>
 
+<input id="searchName" placeholder="Search school...">
+<div id="results" class="search-results"></div>
+
+<input id="schoolName" placeholder="School Name">
+
+<select id="schoolLevel">
+<option value="">Level</option>
+<option>Pre-primary</option>
+<option>Primary</option>
+<option>Junior Secondary</option>
+<option>Senior Secondary</option>
+<option>College / TVET</option>
+</select>
+
 <input list="countiesList" id="schoolCounty" placeholder="County">
 <datalist id="countiesList"></datalist>
 
 <input id="schoolRegion" placeholder="Region" readonly>
 
+<input list="subcountiesList" id="schoolSubcounty" placeholder="Subcounty">
+<datalist id="subcountiesList"></datalist>
+
 <button onclick="detectGPS()">📍 Detect County Automatically</button>
 
-<div id="loader" class="spinner">📡 Detecting location...</div>
+<input id="schoolPhone" placeholder="Phone">
+
+<input id="classInput" placeholder="Enter class + Enter">
+<div id="classesList" class="item-list"></div>
+
+<input id="streamInput" placeholder="Enter stream + Enter">
+<div id="streamsList" class="item-list"></div>
+
+<button class="btn" onclick="createSchool()">Create</button>
+<button class="btn-edit" onclick="updateSchool()">Update</button>
+<button class="btn-danger" onclick="deleteSchool()">Delete</button>
+<button class="btn-clear" onclick="clearForm()">Clear</button>
+
+<div class="spinner" id="loader">⏳ Processing...</div>
 <div id="message"></div>
+
+<div class="stats">
+<h3>Dashboard Stats</h3>
+<div id="statsBox">Loading stats...</div>
+</div>
 
 </div>
 
-<script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase=createClient(
+"https://xnvnskxcsphbvkxhndui.supabase.co",
+"YOUR_PUBLIC_ANON_KEY"
+);
 
 /* BACK BUTTON */
-function goBack(){
-if(document.referrer) history.back();
-else location.href="index.html";
+window.goBack=()=>{
+if(document.referrer){
+history.back();
+}else{
+location.href="index.html";
 }
+};
+
+/* STATE */
+let currentId=null;
+let classes=[];
+let streams=[];
+const loader=document.getElementById("loader");
+function load(x){loader.style.display=x?"block":"none"}
 
 /* THEME */
-function toggleTheme(){
-document.body.classList.toggle("light")
+window.toggleTheme=()=>document.body.classList.toggle("light")
+
+/* CLEAR */
+window.clearForm=()=>{
+currentId=null;
+classes=[];streams=[];
+document.querySelectorAll("input").forEach(i=>i.value="")
+classesList.innerHTML="";
+streamsList.innerHTML="";
 }
+
+/* TAG INPUTS */
+function render(arr,box){
+box.innerHTML="";
+arr.forEach((v,i)=>{
+const d=document.createElement("div");
+d.className="item";
+d.innerHTML=v+" ✕";
+d.onclick=()=>{arr.splice(i,1);render(arr,box)}
+box.appendChild(d);
+})
+}
+classInput.onkeydown=e=>{
+if(e.key==="Enter"&&classInput.value){
+classes.push(classInput.value);
+render(classes,classesList);
+classInput.value="";
+}}
+streamInput.onkeydown=e=>{
+if(e.key==="Enter"&&streamInput.value){
+streams.push(streamInput.value);
+render(streams,streamsList);
+streamInput.value="";
+}}
 
 /* REGIONS */
 const regions={
@@ -145,79 +229,44 @@ const regions={
 
 /* COUNTIES */
 const counties={
-"Nairobi":[],
-"Mombasa":[],
-"Kwale":[],
-"Kilifi":[],
-"Taita Taveta":[],
-"Lamu":[],
-"Tana River":[],
-"Garissa":[],
-"Wajir":[],
-"Mandera":[],
-"Kisumu":[],
-"Nakuru":[],
-"Kiambu":[],
-"Machakos":[],
-"Meru":[],
-"Nyeri":[],
-"Kakamega":[],
-"Uasin Gishu":[],
-"Narok":[],
-"Kajiado":[],
-"Kericho":[],
-"Bomet":[],
-"Bungoma":[],
-"Busia":[],
-"Siaya":[],
-"Homa Bay":[],
-"Migori":[],
-"Kisii":[],
-"Nyamira":[],
-"Embu":[],
-"Kitui":[],
-"Makueni":[],
-"Murang'a":[],
-"Kirinyaga":[],
-"Nyandarua":[],
-"Laikipia":[],
-"Baringo":[],
-"Nandi":[],
-"Elgeyo-Marakwet":[],
-"Trans Nzoia":[],
-"West Pokot":[],
-"Samburu":[],
-"Turkana":[],
-"Marsabit":[],
-"Isiolo":[],
-"Tharaka-Nithi":[]
+"Nairobi":["Westlands","Dagoretti North","Dagoretti South","Langata","Kibra","Roysambu","Kasarani","Ruaraka","Embakasi South","Embakasi North","Embakasi Central","Embakasi East","Embakasi West","Makadara","Kamukunji","Starehe","Mathare"],
+"Mombasa":["Changamwe","Jomvu","Kisauni","Nyali","Likoni","Mvita"],
+"Kwale":["Msambweni","Lunga Lunga","Matuga","Kinango"],
+"Kilifi":["Kilifi North","Kilifi South","Kaloleni","Rabai","Ganze","Malindi","Magarini"],
+"Tana River":["Garsen","Galole","Bura"],
+"Lamu":["Lamu East","Lamu West"],
+"Taita Taveta":["Taveta","Wundanyi","Mwatate","Voi"],
+"Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara"],
+"Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Eldas","Wajir South"],
+"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"]
 };
 
-/* LOAD COUNTY LIST */
-Object.keys(counties).forEach(c=>{
-countiesList.appendChild(new Option(c,c))
-});
+/* LOAD COUNTIES */
+Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
 
-/* GPS DETECTOR (REAL VERSION) */
-async function detectGPS(){
+schoolCounty.oninput=()=>{
+schoolRegion.value=regions[schoolCounty.value]||"Other Region";
+subcountiesList.innerHTML="";
+(counties[schoolCounty.value]||[]).forEach(s=>{
+subcountiesList.appendChild(new Option(s,s))
+})
+}
 
-loader.style.display="block";
-message.innerText="Requesting GPS permission...";
-
+/* GPS DETECTOR FIX */
+window.detectGPS=()=>{
 if(!navigator.geolocation){
 alert("GPS not supported");
 return;
 }
 
-navigator.geolocation.getCurrentPosition(async pos=>{
+load(true);
 
+navigator.geolocation.getCurrentPosition(async pos=>{
 try{
 const lat=pos.coords.latitude;
 const lon=pos.coords.longitude;
 
-message.innerText="Detecting county from satellite...";
-
-/* REVERSE GEOCODE */
+/* reverse geocode using openstreetmap */
 const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
 const data=await res.json();
 
@@ -227,30 +276,38 @@ data.address.state_district ||
 data.address.state ||
 "";
 
+/* clean county names */
 county=county.replace(" County","").trim();
 
-/* FILL FIELD */
+/* set fields */
 schoolCounty.value=county;
-schoolRegion.value=regions[county] || "Other Region";
+schoolCounty.dispatchEvent(new Event("input"));
 
-message.innerText="✔ Location detected: "+county;
-
-}catch(err){
-alert("Location detection failed");
+message.innerText="Detected: "+county;
+}
+catch(err){
+alert("Location detected but county not found");
+console.error(err);
+}
+load(false);
+},
+err=>{
+load(false);
+alert("Location permission denied");
+});
 }
 
-loader.style.display="none";
-
-},
-()=>{
-loader.style.display="none";
-alert("Permission denied or GPS off");
-},
-{enableHighAccuracy:true,timeout:15000}
-);
-
+/* STATS */
+async function loadStats(){
+const {data}=await supabase.from("schools").select("county");
+let counts={};
+data.forEach(s=>counts[s.county]=(counts[s.county]||0)+1);
+statsBox.innerHTML="";
+Object.entries(counts).forEach(([c,n])=>{
+statsBox.innerHTML+=`<div>${c}: ${n} schools</div>`;
+});
 }
-
+loadStats();
 </script>
 </body>
 </html>
