@@ -152,9 +152,9 @@ canvas{width:100%!important;height:100%!important;}
 </div>
 
 <div class="details-card">
-  <p><b>Name:</b> <span id="studentName">-</span></p>
-  <p><b>Class:</b> <span id="studentClass">-</span></p>
-  <p><b>School:</b> <span id="studentSchool">-</span></p>
+  <p><b>Name:</b> <span id="studentName">Missing</span></p>
+  <p><b>Class:</b> <span id="studentClass">Missing</span></p>
+  <p><b>School:</b> <span id="studentSchool">Missing</span></p>
 </div>
 
 <div class="summary">
@@ -201,9 +201,9 @@ async function loadStudent() {
     .from("students").select("*").eq("studentid", adm).single();
   if(studentErr || !student) return alert("Student not found");
 
-  document.getElementById("studentName").textContent = student.studentname || "-";
-  document.getElementById("studentClass").textContent = student.grade || "-";
-  document.getElementById("studentSchool").textContent = student.school || "-";
+  document.getElementById("studentName").textContent = student.studentname || "Missing";
+  document.getElementById("studentClass").textContent = student.grade || "Missing";
+  document.getElementById("studentSchool").textContent = student.school || "Missing";
 
   // ------------------- Load Academics -------------------
   const { data: acad } = await supabase
@@ -248,39 +248,57 @@ async function loadStudent() {
   predictOutcome(overall, student.grade);
 }
 
-function updateCard(id, val){
+function updateCard(id, val) {
   const el = document.getElementById(id);
-  el.textContent = el.textContent.split(" ")[0]+" "+val+"%";
-  el.className = "summary-card "+(val<35?"green":val<60?"yellow":"red");
+  if (val === undefined || val === null) {
+    el.textContent = "Missing";
+    el.className = "summary-card red"; // Red for missing values
+  } else {
+    el.textContent = el.textContent.split(" ")[0] + " " + val + "%";
+    el.className = "summary-card " + (val < 35 ? "green" : val < 60 ? "yellow" : "red");
+  }
 }
 
-function drawChart(a,b,c,o){
-  if(chart) chart.destroy();
-  chart = new Chart(document.getElementById("barChart"),{
-    type:"bar",
-    data:{
-      labels:["Academic","Behavior","Social + Socioeconomic","Overall"],
-      datasets:[{
-        data:[a,b,c,o],
-        backgroundColor:["#1abc9c","#3498db","#9b59b6","#e74c3c"]
+function drawChart(a, b, c, o) {
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: {
+      labels: ["Academic", "Behavior", "Social + Socioeconomic", "Overall"],
+      datasets: [{
+        data: [a || 0, b || 0, c || 0, o || 0],
+        backgroundColor: ["#1abc9c", "#3498db", "#9b59b6", "#e74c3c"]
       }]
     },
-    options:{responsive:true,scales:{y:{min:0,max:100}}}
+    options: { responsive: true, scales: { y: { min: 0, max: 100 } } }
   });
 }
 
-function predictOutcome(risk,grade){
-  const card = document.getElementById("predictionCard");
-  card.style.display="block";
-  let status,color;
-  if(risk<=35){status="LIKELY TO COMPLETE";color="linear-gradient(135deg,#11998e,#38ef7d)";}
-  else if(risk<=60){status="COMPLETION AT RISK";color="linear-gradient(135deg,#f7971e,#ffd200)";}
-  else{status="HIGH DROPOUT RISK";color="linear-gradient(135deg,#cb2d3e,#ef473a)";}
-  card.style.background=color;
-  document.getElementById("predTitle").textContent=status;
-  document.getElementById("predMeta").textContent="Class: "+grade;
-  document.getElementById("completionTag").textContent=status;
-  document.getElementById("dropoutTag").textContent="Overall Risk: "+risk+"%";
+function predictOutcome(overall, grade) {
+  const predictionCard = document.getElementById("predictionCard");
+  const predTitle = document.getElementById("predTitle");
+  const predMeta = document.getElementById("predMeta");
+  const completionTag = document.getElementById("completionTag");
+  const dropoutTag = document.getElementById("dropoutTag");
+
+  if (overall > 75) {
+    predTitle.textContent = "Low Risk of Dropout";
+    predMeta.textContent = `Your student's risk is currently at ${overall}%`;
+    completionTag.textContent = "Stay the course!";
+    dropoutTag.textContent = "";
+  } else if (overall > 50) {
+    predTitle.textContent = "Moderate Risk of Dropout";
+    predMeta.textContent = `Your student's risk is currently at ${overall}%`;
+    completionTag.textContent = "Intervention needed!";
+    dropoutTag.textContent = "";
+  } else {
+    predTitle.textContent = "High Risk of Dropout";
+    predMeta.textContent = `Your student's risk is currently at ${overall}%`;
+    completionTag.textContent = "Immediate action required!";
+    dropoutTag.textContent = "Consider counseling and support.";
+  }
+
+  predictionCard.style.display = "block";
 }
 </script>
 </body>
