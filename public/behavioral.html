@@ -68,7 +68,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 30px;
+      font-size: 28px;
       font-weight: bold;
       margin: 30px auto;
     }
@@ -109,9 +109,10 @@
     <input type="text" id="studentSchool" readonly placeholder="School">
 
     <div class="attendance-card">
-      <h4>Attendance Summary</h4>
-      <p>Total Days: <span id="totalDays">0</span></p>
-      <p>Days Present: <span id="daysPresent">0</span></p>
+      <h4>Attendance Entry</h4>
+      <input type="number" id="inputTotalDays" placeholder="Enter Total Days">
+      <input type="number" id="inputDaysPresent" placeholder="Enter Days Present">
+
       <p>Days Absent: <span id="daysAbsent">0</span></p>
       <p>Attendance Risk %: <span id="attendancePercent">0%</span></p>
     </div>
@@ -125,11 +126,10 @@
 
 </div>
 
-<!-- TOTAL RISK OVAL -->
 <div id="riskOval" class="oval green">0%</div>
 
 <div style="text-align:center">
-  <button class="save" onclick="saveRecord()">Save</button>
+  <button class="save" onclick="saveRecord()">Save / Update</button>
   <button class="view" onclick="window.location.href='behavioral_view.html'">View Behavioral</button>
 </div>
 
@@ -138,13 +138,12 @@
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* SUPABASE CONNECTION */
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* STRICTLY BEHAVIOR FACTORS */
+/* BEHAVIOR FACTORS ONLY */
 const behaviorFactors = [
   "Bullying others",
   "Fighting in school",
@@ -158,7 +157,6 @@ const behaviorFactors = [
   "Non-compliance with school rules"
 ];
 
-/* POPULATE CHECKBOXES */
 const checklist = document.getElementById("checklist");
 behaviorFactors.forEach(f => {
   const label = document.createElement("label");
@@ -169,19 +167,31 @@ behaviorFactors.forEach(f => {
 let currentId = null;
 let attendanceRisk = 0;
 
-/* FETCH STUDENT AUTOMATICALLY */
-document.getElementById("studentId").addEventListener("input", async (e) => {
+/* FETCH FROM STUDENTS OR ACADEMICS */
+document.getElementById("studentId").addEventListener("change", async (e) => {
   const id = e.target.value.trim();
   if (!id) return;
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("students")
-    .select("studentid,name,level,age,gender,school,total_days,days_present")
+    .select("studentid,name,level,age,gender,school")
     .eq("studentid", id)
     .single();
 
   if (error || !data) {
-    alert("Student not found");
+    // Try academics table
+    const response = await supabase
+      .from("academics")
+      .select("studentid,name,level,age,gender,school")
+      .eq("studentid", id)
+      .single();
+
+    data = response.data;
+    error = response.error;
+  }
+
+  if (error || !data) {
+    alert("Student not found in students or academics table.");
     return;
   }
 
@@ -192,28 +202,27 @@ document.getElementById("studentId").addEventListener("input", async (e) => {
   document.getElementById("studentAge").value = data.age || "";
   document.getElementById("studentGender").value = data.gender || "";
   document.getElementById("studentSchool").value = data.school || "";
-
-  loadAttendance(data);
-  calculateTotalRisk();
 });
 
-/* LOAD ATTENDANCE */
-function loadAttendance(data) {
-  const total = data.total_days || 0;
-  const present = data.days_present || 0;
+/* ATTENDANCE CALCULATION */
+function calculateAttendance() {
+  const total = parseFloat(document.getElementById("inputTotalDays").value) || 0;
+  const present = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
   const absent = total - present;
 
-  document.getElementById("totalDays").innerText = total;
-  document.getElementById("daysPresent").innerText = present;
-  document.getElementById("daysAbsent").innerText = absent;
+  document.getElementById("daysAbsent").innerText = absent > 0 ? absent : 0;
 
   const percent = total ? (absent * 100 / total) : 0;
   document.getElementById("attendancePercent").innerText = percent.toFixed(2) + "%";
 
-  attendanceRisk = percent * 0.20;  // 20% weight
+  attendanceRisk = percent * 0.20;
+  calculateTotalRisk();
 }
 
-/* CALCULATE BEHAVIOR RISK */
+document.getElementById("inputTotalDays").addEventListener("input", calculateAttendance);
+document.getElementById("inputDaysPresent").addEventListener("input", calculateAttendance);
+
+/* BEHAVIOR RISK */
 function calculateBehaviorRisk() {
   const checked = document.querySelectorAll(".factor:checked").length;
   const weightPerFactor = 80 / behaviorFactors.length;
@@ -222,8 +231,7 @@ function calculateBehaviorRisk() {
 
 /* TOTAL RISK */
 function calculateTotalRisk() {
-  const behaviorRisk = calculateBehaviorRisk();
-  const totalRisk = behaviorRisk + attendanceRisk;
+  const totalRisk = calculateBehaviorRisk() + attendanceRisk;
 
   const oval = document.getElementById("riskOval");
   oval.innerText = totalRisk.toFixed(2) + "%";
@@ -243,7 +251,7 @@ document.addEventListener("change", (e) => {
   }
 });
 
-/* SAVE RECORD */
+/* SAVE / UPDATE RECORD */
 window.saveRecord = async () => {
   if (!currentId) return alert("Enter Admission Number first");
 
@@ -254,6 +262,8 @@ window.saveRecord = async () => {
 
   const { error } = await supabase.from("behavior").upsert({
     student_id: currentId,
+    total_days: parseFloat(document.getElementById("inputTotalDays").value) || 0,
+    days_present: parseFloat(document.getElementById("inputDaysPresent").value) || 0,
     behavior_risks: risks,
     total_risk: totalRisk,
     recorded_at: new Date()
