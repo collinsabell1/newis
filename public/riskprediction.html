@@ -145,7 +145,7 @@ canvas{width:100%!important;height:100%!important;}
 <div class="top-widget">
   <h2>NEWIS AI Dropout Risk Dashboard</h2>
   <div class="controls">
-    <input id="studentId" placeholder="Admission Number">
+    <input id="studentId" placeholder="Admission Number (numeric)">
     <button onclick="loadStudent()">Load</button>
     <button onclick="location.reload()">Refresh</button>
   </div>
@@ -196,7 +196,7 @@ async function loadStudent() {
   const adm = document.getElementById("studentId").value.trim();
   if(!adm) return alert("Enter Admission Number");
 
-  // Load student info
+  // ------------------- Load student -------------------
   const { data: student, error: studentErr } = await supabase
     .from("students").select("*").eq("studentid", adm).single();
   if(studentErr || !student) return alert("Student not found");
@@ -205,7 +205,7 @@ async function loadStudent() {
   document.getElementById("studentClass").textContent = student.grade || "-";
   document.getElementById("studentSchool").textContent = student.school || "-";
 
-  // Load Academic
+  // ------------------- Load Academics -------------------
   const { data: acad } = await supabase
     .from("academics").select("*").eq("student_id", student.id).single();
   const term1 = safe(acad?.term1);
@@ -213,7 +213,7 @@ async function loadStudent() {
   const term3 = safe(acad?.term3);
   const academicAvg = Math.round((term1 + term2 + term3)/3);
 
-  // Load Behavior
+  // ------------------- Load Behavior -------------------
   const { data: behavior } = await supabase
     .from("behavior").select("*").eq("student_id", student.id).single();
   const attendanceDays = behavior?.total_days || 0;
@@ -223,28 +223,28 @@ async function loadStudent() {
   const behaviorRisk = (behavior?.behavior_risks?.length || 0) * (80/10);
   const behaviorTotal = Math.round(attendanceRisk + behaviorRisk);
 
-  // Load Social Risk
+  // ------------------- Load Social Risk -------------------
   let socialRisk = safe(student.social_risk);
 
-  // Load Socioeconomic Risk and merge with social
+  // ------------------- Load Socioeconomic -------------------
   const { data: socio } = await supabase
     .from("socioeconomic").select("*").eq("student_id", student.id).single();
   const socioRisk = safe(socio?.risk);
   if(socioRisk) socialRisk = Math.round((socialRisk + socioRisk)/2);
 
-  // Calculate Overall
+  // ------------------- Overall -------------------
   const overall = Math.round(academicAvg*0.4 + behaviorTotal*0.3 + socialRisk*0.3);
 
-  // Update Cards
+  // ------------------- Update Cards -------------------
   updateCard("academicCard", academicAvg);
   updateCard("behaviorCard", behaviorTotal);
   updateCard("socialCard", socialRisk);
   updateCard("finalCard", overall);
 
-  // Update Chart
+  // ------------------- Draw Chart -------------------
   drawChart(academicAvg, behaviorTotal, socialRisk, overall);
 
-  // Predict Outcome
+  // ------------------- Predict Outcome -------------------
   predictOutcome(overall, student.grade);
 }
 
