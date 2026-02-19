@@ -3,101 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEWIS AI Dropout Risk Dashboard (CBC)</title>
+<title>NEWIS AI Dropout Risk Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"></script>
 
 <style>
+:root{
+  --primary:#134E5E;
+  --green:#28a745;
+  --yellow:#ffc107;
+  --red:#dc3545;
+}
+*{box-sizing:border-box;}
 body{
   margin:0;
   font-family:'Segoe UI',sans-serif;
   background:linear-gradient(135deg,#134E5E,#71B280);
+  color:#111;
 }
-.container{padding:25px;padding-bottom:200px;}
-
+.container{
+  padding:15px;
+  padding-bottom:160px;
+  max-width:1100px;
+  margin:auto;
+}
 .top-widget{
-  background:#fff;padding:20px;border-radius:15px;
-  display:flex;justify-content:space-between;flex-wrap:wrap;
-  align-items:center;
-  gap:10px;
-  box-shadow:0 10px 25px rgba(0,0,0,.2);
+  background:#fff;
+  padding:15px;
+  border-radius:14px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  box-shadow:0 8px 20px rgba(0,0,0,.2);
 }
-.top-widget input{padding:8px;border-radius:6px;border:1px solid #ccc;}
-.top-widget button{
-  padding:8px 14px;border:none;border-radius:8px;
-  background:#134E5E;color:#fff;font-weight:bold;cursor:pointer;
+.top-widget h2{
+  margin:0;
+  font-size:1.2rem;
+  text-align:center;
 }
-.top-widget .nav-btn{
-  background:#0b3c49;
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
 }
-.top-widget .refresh-btn{
-  background:#1e7e34;
+.controls input{
+  flex:1;
+  min-width:140px;
 }
-
+.controls button{
+  flex:1;
+  min-width:90px;
+}
+input,button{
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+button{
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+}
 .details-card{
-  background:#203a43;color:#fff;
-  padding:20px;border-radius:15px;margin:20px 0;
+  background:#203a43;
+  color:#fff;
+  padding:15px;
+  border-radius:12px;
+  margin:15px 0;
+  font-size:14px;
 }
-
-.summary{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:20px;}
+.summary{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+}
 .summary-card{
-  flex:1 1 200px;padding:20px;border-radius:15px;
-  text-align:center;font-weight:bold;font-size:18px;color:#fff;
+  padding:16px;
+  border-radius:12px;
+  text-align:center;
+  font-weight:bold;
+  color:#fff;
 }
-
-.green{background:#28a745;}
-.yellow{background:#ffc107;color:#111;}
-.red{background:#dc3545;}
-
+.green{background:var(--green);}
+.yellow{background:var(--yellow);color:#000;}
+.red{background:var(--red);}
 .chart-card{
-  background:#fff;padding:20px;border-radius:15px;height:320px;
+  background:#fff;
+  padding:15px;
+  border-radius:12px;
+  margin-top:15px;
+  height:300px;
 }
 canvas{width:100%!important;height:100%!important;}
-
 .prediction-card{
-  position:fixed;right:16px;bottom:16px;
-  width:min(95vw,420px);
-  padding:22px;border-radius:26px;
-  color:#fff;display:none;
-  box-shadow:0 25px 50px rgba(0,0,0,.5);
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:15px;
+  width:95%;
+  max-width:420px;
+  padding:18px;
+  border-radius:20px;
+  color:#fff;
+  display:none;
+  box-shadow:0 20px 40px rgba(0,0,0,.4);
 }
-
-.pred-title{font-size:20px;font-weight:900;}
-.pred-meta{font-size:13px;margin:6px 0;white-space:pre-line;}
-
+.pred-title{font-weight:900;font-size:18px;}
+.pred-meta{font-size:13px;margin:6px 0;}
 .confidence{
   display:inline-block;
-  padding:6px 14px;border-radius:14px;
-  font-weight:bold;margin:4px 4px 4px 0;
+  padding:6px 12px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:bold;
+  margin:4px 4px 0 0;
 }
-
-.low{background:#28a745;}
-.mid{background:#f0ad4e;color:#000;}
-.high{background:#dc3545;}
-
 .explain{
-  margin-top:10px;padding:12px;border-radius:14px;
-  background:rgba(255,255,255,.18);
-  font-size:13px;white-space:pre-line;
+  margin-top:10px;
+  font-size:12px;
+  background:rgba(255,255,255,.15);
+  padding:10px;
+  border-radius:10px;
+}
+@media(min-width:768px){
+  .top-widget{
+    flex-direction:row;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .top-widget h2{text-align:left;}
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
 <div class="top-widget">
-  <h2>AI Dropout Risk Dashboard (CBC)</h2>
-  <div>
+  <h2>AI Dropout Risk Dashboard</h2>
+  <div class="controls">
     <input id="studentId" placeholder="Admission Number">
     <button onclick="loadStudent()">Load</button>
-
-    <!-- 🔹 NEW BUTTONS -->
-    <button class="refresh-btn" onclick="location.reload()">Refresh</button>
-    <button class="nav-btn" onclick="window.location.href='index.html'">Home</button>
-    <button class="nav-btn" onclick="window.location.href='intervention.html'">Interventions</button>
-    <button onclick="window.location.href='riskview.html'">View All</button>
+    <button onclick="location.reload()">Refresh</button>
   </div>
 </div>
 
@@ -110,11 +161,13 @@ canvas{width:100%!important;height:100%!important;}
 <div class="summary">
   <div id="academicCard" class="summary-card">Academic</div>
   <div id="behaviourCard" class="summary-card">Behaviour</div>
-  <div id="assessmentCard" class="summary-card">Social</div>
+  <div id="socialCard" class="summary-card">Social</div>
   <div id="finalCard" class="summary-card">Overall</div>
 </div>
 
-<div class="chart-card"><canvas id="barChart"></canvas></div>
+<div class="chart-card">
+  <canvas id="barChart"></canvas>
+</div>
 
 </div>
 
@@ -123,42 +176,67 @@ canvas{width:100%!important;height:100%!important;}
   <div id="predMeta" class="pred-meta"></div>
   <div id="completionTag" class="confidence"></div>
   <div id="dropoutTag" class="confidence"></div>
-  <div id="predExplain" class="explain"></div>
+  <div class="explain">
+    Overall = (Academic × 0.4) + (Behaviour × 0.3) + (Social × 0.3)
+  </div>
 </div>
 
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
 
-import { getFirestore, collection, query, where, getDocs, getDoc, doc }
+// 🔹 Supabase config
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+)
 
-const app = initializeApp({
-  apiKey:"AIzaSyCkMThRpTLJ7QC0d2OC0Neeim8bBRkzJcQ",
-  projectId:"newis-96304"
-}])
-const db = getFirestore(app);
-const safe = v => Math.max(0, Math.min(100, Number(v)||0));
-let chart;
+const safe=v=>Math.max(0,Math.min(100,Number(v)||0))
+let chart
 
-/* 🔹 ACCURATE ACADEMIC AVERAGE FETCH */
-async function getLatestAcademicAverage(studentDocId){
-  const snap = await SUPABASE_QUERY(collection(db,"students",studentDocId,"academics"));
-  if(snap.empty) return 0;
+async function loadStudent(){
+  const adm=document.getElementById("studentId").value.trim()
+  if(!adm) return alert("Enter Admission Number")
 
-  const records = snap.docs.map(d => d.data());
+  const {data:student,error}=await supabase
+    .from("students")
+    .select("*")
+    .eq("studentid",adm)
+    .single()
 
-  records.sort((a,b)=>{
-    if(a.year && b.year) return b.year - a.year;
-    if(a.timestamp && b.timestamp) return b.timestamp.seconds - a.timestamp.seconds;
-    return 0;
-  }])
+  if(error||!student) return alert("Student not found")
 
-  return safe(records[0].average);
+  document.getElementById("studentName").textContent=student.studentname
+  document.getElementById("studentClass").textContent=student.grade
+  document.getElementById("studentSchool").textContent=student.school||"-"
+
+  const academicRisk=safe(student.academic_risk||0)
+  const behaviour=safe(student.behaviour_risk||0)
+  const social=safe(student.social_risk||0)
+
+  const overall=safe(
+    academicRisk*0.4+
+    behaviour*0.3+
+    social*0.3
+  )
+
+  updateCard("academicCard",academicRisk)
+  updateCard("behaviourCard",behaviour)
+  updateCard("socialCard",social)
+  updateCard("finalCard",overall)
+
+  drawChart(academicRisk,behaviour,social,overall)
+  predictOutcome(overall,student.grade)
 }
 
-function drawBar(a,b,c,o){
-  if(chart) chart.destroy();
-  chart=new Chart(barChart,{
+function updateCard(id,val){
+  const el=document.getElementById(id)
+  el.textContent=el.textContent.split(" ")[0]+" "+val+"%"
+  el.className="summary-card "+(val<35?"green":val<60?"yellow":"red")
+}
+
+function drawChart(a,b,c,o){
+  if(chart) chart.destroy()
+  chart=new Chart(document.getElementById("barChart"),{
     type:"bar",
     data:{
       labels:["Academic","Behaviour","Social","Overall"],
@@ -167,103 +245,33 @@ function drawBar(a,b,c,o){
         backgroundColor:["#1abc9c","#3498db","#9b59b6","#e74c3c"]
       }]
     },
-    options:{scales:{y:{min:0,max:100}}}
-  }])
+    options:{responsive:true,scales:{y:{min:0,max:100}}}
+  })
 }
 
-window.loadStudent = async()=>{
-  const adm = studentId.value.trim();
-  if(!adm) return alert("Enter Admission Number");
+function predictOutcome(risk,grade){
+  const card=document.getElementById("predictionCard")
+  card.style.display="block"
 
-  const q=query(collection(db,"students"),where("studentId","==",adm));
-  const snap=await SUPABASE_QUERY(q);
-  if(snap.empty) return alert("Student not found");
-
-  const d=snap.docs[0];
-  const s=d.data();
-
-  studentName.textContent=s.studentName;
-  studentClass.textContent=s.grade;
-  studentSchool.textContent=s.school||"-";
-
-  const academicAvg = await getLatestAcademicAverage(d.id);
-  const academicRisk = safe(100 - academicAvg);
-
-  let behaviour=0,social=0;
-  const b=await getDoc(doc(db,"students",d.id,"behavioral","record"));
-  if(b.exists()) behaviour=safe(b.data().riskPercent);
-
-  const a=await getDoc(doc(db,"students",d.id,"assessment","record"));
-  if(a.exists()) social=safe(a.data().riskPercent);
-
-  // 🔒 STRICT & ONLY ALLOWED FORMULA
-  const overall = safe(
-    academicRisk * 0.4 +
-    behaviour * 0.3 +
-    social * 0.3
-  );
-
-  academicCard.textContent=`Academic ${academicRisk}%`;
-  behaviourCard.textContent=`Behaviour ${behaviour}%`;
-  assessmentCard.textContent=`Social ${social}%`;
-  finalCard.textContent=`Overall ${overall}%`;
-
-  academicCard.className=`summary-card ${academicRisk<35?"green":academicRisk<60?"yellow":"red"}`;
-  behaviourCard.className=`summary-card ${behaviour<35?"green":behaviour<60?"yellow":"red"}`;
-  assessmentCard.className=`summary-card ${social<35?"green":social<60?"yellow":"red"}`;
-  finalCard.className=`summary-card ${overall<35?"green":overall<60?"yellow":"red"}`;
-
-  drawBar(academicRisk,behaviour,social,overall);
-  predictOutcome(overall,s.grade);
-};
-
-function predictOutcome(risk,cls){
-  predictionCard.style.display="block";
-
-  const now=new Date();
-  const year=now.getFullYear();
-  const term=Math.ceil((now.getMonth()+1)/4);
-  const g=parseInt(cls.match(/\d+/)?.[0]||0);
-
-  let finalGrade=cls.toLowerCase().includes("form")?4:12;
-  const completionYear=year+(finalGrade-g);
-
-  const horizon=risk<=35?4:risk<=60?2:1;
-  const predictedYear=year+horizon;
-
-  let status,grad,clsTag;
-  if(predictedYear>completionYear){
-    status="LIKELY TO SUCCESSFULLY COMPLETE";
-    grad="linear-gradient(135deg,#11998e,#38ef7d)";
-    clsTag="low";
-  }else if(predictedYear===completionYear){
-    status="COMPLETION AT RISK";
-    grad="linear-gradient(135deg,#f7971e,#ffd200)";
-    clsTag="mid";
+  let status,color
+  if(risk<=35){
+    status="LIKELY TO COMPLETE"
+    color="linear-gradient(135deg,#11998e,#38ef7d)"
+  }else if(risk<=60){
+    status="COMPLETION AT RISK"
+    color="linear-gradient(135deg,#f7971e,#ffd200)"
   }else{
-    status="MIGHT NOT COMPLETE";
-    grad="linear-gradient(135deg,#cb2d3e,#ef473a)";
-    clsTag="high";
+    status="HIGH DROPOUT RISK"
+    color="linear-gradient(135deg,#cb2d3e,#ef473a)"
   }
 
-  predictionCard.style.background=grad;
-  predTitle.textContent=status;
-  predMeta.textContent=
-`Predicted Review: Term ${term}, ${predictedYear}
-Expected Completion Year: ${completionYear}`;
-
-  completionTag.textContent=status;
-  completionTag.className=`confidence ${clsTag}`;
-  dropoutTag.textContent=`Overall Risk: ${risk}%`;
-  dropoutTag.className=`confidence ${clsTag}`;
-
-  predExplain.textContent=
-`Overall = (Academic × 0.4) + (Behaviour × 0.3) + (Social × 0.3)
-
-This formula is strictly enforced and used consistently across NEWIS.`;
+  card.style.background=color
+  document.getElementById("predTitle").textContent=status
+  document.getElementById("predMeta").textContent="Class: "+grade
+  document.getElementById("completionTag").textContent=status
+  document.getElementById("dropoutTag").textContent="Overall Risk: "+risk+"%"
 }
 </script>
 
 </body>
-<script type="module" src="test.js"></script>
 </html>
