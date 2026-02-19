@@ -66,15 +66,19 @@ button{font-weight:bold;cursor:pointer}
 
 <h2>Student Registration</h2>
 
+<!-- NAVIGATION BUTTONS -->
 <button class="navbtn" onclick="location.href='index.html'">🏠 Home</button>
 <button class="navbtn" onclick="location.href='schooldetails.html'">🏫 Register School</button>
 <button class="navbtn" onclick="location.href='view-all.html'">📋 All Students</button>
+<button class="navbtn" onclick="location.href='registerview.html'">📄 Register View</button>
 
 <hr>
 
+<!-- STUDENT SEARCH -->
 <input id="studentId" placeholder="Admission Number">
 <button class="btn-search" onclick="searchStudent()">Search Student</button>
 
+<!-- STUDENT FORM -->
 <input id="studentName" placeholder="Student Full Name">
 <input type="date" id="dateOfBirth">
 <input id="age" placeholder="Age" readonly>
@@ -107,6 +111,7 @@ button{font-weight:bold;cursor:pointer}
 
 <hr>
 
+<!-- BULK UPLOAD -->
 <h3>Bulk Upload Students (Excel)</h3>
 <div class="info">
   Format your Excel sheet with columns:<br>
@@ -142,37 +147,21 @@ let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 const dbName="studentsOffline";
 let db;
 const request=indexedDB.open(dbName,1);
-request.onupgradeneeded=e=>{
-  db=e.target.result;
-  db.createObjectStore("students",{keyPath:"studentid"});
-};
+request.onupgradeneeded=e=>{ db=e.target.result; db.createObjectStore("students",{keyPath:"studentid"}); };
 request.onsuccess=e=>{ db=e.target.result; console.log("Offline DB ready"); };
 request.onerror=e=>{ console.error("DB error",e); };
 
-async function saveOffline(student){
-  return new Promise(resolve=>{
-    const tx=db.transaction("students","readwrite");
-    tx.objectStore("students").put(student);
-    tx.oncomplete=()=>resolve(true);
-  });
-}
-
-async function getOffline(studentid){
-  return new Promise(resolve=>{
-    const tx=db.transaction("students","readonly");
-    const req=tx.objectStore("students").get(studentid);
-    req.onsuccess=e=>resolve(e.target.result);
-  });
-}
+async function saveOffline(student){ return new Promise(resolve=>{ const tx=db.transaction("students","readwrite"); tx.objectStore("students").put(student); tx.oncomplete=()=>resolve(true); }); }
+async function getOffline(studentid){ return new Promise(resolve=>{ const tx=db.transaction("students","readonly"); const req=tx.objectStore("students").get(studentid); req.onsuccess=e=>resolve(e.target.result); }); }
 
 /* ------------------- AGE CALC ------------------- */
-el("dateOfBirth").addEventListener("change",()=>{
-  const val=el("dateOfBirth").value;
-  if(!val){ el("age").value=""; return; }
+el("dateOfBirth").addEventListener("change",()=>{ 
+  const val=el("dateOfBirth").value; 
+  if(!val){ el("age").value=""; return; } 
   const b=new Date(val), t=new Date();
   let a=t.getFullYear()-b.getFullYear();
   if(t.getMonth()<b.getMonth()||(t.getMonth()==b.getMonth()&&t.getDate()<b.getDate())) a--;
-  el("age").value=a>0?a:"";
+  el("age").value=a>0?a:""; 
 });
 
 /* ------------------- LOAD SCHOOLS ------------------- */
@@ -322,8 +311,8 @@ async function saveStudent(online=true){
     if(error){ await saveOffline(student); el("message").innerText="Saved Offline ✔"; }
     else el("message").innerText="Saved Online ✔";
   }
-  clearForm(); // <-- Clear form after save
-  loadLiveStudents(); // Refresh live list
+  clearForm();
+  loadLiveStudents();
 }
 window.registerStudent = ()=>saveStudent();
 window.updateStudent = ()=>saveStudent();
