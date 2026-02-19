@@ -20,62 +20,21 @@
       box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
     }
     h2 { text-align: center; }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 25px;
-    }
-    .section {
-      padding: 20px;
-      border-radius: 15px;
-      background: rgba(255,255,255,0.1);
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      border-radius: 10px;
-      border: none;
-      margin-bottom: 10px;
-    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .section { padding: 20px; border-radius: 15px; background: rgba(255,255,255,0.1); }
+    input { width: 100%; padding: 10px; border-radius: 10px; border: none; margin-bottom: 10px; }
     input[readonly] { background: #e0e0e0; font-weight: bold; }
-    .attendance-card {
-      background: rgba(0,0,0,0.3);
-      padding: 15px;
-      border-radius: 12px;
-      margin-top: 15px;
-    }
-    .checkbox-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .oval {
-      width: 220px;
-      height: 120px;
-      border-radius: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      font-weight: bold;
-      margin: 30px auto;
-    }
+    .attendance-card { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-top: 15px; }
+    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .oval { width: 220px; height: 120px; border-radius: 100px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 30px auto; }
     .green { background: #28a745; }
     .yellow { background: #ffc107; color: black; }
     .red { background: #dc3545; }
-    button {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      margin: 5px;
-    }
+    button { padding: 10px 18px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; }
     .save { background: #28a745; color: white; }
     .view { background: #6f42c1; color: white; }
   </style>
 </head>
-
 <body>
 <div class="container">
 <h2>Behavioral Dropout Risk Assessment</h2>
@@ -145,42 +104,51 @@ behaviorFactors.forEach(f => {
 let currentId = null;
 let attendanceRisk = 0;
 
-/* FETCH STUDENT DATA */
+/* FETCH STUDENT DATA AND EXISTING BEHAVIOR RECORD */
 document.getElementById("studentId").addEventListener("change", async () => {
   const id = parseInt(document.getElementById("studentId").value, 10);
   if (!id) return;
 
-  // Try students table
-  let { data, error } = await supabase
+  // Pull student info
+  const { data: student, error: studentError } = await supabase
     .from("students")
-    .select("studentid,name,level,age,gender,school")
+    .select("studentid,studentname,name,age,gender,school,level")
     .eq("studentid", id)
     .single();
 
-  if (error || !data) {
-    // Try academics table
-    const resp = await supabase
-      .from("academics")
-      .select("studentid,name,level,age,gender,school")
-      .eq("studentid", id)
-      .single();
-
-    data = resp.data;
-    error = resp.error;
-  }
-
-  if (error || !data) {
+  if (studentError || !student) {
     alert("Student not found.");
     return;
   }
 
-  currentId = data.studentid;
+  currentId = student.studentid;
+  document.getElementById("studentName").value = student.studentname || student.name || "";
+  document.getElementById("studentClass").value = student.level || "";
+  document.getElementById("studentAge").value = student.age || "";
+  document.getElementById("studentGender").value = student.gender || "";
+  document.getElementById("studentSchool").value = student.school || "";
 
-  document.getElementById("studentName").value = data.name || "";
-  document.getElementById("studentClass").value = data.level || "";
-  document.getElementById("studentAge").value = data.age || "";
-  document.getElementById("studentGender").value = data.gender || "";
-  document.getElementById("studentSchool").value = data.school || "";
+  // Pull existing behavior record if exists
+  const { data: behavior } = await supabase
+    .from("behavior")
+    .select("*")
+    .eq("student_id", currentId)
+    .single();
+
+  if (behavior) {
+    document.getElementById("inputTotalDays").value = behavior.total_days || 0;
+    document.getElementById("inputDaysPresent").value = behavior.days_present || 0;
+
+    // Check behavior factors
+    if (Array.isArray(behavior.behavior_risks)) {
+      document.querySelectorAll(".factor").forEach(cb => {
+        cb.checked = behavior.behavior_risks.includes(cb.parentElement.textContent.trim());
+      });
+    }
+  }
+
+  calculateAttendance();
+  calculateTotalRisk();
 });
 
 /* CALCULATE ATTENDANCE */
@@ -193,7 +161,7 @@ function calculateAttendance() {
   const percent = total ? (absent * 100 / total) : 0;
   document.getElementById("attendancePercent").innerText = percent.toFixed(2) + "%";
 
-  attendanceRisk = percent * 0.20; // 20% weight
+  attendanceRisk = percent * 0.20;
   calculateTotalRisk();
 }
 
@@ -214,7 +182,6 @@ function calculateTotalRisk() {
   const oval = document.getElementById("riskOval");
   oval.innerText = totalRisk.toFixed(2) + "%";
 
-  // Color coding
   if (totalRisk < 40) oval.className = "oval green";
   else if (totalRisk <= 60) oval.className = "oval yellow";
   else oval.className = "oval red";
@@ -222,7 +189,7 @@ function calculateTotalRisk() {
   return totalRisk;
 }
 
-document.addEventListener("change", (e) => {
+document.addEventListener("change", e => {
   if (e.target.classList.contains("factor")) calculateTotalRisk();
 });
 
@@ -234,7 +201,6 @@ async function saveRecord() {
     .map(cb => cb.parentElement.textContent.trim());
 
   const totalRisk = calculateTotalRisk();
-
   const totalDays = parseFloat(document.getElementById("inputTotalDays").value) || 0;
   const daysPresent = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
 
