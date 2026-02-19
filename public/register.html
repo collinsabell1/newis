@@ -5,9 +5,6 @@
 <title>Student Registration - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
-
 <style>
 body{
 margin:0;
@@ -38,9 +35,7 @@ button{font-weight:bold;cursor:pointer}
 .btn-search{background:#ffc107;color:black}
 .btn-update{background:#28a745}
 .btn-cam{background:#ff9800}
-.btn-bulk{background:#9c27b0}
 .success{text-align:center;color:#00ff99;margin-top:10px}
-
 #video{width:100%;display:none;border-radius:10px}
 #preview{width:150px;margin-top:10px;border-radius:12px;display:none}
 </style>
@@ -93,47 +88,38 @@ button{font-weight:bold;cursor:pointer}
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+/* 🔑 YOUR REAL API KEY */
 const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+"PASTE_FULL_KEY_HERE"
 );
-
-await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
 
 const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* AGE AUTO */
-el("dateOfBirth").onchange=()=>{
+/* AGE AUTO CALCULATE */
+el("dateOfBirth").addEventListener("change",()=>{
 const b=new Date(el("dateOfBirth").value);
 const t=new Date();
 let a=t.getFullYear()-b.getFullYear();
 if(t.getMonth()<b.getMonth()||(t.getMonth()==b.getMonth()&&t.getDate()<b.getDate()))a--;
 el("age").value=a;
-};
+});
 
 /* LOAD SCHOOLS */
 async function loadSchools(){
-
 const {data,error}=await supabase.from("schools").select("*");
-
-if(error){
-alert(error.message);
-return;
-}
+if(error){ alert(error.message); return; }
 
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
 data.forEach(s=>{
-
-/* ensure arrays */
-if(typeof s.classes==="string") s.classes=JSON.parse(s.classes);
-if(typeof s.streams==="string") s.streams=JSON.parse(s.streams);
+if(typeof s.classes==="string") s.classes=JSON.parse(s.classes||"[]");
+if(typeof s.streams==="string") s.streams=JSON.parse(s.streams||"[]");
 
 schoolsMap[s.name]=s;
 el("schoolSelect").add(new Option(s.name,s.name));
-
 });
 }
 loadSchools();
@@ -144,7 +130,6 @@ const s=schoolsMap[el("schoolSelect").value];
 
 el("gradeSelect").innerHTML="<option>Select Class</option>";
 el("streamSelect").innerHTML="<option>Select Stream</option>";
-
 if(!s)return;
 
 el("levelDisplay").value=s.level||"";
@@ -158,45 +143,52 @@ window.searchStudent=async()=>{
 const id=el("studentId").value.trim();
 if(!id)return alert("Enter admission number");
 
-const {data,error}=await supabase.from("students").select("*").eq("studentId",id).single();
+const {data,error}=await supabase
+.from("students")
+.select("*")
+.eq("studentId",id)
+.maybeSingle();
 
-if(error||!data){
+if(!data){
 alert("Student not in system");
 return;
 }
 
 currentStudentId=id;
 
-studentName.value=data.studentName||"";
-dateOfBirth.value=data.dateOfBirth||"";
-age.value=data.age||"";
-schoolSelect.value=data.school||"";
-schoolSelect.onchange();
-gradeSelect.value=data.grade||"";
-streamSelect.value=data.stream||"";
+el("studentName").value=data.studentName||"";
+el("dateOfBirth").value=data.dateOfBirth||"";
+el("age").value=data.age||"";
+el("schoolSelect").value=data.school||"";
+el("schoolSelect").onchange();
+el("gradeSelect").value=data.grade||"";
+el("streamSelect").value=data.stream||"";
 
 if(data.photo){
-preview.src=data.photo;
-preview.style.display="block";
+el("preview").src=data.photo;
+el("preview").style.display="block";
 }
 };
 
 /* CAMERA */
 window.startCamera=async()=>{
 cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
-video.srcObject=cameraStream;
-video.style.display="block";
+el("video").srcObject=cameraStream;
+el("video").style.display="block";
 };
 
 window.capturePhoto=()=>{
+const video=el("video");
+const canvas=el("canvas");
+
 canvas.width=video.videoWidth;
 canvas.height=video.videoHeight;
 canvas.getContext("2d").drawImage(video,0,0);
 
 canvas.toBlob(b=>{
 capturedBlob=b;
-preview.src=URL.createObjectURL(b);
-preview.style.display="block";
+el("preview").src=URL.createObjectURL(b);
+el("preview").style.display="block";
 });
 
 cameraStream?.getTracks().forEach(t=>t.stop());
@@ -205,7 +197,7 @@ video.style.display="none";
 
 /* UPLOAD PHOTO */
 async function uploadPhoto(id){
-let f=photoUpload.files[0]||capturedBlob;
+let f=el("photoUpload").files[0]||capturedBlob;
 if(!f)return null;
 
 const path=`students/${id}_${Date.now()}.jpg`;
@@ -218,26 +210,26 @@ return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 
 /* REGISTER */
 window.registerStudent=async()=>{
-const id=studentId.value.trim();
+const id=el("studentId").value.trim();
 if(!id)return alert("Admission number required");
 
 const photo=await uploadPhoto(id);
 
 const {error}=await supabase.from("students").insert([{
 studentId:id,
-studentName:studentName.value,
-dateOfBirth:dateOfBirth.value||null,
-age:Number(age.value)||null,
-school:schoolSelect.value||null,
-level:levelDisplay.value||null,
-grade:gradeSelect.value||null,
-stream:streamSelect.value||null,
+studentName:el("studentName").value,
+dateOfBirth:el("dateOfBirth").value||null,
+age:Number(el("age").value)||null,
+school:el("schoolSelect").value||null,
+level:el("levelDisplay").value||null,
+grade:el("gradeSelect").value||null,
+stream:el("streamSelect").value||null,
 photo
 }]);
 
 if(error)return alert(error.message);
 
-message.innerText="Student Registered ✔";
+el("message").innerText="Student Registered ✔";
 };
 
 /* UPDATE */
@@ -247,32 +239,38 @@ if(!currentStudentId)return alert("Search student first");
 const photo=await uploadPhoto(currentStudentId);
 
 let data={
-studentName:studentName.value,
-dateOfBirth:dateOfBirth.value,
-age:Number(age.value)||null,
-school:schoolSelect.value,
-level:levelDisplay.value,
-grade:gradeSelect.value,
-stream:streamSelect.value
+studentName:el("studentName").value,
+dateOfBirth:el("dateOfBirth").value,
+age:Number(el("age").value)||null,
+school:el("schoolSelect").value,
+level:el("levelDisplay").value,
+grade:el("gradeSelect").value,
+stream:el("streamSelect").value
 };
 if(photo)data.photo=photo;
 
-const {error}=await supabase.from("students").update(data).eq("studentId",currentStudentId);
+const {error}=await supabase
+.from("students")
+.update(data)
+.eq("studentId",currentStudentId);
 
 if(error)return alert(error.message);
 
-message.innerText="Student Updated ✔";
+el("message").innerText="Student Updated ✔";
 };
 
-/* REALTIME */
+/* REALTIME LIST */
 supabase.channel("students")
-.on("postgres_changes",{event:"INSERT",schema:"public",table:"students"},
-p=>liveList.innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
+.on("postgres_changes",
+{event:"INSERT",schema:"public",table:"students"},
+p=>el("liveList").innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
 ).subscribe();
 
 /* INITIAL LIST */
 const {data:list}=await supabase.from("students").select("*").limit(20);
-list?.forEach(s=>liveList.innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`);
+list?.forEach(s=>{
+el("liveList").innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
+});
 </script>
 </body>
 </html>
