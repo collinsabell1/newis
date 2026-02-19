@@ -70,10 +70,36 @@ button{cursor:pointer;font-weight:bold}
  border-radius:10px;
  margin-top:15px;
 }
+
+/* FLOATING BACK BUTTON */
+.back-btn{
+position:fixed;
+top:20px;
+left:20px;
+padding:12px 18px;
+border:none;
+border-radius:14px;
+font-weight:600;
+cursor:pointer;
+color:white;
+background:linear-gradient(45deg,#ff416c,#ff4b2b,#ff6a00);
+background-size:300% 300%;
+animation:gradientMove 6s ease infinite;
+box-shadow:0 8px 20px rgba(0,0,0,.35);
+z-index:9999;
+}
+@keyframes gradientMove{
+0%{background-position:0% 50%}
+50%{background-position:100% 50%}
+100%{background-position:0% 50%}
+}
 </style>
 </head>
 
 <body>
+
+<button class="back-btn" onclick="goBack()">⬅ Back</button>
+
 <div class="container">
 
 <button onclick="toggleTheme()">Toggle Theme</button>
@@ -135,6 +161,15 @@ const supabase=createClient(
 "YOUR_PUBLIC_ANON_KEY"
 );
 
+/* BACK BUTTON */
+window.goBack=()=>{
+if(document.referrer){
+history.back();
+}else{
+location.href="index.html";
+}
+};
+
 /* STATE */
 let currentId=null;
 let classes=[];
@@ -170,15 +205,13 @@ if(e.key==="Enter"&&classInput.value){
 classes.push(classInput.value);
 render(classes,classesList);
 classInput.value="";
-}
-}
+}}
 streamInput.onkeydown=e=>{
 if(e.key==="Enter"&&streamInput.value){
 streams.push(streamInput.value);
 render(streams,streamsList);
 streamInput.value="";
-}
-}
+}}
 
 /* REGIONS */
 const regions={
@@ -194,21 +227,13 @@ const regions={
 "Mandera":"North Eastern"
 };
 
-/* COUNTIES + SUBCOUNTIES (ALL) */
+/* COUNTIES */
 const counties={
 "Nairobi":["Westlands","Dagoretti","Langata","Embakasi","Kasaran","Makadara","Kamukunji","Starehe","Mathare"],
 "Mombasa":["Nyali","Likoni","Kisauni","Changamwe","Jomvu","Mvita"],
 "Kwale":["Msambweni","Matuga","Kinango","Lunga Lunga"],
 "Kilifi":["Kilifi North","Kilifi South","Kaloleni","Rabai","Ganze","Malindi","Magarini"],
-"Taita Taveta":["Voi","Wundanyi","Taveta","Mwatate"],
-"Lamu":["Lamu East","Lamu West"],
-"Tana River":["Bura","Galole","Garsen"],
-"Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara","Hulugho"],
-"Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Wajir South","Eldas"],
-"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"],
-"Machakos":["Machakos Town","Mwala","Yatta","Kathiani","Masinga","Matungulu","Mavoko"],
-"Kitui":["Kitui Central","Kitui West","Kitui East","Kitui South","Mwingi North","Mwingi West","Mwingi Central"],
-"Makueni":["Makueni","Kaiti","Kilome","Kibwezi East","Kibwezi West","Mbooni"]
+"Taita Taveta":["Voi","Wundanyi","Taveta","Mwatate"]
 };
 
 /* LOAD COUNTIES */
@@ -315,7 +340,7 @@ clearForm();
 loadStats();
 }
 
-/* GPS COUNTY DETECTION */
+/* GPS */
 window.detectGPS=()=>{
 navigator.geolocation.getCurrentPosition(pos=>{
 const lat=pos.coords.latitude;
