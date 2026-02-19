@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Behavioral Risk Assessment - NEWIS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
@@ -104,43 +105,43 @@ behaviorFactors.forEach(f => {
 let currentId = null;
 let attendanceRisk = 0;
 
-/* FETCH STUDENT DATA AND EXISTING BEHAVIOR RECORD */
+/* FETCH STUDENT DATA */
 document.getElementById("studentId").addEventListener("change", async () => {
-  const id = parseInt(document.getElementById("studentId").value, 10);
-  if (!id) return;
+  const id = document.getElementById("studentId").value.trim();
+  if(!id) return;
 
-  // Pull student info
-  const { data: student, error: studentError } = await supabase
+  // Fetch student from Supabase
+  const { data: student, error } = await supabase
     .from("students")
-    .select("studentid,studentname,name,age,gender,school,level")
+    .select("*")
     .eq("studentid", id)
     .single();
 
-  if (studentError || !student) {
-    alert("Student not found.");
+  if(error || !student){
+    alert("Student not found");
     return;
   }
 
   currentId = student.studentid;
-  document.getElementById("studentName").value = student.studentname || student.name || "";
-  document.getElementById("studentClass").value = student.level || "";
+  document.getElementById("studentName").value = student.studentname || "";
+  document.getElementById("studentClass").value = student.grade || student.level || "";
   document.getElementById("studentAge").value = student.age || "";
   document.getElementById("studentGender").value = student.gender || "";
   document.getElementById("studentSchool").value = student.school || "";
 
-  // Pull existing behavior record if exists
+  // Load existing behavior record
   const { data: behavior } = await supabase
     .from("behavior")
     .select("*")
     .eq("student_id", currentId)
-    .single();
+    .single()
+    .catch(()=>({ data: null }));
 
-  if (behavior) {
+  if(behavior){
     document.getElementById("inputTotalDays").value = behavior.total_days || 0;
     document.getElementById("inputDaysPresent").value = behavior.days_present || 0;
 
-    // Check behavior factors
-    if (Array.isArray(behavior.behavior_risks)) {
+    if(Array.isArray(behavior.behavior_risks)){
       document.querySelectorAll(".factor").forEach(cb => {
         cb.checked = behavior.behavior_risks.includes(cb.parentElement.textContent.trim());
       });
@@ -152,16 +153,14 @@ document.getElementById("studentId").addEventListener("change", async () => {
 });
 
 /* CALCULATE ATTENDANCE */
-function calculateAttendance() {
+function calculateAttendance(){
   const total = parseFloat(document.getElementById("inputTotalDays").value) || 0;
   const present = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
   const absent = total - present;
-
   document.getElementById("daysAbsent").innerText = absent > 0 ? absent : 0;
   const percent = total ? (absent * 100 / total) : 0;
   document.getElementById("attendancePercent").innerText = percent.toFixed(2) + "%";
-
-  attendanceRisk = percent * 0.20;
+  attendanceRisk = percent * 0.2;
   calculateTotalRisk();
 }
 
@@ -169,33 +168,30 @@ document.getElementById("inputTotalDays").addEventListener("input", calculateAtt
 document.getElementById("inputDaysPresent").addEventListener("input", calculateAttendance);
 
 /* BEHAVIOR RISK */
-function calculateBehaviorRisk() {
+function calculateBehaviorRisk(){
   const checked = document.querySelectorAll(".factor:checked").length;
   const weightPerFactor = 80 / behaviorFactors.length;
   return checked * weightPerFactor;
 }
 
-/* TOTAL RISK WITH COLOR CODING */
-function calculateTotalRisk() {
+/* TOTAL RISK */
+function calculateTotalRisk(){
   const totalRisk = calculateBehaviorRisk() + attendanceRisk;
-
   const oval = document.getElementById("riskOval");
   oval.innerText = totalRisk.toFixed(2) + "%";
-
-  if (totalRisk < 40) oval.className = "oval green";
-  else if (totalRisk <= 60) oval.className = "oval yellow";
+  if(totalRisk < 40) oval.className = "oval green";
+  else if(totalRisk <= 60) oval.className = "oval yellow";
   else oval.className = "oval red";
-
   return totalRisk;
 }
 
 document.addEventListener("change", e => {
-  if (e.target.classList.contains("factor")) calculateTotalRisk();
+  if(e.target.classList.contains("factor")) calculateTotalRisk();
 });
 
-/* SAVE / UPDATE RECORD */
-async function saveRecord() {
-  if (!currentId) return alert("Enter Admission Number first");
+/* SAVE RECORD */
+async function saveRecord(){
+  if(!currentId) return alert("Enter Admission Number first");
 
   const risks = [...document.querySelectorAll(".factor:checked")]
     .map(cb => cb.parentElement.textContent.trim());
@@ -213,7 +209,7 @@ async function saveRecord() {
     recorded_at: new Date()
   }, { onConflict: "student_id" });
 
-  if (error) alert("Error saving record: " + error.message);
+  if(error) alert("Error saving record: " + error.message);
   else alert("Record saved successfully");
 }
 
