@@ -202,9 +202,8 @@ window.searchStudent = async ()=>{
   if(!id) return alert("Enter admission number");
   if(!navigator.onLine){
     const student=await getOffline(id);
-    if(student){
-      fillForm(student); return;
-    } else { alert("Student not found offline"); return; }
+    if(student){ fillForm(student); return; } 
+    else { alert("Student not found offline"); return; }
   }
   const {data,error}=await supabase.from("students").select("*").eq("studentid",id).single();
   if(error){ alert("Student not found"); return; }
@@ -283,6 +282,22 @@ async function uploadPhoto(id){
   });
 }
 
+/* ------------------- CLEAR FORM ------------------- */
+function clearForm(){
+  currentStudentId=null;
+  el("studentId").value="";
+  el("studentName").value="";
+  el("dateOfBirth").value="";
+  el("age").value="";
+  el("schoolSelect").value="";
+  el("schoolSelect").dispatchEvent(new Event("change"));
+  el("gradeSelect").value="";
+  el("streamSelect").value="";
+  el("preview").src="";
+  cropBox.style.display="none";
+  capturedBlob=null;
+}
+
 /* ------------------- REGISTER / UPDATE ------------------- */
 async function saveStudent(online=true){
   const id=el("studentId").value.trim();
@@ -307,6 +322,8 @@ async function saveStudent(online=true){
     if(error){ await saveOffline(student); el("message").innerText="Saved Offline ✔"; }
     else el("message").innerText="Saved Online ✔";
   }
+  clearForm(); // <-- Clear form after save
+  loadLiveStudents(); // Refresh live list
 }
 window.registerStudent = ()=>saveStudent();
 window.updateStudent = ()=>saveStudent();
@@ -337,6 +354,7 @@ async function bulkUploadExcel(){
     if(error){ el("error").innerText=error.message; return; }
     el("message").innerText=`Bulk upload successful: ${students.length} students`;
     el("bulkExcel").value="";
+    loadLiveStudents();
   };
   reader.readAsArrayBuffer(file);
 }

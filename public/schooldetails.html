@@ -171,38 +171,39 @@ function load(x){loader.style.display=x?"block":"none"}
 window.toggleTheme=()=>document.body.classList.toggle("light")
 
 /* CLEAR */
-window.clearForm=()=>{
-currentId=null;
-classes=[];
-streams=[];
-document.querySelectorAll("input").forEach(i=>i.value="")
-classesList.innerHTML="";
-streamsList.innerHTML="";
+window.clearForm=()=>{ 
+  currentId=null;
+  classes=[]; streams=[];
+  document.querySelectorAll("input").forEach(i=>i.value="");
+  document.querySelectorAll("select").forEach(s=>s.value="");
+  classesList.innerHTML=""; streamsList.innerHTML="";
 }
 
 /* TAG INPUTS */
 function render(arr,box){
-box.innerHTML="";
-arr.forEach((v,i)=>{
-const d=document.createElement("div");
-d.className="item";
-d.innerHTML=v+" ✕";
-d.onclick=()=>{arr.splice(i,1);render(arr,box)}
-box.appendChild(d);
-})
+  box.innerHTML="";
+  arr.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="item";
+    d.innerHTML=v+" ✕";
+    d.onclick=()=>{arr.splice(i,1); render(arr,box)}
+    box.appendChild(d);
+  })
 }
 classInput.onkeydown=e=>{
-if(e.key==="Enter"&&classInput.value){
-classes.push(classInput.value);
-render(classes,classesList);
-classInput.value="";
-}}
+  if(e.key==="Enter" && classInput.value){
+    classes.push(classInput.value);
+    render(classes,classesList);
+    classInput.value="";
+  }
+}
 streamInput.onkeydown=e=>{
-if(e.key==="Enter"&&streamInput.value){
-streams.push(streamInput.value);
-render(streams,streamsList);
-streamInput.value="";
-}}
+  if(e.key==="Enter" && streamInput.value){
+    streams.push(streamInput.value);
+    render(streams,streamsList);
+    streamInput.value="";
+  }
+}
 
 /* REGIONS */
 const regions={
@@ -229,9 +230,9 @@ const counties = {
 Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
 
 schoolCounty.oninput=()=>{
-schoolRegion.value=regions[schoolCounty.value]||"Other Region";
-subcountiesList.innerHTML="";
-(counties[schoolCounty.value]||[]).forEach(s=>subcountiesList.appendChild(new Option(s,s)))
+  schoolRegion.value=regions[schoolCounty.value]||"Other Region";
+  subcountiesList.innerHTML="";
+  (counties[schoolCounty.value]||[]).forEach(s=>subcountiesList.appendChild(new Option(s,s)))
 }
 
 /* GPS */
@@ -317,10 +318,10 @@ classes,streams
 load(true);
 if(navigator.onLine){
 const {data,error}=await supabase.from("schools").insert([school]).select();
-if(error){message.innerText=error.message; saveOffline(school)}
-else{currentId=data[0].id;message.innerText="Saved"} 
-}else{await saveOffline(school);message.innerText="Saved offline"}
-loadStats();load(false);
+if(error){message.innerText=error.message; await saveOffline(school)}
+else{currentId=data[0].id; message.innerText="Saved ✔"; clearForm();} 
+}else{await saveOffline(school); message.innerText="Saved offline ✔"; clearForm();}
+loadStats(); load(false);
 }
 
 /* UPDATE */
@@ -335,9 +336,9 @@ phone:schoolPhone.value,classes,streams
 load(true);
 if(navigator.onLine){
 const {error}=await supabase.from("schools").update(school).eq("id",currentId);
-message.innerText=error?error.message:"Updated";
-}else{await saveOffline(school);message.innerText="Updated offline"}
-loadStats();load(false);
+message.innerText=error?error.message:"Updated ✔"; clearForm();
+}else{await saveOffline(school); message.innerText="Updated offline ✔"; clearForm();}
+loadStats(); load(false);
 }
 
 /* DELETE */
@@ -350,7 +351,7 @@ await supabase.from("schools").delete().eq("id",currentId);
 const tx=db.transaction("schools","readwrite");
 tx.objectStore("schools").delete(currentId);
 }
-clearForm();message.innerText="Deleted";loadStats();load(false);
+clearForm(); message.innerText="Deleted ✔"; loadStats(); load(false);
 }
 
 /* SEARCH */
@@ -358,7 +359,7 @@ searchName.oninput=async()=>{
 const q=searchName.value
 results.innerHTML=""
 if(!q) return
-let data=[];
+let data=[]
 if(navigator.onLine){
 const res=await supabase.from("schools").select("*").ilike("name","%"+q+"%").limit(5)
 data=res.data||[]
@@ -389,7 +390,7 @@ results.appendChild(d)
 
 /* STATS */
 async function loadStats(){
-let data=[];
+let data=[]
 if(navigator.onLine){
 const res=await supabase.from("schools").select("county")
 data=res.data||[]

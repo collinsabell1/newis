@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <title>All Registered Students - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -11,7 +12,6 @@ body{
   background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
   color:white;
 }
-
 .floating-back{
   position:fixed;
   top:20px;
@@ -25,14 +25,9 @@ body{
   color:black;
   box-shadow:0 4px 15px rgba(0,0,0,0.4);
   backdrop-filter:blur(10px);
-  transition:0.3s;
   z-index:1000;
 }
-.floating-back:hover{
-  background:#00c6ff;
-  transform:translateY(-2px) scale(1.05);
-}
-
+.floating-back:hover{background:#00c6ff;transform:translateY(-2px) scale(1.05);}
 .container{
   max-width:1600px;
   margin:80px auto 30px;
@@ -41,9 +36,7 @@ body{
   border-radius:20px;
   backdrop-filter:blur(15px);
 }
-
 h1{text-align:center;}
-
 table{
   width:100%;
   border-collapse:collapse;
@@ -52,91 +45,100 @@ table{
 th,td{
   padding:8px;
   text-align:center;
+  vertical-align: middle;
 }
-th{
-  background:rgba(255,255,255,0.2);
-  cursor:pointer;
-}
-tr:nth-child(even){
-  background:rgba(255,255,255,0.05);
-}
-
-button,select,input{
-  padding:6px 10px;
-  margin:4px;
-  border:none;
-  border-radius:6px;
-  font-weight:bold;
-  cursor:pointer;
-}
-
+th{background:rgba(255,255,255,0.2);cursor:pointer;}
+tr:nth-child(even){background:rgba(255,255,255,0.05);}
+button,select,input{padding:6px 10px;margin:4px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
 .status-active{color:#00ff99;font-weight:bold;}
 .status-suspended{color:orange;font-weight:bold;}
 .status-expelled{color:red;font-weight:bold;}
-
-.delete-btn{
-  background:#ff4d4d;
-  color:white;
-}
-
-.pagination{
-  margin-top:15px;
-  text-align:center;
-}
+.delete-btn{background:#ff4d4d;color:white;}
+.pagination{text-align:center;margin-top:15px;}
 .pagination button{margin:3px;}
+img.student-photo{width:50px;height:50px;object-fit:cover;border-radius:6px;}
+.section-title{font-weight:bold;margin-top:20px;margin-bottom:10px;font-size:18px;text-align:center;}
+.upload-container{text-align:center;margin-bottom:30px;background:rgba(255,255,255,0.1);padding:15px;border-radius:10px;}
+#idPreview{margin-top:15px; display:flex; flex-wrap: wrap; gap:10px; justify-content:center;}
+.id-card{
+  width:85mm;
+  height:55mm;
+  border:1px solid #fff;
+  border-radius:5px;
+  padding:5mm;
+  background:rgba(255,255,255,0.1);
+  position:relative;
+  color:white;
+  font-size:12px;
+}
+.id-card img.logo{width:20mm; height:20mm; object-fit:cover; position:absolute; top:5mm; left:5mm;}
+.id-card img.photo{width:25mm; height:30mm; object-fit:cover; position:absolute; top:5mm; right:5mm;}
+.id-card .text{position:absolute; top:5mm; left:30mm;}
 </style>
 </head>
-
 <body>
 
-<button class="floating-back" onclick="goBackToRegister()">⬅ Back</button>
+<button class="floating-back" onclick="goBack()">⬅ Back</button>
 
 <div class="container">
 
-<h1>📋 All Registered Students</h1>
+  <!-- School Logo Upload Section -->
+  <div class="upload-container">
+    <div class="section-title">🏫 Upload School Logo</div>
+    <input type="file" id="logoUpload" accept="image/*">
+    <button onclick="uploadLogo()">Upload Logo</button>
+    <span id="logoStatus" style="margin-left:10px;"></span>
+  </div>
 
-<div style="text-align:center;">
-<input type="text" id="searchInput" placeholder="Search Admission No">
+  <!-- Students Table Section -->
+  <h1>📋 All Registered Students</h1>
 
-<select id="classFilter">
-  <option value="All">All Classes</option>
-</select>
+  <div style="text-align:center;margin-bottom:20px;">
+    <input type="text" id="searchInput" placeholder="Search Admission No or Name">
+    <select id="classFilter"><option value="All">All Classes</option></select>
+    <select id="statusFilter">
+      <option value="All">All Status</option>
+      <option>Active</option>
+      <option>Suspended</option>
+      <option>Expelled</option>
+    </select>
+    <button onclick="applyFilters()">Apply Filters</button>
+    <button onclick="bulkAction('Suspended')">Bulk Suspend</button>
+    <button onclick="bulkAction('Expelled')">Bulk Expel</button>
+    <button onclick="bulkAction('Active')">Bulk Restore</button>
+    <button class="delete-btn" onclick="deleteSelected()">🗑 Delete Selected</button>
+    <button onclick="downloadPDF()">Export PDF</button>
+    <button onclick="downloadExcel()">Export Excel</button>
+    <button onclick="downloadIDCards()">Download ID Cards</button>
+    <button onclick="bulkPromote()">Promote Selected</button>
+  </div>
 
-<select id="statusFilter">
-  <option value="All">All Status</option>
-  <option>Active</option>
-  <option>Suspended</option>
-  <option>Expelled</option>
-</select>
+  <table id="studentsTable">
+    <thead>
+      <tr>
+        <th><input type="checkbox" onclick="toggleSelectAll(this)"></th>
+        <th onclick="sortTable('studentid')">Adm No</th>
+        <th onclick="sortTable('studentname')">Name</th>
+        <th onclick="sortTable('dateofbirth')">DOB</th>
+        <th onclick="sortTable('age')">Age</th>
+        <th onclick="sortTable('school')">School</th>
+        <th onclick="sortTable('level')">Level</th>
+        <th onclick="sortTable('grade')">Class</th>
+        <th onclick="sortTable('stream')">Stream</th>
+        <th>Photo</th>
+        <th onclick="sortTable('status')">Status</th>
+        <th onclick="sortTable('created_at')">Registered At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-<button onclick="applyFilters()">Apply</button>
-<button onclick="bulkAction('Suspended')">Bulk Suspend</button>
-<button onclick="bulkAction('Expelled')">Bulk Expel</button>
-<button onclick="bulkAction('Active')">Bulk Restore</button>
+  <div class="pagination" id="pagination"></div>
 
-<button class="delete-btn" onclick="deleteSelected()">🗑 Delete Selected</button>
-
-<button onclick="downloadPDF()">Export PDF</button>
-<button onclick="downloadExcel()">Export Excel</button>
-</div>
-
-<table id="studentsTable">
-<thead>
-<tr>
-<th><input type="checkbox" onclick="toggleSelectAll(this)"></th>
-<th onclick="sortTable('adm')">Adm No</th>
-<th onclick="sortTable('name')">Name</th>
-<th onclick="sortTable('class')">Class</th>
-<th onclick="sortTable('stream')">Stream</th>
-<th onclick="sortTable('school')">School</th>
-<th onclick="sortTable('status')">Status</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
-<div class="pagination" id="pagination"></div>
+  <!-- ID Card Preview -->
+  <div class="section-title">🆔 ID Card Preview</div>
+  <div id="idPreview"></div>
 
 </div>
 
@@ -145,39 +147,65 @@ button,select,input{
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
 
-import { 
-  getFirestore, getDocs, collection,
-  deleteDoc, doc, updateDoc 
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
+let students=[], filteredStudents=[], currentPage=1, perPage=20;
+let sortField="studentid", sortAsc=true;
+let schoolLogo=null;
 
+// Load Students
+async function loadStudents(){
+  const {data,error} = await supabase.from("students").select("*").order("created_at",{ascending:false});
+  if(error){ alert(error.message); return; }
+  students = data.map(s=>({...s, status: s.status || "Active"}));
+  populateClassFilter();
+  filteredStudents=[...students];
+  renderTable();
+  renderIDPreview();
+}
+
+function populateClassFilter(){
+  const classSet = new Set(students.map(s=>s.grade).filter(Boolean));
+  const cf=document.getElementById("classFilter");
+  cf.innerHTML='<option value="All">All Classes</option>';
+  classSet.forEach(c=>{cf.innerHTML+=`<option>${c}</option>`});
+}
 
 function renderTable(){
   filteredStudents.sort((a,b)=>{
-    let v=a[sortField].localeCompare(b[sortField]);
-    return sortAsc?v:-v;
-  }])
-
+    let va=a[sortField]||"", vb=b[sortField]||"";
+    if(typeof va==="string") va=va.toLowerCase();
+    if(typeof vb==="string") vb=vb.toLowerCase();
+    if(va<vb) return sortAsc?-1:1;
+    if(va>vb) return sortAsc?1:-1;
+    return 0;
+  });
   const start=(currentPage-1)*perPage;
   const page=filteredStudents.slice(start,start+perPage);
   const tbody=document.querySelector("#studentsTable tbody");
   tbody.innerHTML="";
-
   page.forEach(s=>{
     let sc="status-active";
     if(s.status==="Suspended") sc="status-suspended";
     if(s.status==="Expelled") sc="status-expelled";
-
     tbody.innerHTML+=`
     <tr>
       <td><input type="checkbox" class="selectBox" value="${s.id}"></td>
-      <td>${s.adm}</td>
-      <td>${s.name}</td>
-      <td>${s.class}</td>
-      <td>${s.stream}</td>
-      <td>${s.school}</td>
+      <td>${s.studentid||""}</td>
+      <td>${s.studentname||""}</td>
+      <td>${s.dateofbirth||""}</td>
+      <td>${s.age||""}</td>
+      <td>${s.school||""}</td>
+      <td>${s.level||""}</td>
+      <td>${s.grade||""}</td>
+      <td>${s.stream||""}</td>
+      <td>${s.photo?`<img class="student-photo" src="${s.photo}">`:""}</td>
       <td class="${sc}">${s.status}</td>
+      <td>${s.created_at?new Date(s.created_at).toLocaleString():""}</td>
       <td>
         <button onclick="changeStatus('${s.id}','Active')">Restore</button>
         <button onclick="changeStatus('${s.id}','Suspended')">Suspend</button>
@@ -185,84 +213,140 @@ function renderTable(){
         <button class="delete-btn" onclick="deleteStudent('${s.id}')">Delete</button>
       </td>
     </tr>`;
-  }])
+  });
   renderPagination();
+  renderIDPreview();
 }
 
 function renderPagination(){
   const p=document.getElementById("pagination");
   p.innerHTML="";
   const total=Math.ceil(filteredStudents.length/perPage);
-  for(let i=1;i<=total;i++){
-    p.innerHTML+=`<button onclick="goToPage(${i})">${i}</button>`;
-  }
+  for(let i=1;i<=total;i++){ p.innerHTML+=`<button onclick="goToPage(${i})">${i}</button>`; }
 }
 
-window.goToPage=p=>{currentPage=p;renderTable();};
-
-window.sortTable=f=>{
-  if(sortField===f) sortAsc=!sortAsc;
-  else{sortField=f;sortAsc=true;}
-  renderTable();
+window.goToPage=p=>{currentPage=p; renderTable();}
+window.sortTable=f=>{ if(sortField===f) sortAsc=!sortAsc; else{sortField=f; sortAsc=true;} renderTable(); }
+window.toggleSelectAll=m=>{document.querySelectorAll(".selectBox").forEach(cb=>cb.checked=m.checked);}
+window.applyFilters=()=>{
+  const search=document.getElementById("searchInput").value.toLowerCase();
+  const classF=document.getElementById("classFilter").value;
+  const statusF=document.getElementById("statusFilter").value;
+  filteredStudents=students.filter(s=>{
+    const matchSearch=s.studentid.toLowerCase().includes(search) || (s.studentname||"").toLowerCase().includes(search);
+    const matchClass=classF==="All" || s.grade===classF;
+    const matchStatus=statusF==="All" || s.status===statusF;
+    return matchSearch && matchClass && matchStatus;
+  });
+  currentPage=1; renderTable();
 };
 
-window.toggleSelectAll=m=>{
-  document.querySelectorAll(".selectBox").forEach(cb=>cb.checked=m.checked);
-};
+// Status and Delete
+window.changeStatus=async(id,status)=>{await supabase.from("students").update({status}).eq("id",id); loadStudents();}
+window.deleteStudent=async(id)=>{if(!confirm("Delete this student permanently?")) return; await supabase.from("students").delete().eq("id",id); loadStudents();}
+window.bulkAction=async(status)=>{const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value); for(const id of ids){await supabase.from("students").update({status}).eq("id",id);} loadStudents();}
+window.deleteSelected=async()=>{const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value); if(ids.length===0) return alert("No students selected."); if(!confirm(`Delete ${ids.length} student(s)?`)) return; for(const id of ids){await supabase.from("students").delete().eq("id",id);} loadStudents();}
 
-window.changeStatus=async(id,status)=>{
-  await updateDoc(doc(db,"students",id),{status}])
-  loadStudents();
-};
-
-window.deleteStudent=async(id)=>{
-  if(confirm("Delete this student permanently?")){
-    await deleteDoc(doc(db,"students",id));
-    loadStudents();
-  }
-};
-
-window.bulkAction=async(status)=>{
-  const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value);
-  for(const id of ids){
-    await updateDoc(doc(db,"students",id),{status}])
-  }
-  loadStudents();
-};
-
-window.deleteSelected=async()=>{
-  const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value);
-  if(ids.length===0) return alert("No students selected.");
-  if(!confirm(`Delete ${ids.length} student(s)? This cannot be undone.`)) return;
-
-  for(const id of ids){
-    await deleteDoc(doc(db,"students",id));
-  }
-  loadStudents();
-};
-
+// Export PDF & Excel
 window.downloadPDF=function(){
   const { jsPDF }=window.jspdf;
   const pdf=new jsPDF();
   pdf.text("Registered Students - NEWIS",10,10);
   let y=20;
   filteredStudents.forEach(s=>{
-    pdf.text(`${s.adm} | ${s.name} | ${s.class} | ${s.status}`,10,y);
-    y+=6;
-    if(y>280){pdf.addPage();y=20;}
-  }])
+    pdf.text(`${s.studentid} | ${s.studentname} | ${s.grade} | ${s.stream} | ${s.status}`,10,y);
+    y+=6;if(y>280){pdf.addPage(); y=20;}
+  });
   pdf.save("Students.pdf");
 };
 
 window.downloadExcel=function(){
-  const data=[["Adm","Name","Class","Stream","School","Status"]];
-  filteredStudents.forEach(s=>data.push([s.adm,s.name,s.class,s.stream,s.school,s.status]));
+  const data=[["Adm No","Name","DOB","Age","School","Level","Class","Stream","Status","Registered At"]];
+  filteredStudents.forEach(s=>{data.push([s.studentid,s.studentname,s.dateofbirth,s.age,s.school,s.level,s.grade,s.stream,s.status,s.created_at]);});
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),"Students");
   XLSX.writeFile(wb,"Students.xlsx");
 };
+
+// Upload Logo
+window.uploadLogo=async()=>{
+  const file=document.getElementById("logoUpload").files[0];
+  if(!file) return alert("Select a logo file first.");
+  const ext=file.name.split('.').pop();
+  const name=`school_logo.${ext}`;
+  const {data,error}=await supabase.storage.from('public').upload(name,file,{upsert:true});
+  if(error){alert(error.message); return;}
+  const {publicURL}=supabase.storage.from('public').getPublicUrl(name);
+  schoolLogo=publicURL;
+  document.getElementById("logoStatus").textContent=" Logo uploaded!";
+  renderIDPreview();
+};
+
+// Preview ID Cards
+function renderIDPreview(){
+  const previewDiv=document.getElementById("idPreview");
+  previewDiv.innerHTML="";
+  const page=filteredStudents.slice(0,10); // show preview for first 10 students
+  page.forEach(s=>{
+    const div=document.createElement("div");
+    div.className="id-card";
+    div.innerHTML=`
+      ${schoolLogo?`<img class="logo" src="${schoolLogo}">`:''}
+      ${s.photo?`<img class="photo" src="${s.photo}">`:''}
+      <div class="text">
+        <div><strong>${s.studentname}</strong></div>
+        <div>Adm No: ${s.studentid}</div>
+        <div>Class: ${s.grade}</div>
+        <div>Stream: ${s.stream}</div>
+      </div>
+    `;
+    previewDiv.appendChild(div);
+  });
+}
+
+// Download ID Cards PDF
+window.downloadIDCards=function(){
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF({unit:'mm', format:'a4'});
+  let x=10, y=10, w=85, h=55, gap=10;
+  filteredStudents.forEach(s=>{
+    pdf.rect(x,y,w,h);
+    pdf.setFontSize(12);
+    if(schoolLogo) pdf.addImage(schoolLogo,'JPEG',x+5,y+2,20,20);
+    if(s.photo) pdf.addImage(s.photo,'JPEG',x+w-25,y+5,20,30);
+    pdf.text("School Name", x+30, y+12);
+    pdf.text(`Name: ${s.studentname}`, x+5, y+25);
+    pdf.text(`Adm No: ${s.studentid}`, x+5, y+33);
+    pdf.text(`Class: ${s.grade}`, x+5, y+41);
+    pdf.text(`Stream: ${s.stream}`, x+5, y+49);
+    x+=w+gap;if(x+w>210){x=10;y+=h+gap;}
+    if(y+h>297){pdf.addPage(); x=10; y=10;}
+  });
+  pdf.save("ID_Cards.pdf");
+};
+
+// Bulk Promote
+window.bulkPromote=async()=>{
+  const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value);
+  if(ids.length===0) return alert("No students selected.");
+  const updates=[];
+  ids.forEach(id=>{
+    const stu=students.find(s=>s.id===id);
+    if(stu && stu.grade){
+      let next=parseInt(stu.grade);
+      if(!isNaN(next)) updates.push({id:id, grade:(next+1).toString()});
+    }
+  });
+  for(const u of updates){
+    await supabase.from("students").update({grade:u.grade}).eq("id",u.id);
+  }
+  loadStudents();
+};
+
+window.goBack=()=>{location.href="student-registration.html";};
+
+loadStudents();
 </script>
 
 </body>
-<script type="module" src="test.js"></script>
 </html>
