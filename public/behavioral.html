@@ -61,6 +61,7 @@
       margin: 30px auto;
     }
     .green { background: #28a745; }
+    .yellow { background: #ffc107; color: black; }
     .red { background: #dc3545; }
     button {
       padding: 10px 18px;
@@ -206,14 +207,18 @@ function calculateBehaviorRisk() {
   return checked * weightPerFactor;
 }
 
-/* TOTAL RISK */
+/* TOTAL RISK WITH COLOR CODING */
 function calculateTotalRisk() {
   const totalRisk = calculateBehaviorRisk() + attendanceRisk;
 
   const oval = document.getElementById("riskOval");
   oval.innerText = totalRisk.toFixed(2) + "%";
 
-  oval.className = "oval " + (totalRisk < 4 ? "green" : "red");
+  // Color coding
+  if (totalRisk < 40) oval.className = "oval green";
+  else if (totalRisk <= 60) oval.className = "oval yellow";
+  else oval.className = "oval red";
+
   return totalRisk;
 }
 
@@ -230,10 +235,13 @@ async function saveRecord() {
 
   const totalRisk = calculateTotalRisk();
 
+  const totalDays = parseFloat(document.getElementById("inputTotalDays").value) || 0;
+  const daysPresent = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
+
   const { error } = await supabase.from("behavior").upsert({
     student_id: currentId,
-    total_days: parseFloat(document.getElementById("inputTotalDays").value) || 0,
-    days_present: parseFloat(document.getElementById("inputDaysPresent").value) || 0,
+    total_days: totalDays,
+    days_present: daysPresent,
     behavior_risks: risks,
     total_risk: totalRisk,
     recorded_at: new Date()
@@ -244,7 +252,6 @@ async function saveRecord() {
 }
 
 window.saveRecord = saveRecord;
-
 </script>
 </body>
 </html>
