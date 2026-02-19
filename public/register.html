@@ -10,36 +10,92 @@
 <style>
 body{
 margin:0;
-font-family:Segoe UI;
+font-family:Segoe UI, sans-serif;
 background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
 color:white;
 display:flex;
 justify-content:center;
-padding-top:20px;
+padding:20px;
+box-sizing:border-box;
 }
+
 .container{
 background:rgba(255,255,255,.12);
-padding:30px;
+padding:25px;
 border-radius:20px;
-width:560px;
+width:100%;
+max-width:560px;
 backdrop-filter:blur(15px);
+box-sizing:border-box;
 }
+
+/* FORM ELEMENTS */
 input,select,button{
 width:100%;
-padding:10px;
+padding:12px;
 margin:6px 0;
 border:none;
 border-radius:10px;
+box-sizing:border-box;
+font-size:15px;
 }
-button{font-weight:bold;cursor:pointer}
+
+button{
+font-weight:bold;
+cursor:pointer;
+transition:.2s;
+}
+
+button:hover{
+opacity:.85;
+}
+
+/* BUTTON COLORS */
 .navbtn{background:#17a2b8}
 .btn-create{background:#00c6ff}
 .btn-search{background:#ffc107;color:black}
 .btn-update{background:#28a745}
 .btn-cam{background:#ff9800}
-.success{text-align:center;color:#00ff99;margin-top:10px}
-#video{width:100%;display:none;border-radius:10px}
-#preview{width:150px;margin-top:10px;border-radius:12px;display:none}
+
+/* BUTTON ROW (RESPONSIVE) */
+.btn-row{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+
+.btn-row button{
+flex:1;
+min-width:120px;
+}
+
+.success{
+text-align:center;
+color:#00ff99;
+margin-top:10px;
+font-weight:bold;
+}
+
+#video{
+width:100%;
+display:none;
+border-radius:10px;
+margin-top:10px;
+}
+
+#preview{
+width:150px;
+margin-top:10px;
+border-radius:12px;
+display:none;
+}
+
+/* MOBILE IMPROVEMENTS */
+@media(max-width:480px){
+.btn-row{
+flex-direction:column;
+}
+}
 </style>
 </head>
 
@@ -48,13 +104,18 @@ button{font-weight:bold;cursor:pointer}
 
 <h2>Student Registration</h2>
 
+<div class="btn-row">
 <button class="navbtn" onclick="location.href='index.html'">🏠 Home</button>
 <button class="navbtn" onclick="location.href='schooldetails.html'">🏫 Register School</button>
+</div>
 
 <hr>
 
 <input id="studentId" placeholder="Admission Number">
+
+<div class="btn-row">
 <button class="btn-search" onclick="searchStudent()">Search Student</button>
+</div>
 
 <input id="studentName" placeholder="Student Full Name">
 <input type="date" id="dateOfBirth">
@@ -69,15 +130,19 @@ button{font-weight:bold;cursor:pointer}
 <label>Upload Photo</label>
 <input type="file" id="photoUpload">
 
+<div class="btn-row">
 <button class="btn-cam" onclick="startCamera()">Start Camera</button>
 <button class="btn-cam" onclick="capturePhoto()">Capture Photo</button>
+</div>
 
 <video id="video" autoplay></video>
 <canvas id="canvas" style="display:none"></canvas>
 <img id="preview">
 
+<div class="btn-row">
 <button class="btn-create" onclick="registerStudent()">Register Student</button>
 <button class="btn-update" onclick="updateStudent()">Update Student</button>
+</div>
 
 <hr>
 <h3>Live Students</h3>
@@ -95,14 +160,14 @@ window.onerror=(msg,src,line,col)=>alert(`ERROR:\n${msg}\nLine:${line}`);
 /* SUPABASE CONNECTED */
 const supabase = window.supabase.createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+"YOUR_PUBLIC_ANON_KEY"
 );
 
 const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* AGE CALCULATION (RELIABLE) */
+/* AGE CALCULATION */
 function calcAge(){
 const v=el("dateOfBirth").value;
 if(!v){el("age").value="";return;}
@@ -111,10 +176,8 @@ const b=new Date(v+"T00:00:00");
 const t=new Date();
 
 let age=t.getFullYear()-b.getFullYear();
-if(
-t.getMonth()<b.getMonth() ||
-(t.getMonth()==b.getMonth() && t.getDate()<b.getDate())
-) age--;
+if(t.getMonth()<b.getMonth() ||
+(t.getMonth()==b.getMonth() && t.getDate()<b.getDate())) age--;
 
 el("age").value=age>=0?age:"";
 }
@@ -123,13 +186,11 @@ el("dateOfBirth").addEventListener("input",calcAge);
 /* LOAD SCHOOLS */
 async function loadSchools(){
 const {data,error}=await supabase.from("schools").select("*");
-
-if(error){alert("School Load Error:\n"+error.message);return;}
-if(!data||!data.length){alert("No schools found");return;}
+if(error){alert(error.message);return;}
 
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
-data.forEach(s=>{
+data?.forEach(s=>{
 try{
 if(typeof s.classes==="string") s.classes=JSON.parse(s.classes||"[]");
 if(typeof s.streams==="string") s.streams=JSON.parse(s.streams||"[]");
@@ -150,7 +211,6 @@ el("streamSelect").innerHTML="<option>Select Stream</option>";
 if(!s)return;
 
 el("levelDisplay").value=s.level||"";
-
 (s.classes||[]).forEach(c=>el("gradeSelect").add(new Option(c,c)));
 (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 };
@@ -242,7 +302,6 @@ photo
 }]);
 
 if(error)return alert(error.message);
-
 el("message").innerText="Student Registered ✔";
 }
 
@@ -269,23 +328,8 @@ const {error}=await supabase
 .eq("studentId",currentStudentId);
 
 if(error)return alert(error.message);
-
 el("message").innerText="Student Updated ✔";
 }
-
-/* LIVE LIST */
-supabase.channel("students")
-.on("postgres_changes",
-{event:"INSERT",schema:"public",table:"students"},
-p=>el("liveList").innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
-).subscribe();
-
-/* INITIAL LIST */
-(async()=>{
-const {data,error}=await supabase.from("students").select("*").limit(20);
-if(error)return alert(error.message);
-data?.forEach(s=>el("liveList").innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`);
-})();
 </script>
 </body>
 </html>
