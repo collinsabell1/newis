@@ -10,7 +10,6 @@
       background: linear-gradient(135deg, #141e30, #243b55);
       color: white;
     }
-
     .container {
       max-width: 1200px;
       margin: 30px auto;
@@ -20,21 +19,17 @@
       backdrop-filter: blur(15px);
       box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
     }
-
     h2 { text-align: center; }
-
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 25px;
     }
-
     .section {
       padding: 20px;
       border-radius: 15px;
       background: rgba(255,255,255,0.1);
     }
-
     input {
       width: 100%;
       padding: 10px;
@@ -42,25 +37,18 @@
       border: none;
       margin-bottom: 10px;
     }
-
-    input[readonly] {
-      background: #e0e0e0;
-      font-weight: bold;
-    }
-
+    input[readonly] { background: #e0e0e0; font-weight: bold; }
     .attendance-card {
       background: rgba(0,0,0,0.3);
       padding: 15px;
       border-radius: 12px;
       margin-top: 15px;
     }
-
     .checkbox-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
-
     .oval {
       width: 220px;
       height: 120px;
@@ -72,10 +60,8 @@
       font-weight: bold;
       margin: 30px auto;
     }
-
     .green { background: #28a745; }
     .red { background: #dc3545; }
-
     button {
       padding: 10px 18px;
       border: none;
@@ -84,10 +70,8 @@
       cursor: pointer;
       margin: 5px;
     }
-
     .save { background: #28a745; color: white; }
     .view { background: #6f42c1; color: white; }
-
   </style>
 </head>
 
@@ -100,7 +84,7 @@
   <!-- STUDENT SECTION -->
   <div class="section">
     <label>Admission Number</label>
-    <input type="text" id="studentId" placeholder="Enter Admission Number">
+    <input type="number" id="studentId" placeholder="Enter Admission Number">
 
     <input type="text" id="studentName" readonly placeholder="Student Name">
     <input type="text" id="studentClass" readonly placeholder="Class">
@@ -143,20 +127,13 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* BEHAVIOR FACTORS ONLY */
 const behaviorFactors = [
-  "Bullying others",
-  "Fighting in school",
-  "Drug abuse",
-  "Theft",
-  "Disrespect",
-  "Dishonesty",
-  "Repeated discipline cases",
-  "Sexual harassment",
-  "Gang involvement",
+  "Bullying others","Fighting in school","Drug abuse","Theft","Disrespect",
+  "Dishonesty","Repeated discipline cases","Sexual harassment","Gang involvement",
   "Non-compliance with school rules"
 ];
 
+// Populate checklist
 const checklist = document.getElementById("checklist");
 behaviorFactors.forEach(f => {
   const label = document.createElement("label");
@@ -167,11 +144,12 @@ behaviorFactors.forEach(f => {
 let currentId = null;
 let attendanceRisk = 0;
 
-/* FETCH FROM STUDENTS OR ACADEMICS */
-document.getElementById("studentId").addEventListener("change", async (e) => {
-  const id = e.target.value.trim();
+/* FETCH STUDENT DATA */
+document.getElementById("studentId").addEventListener("change", async () => {
+  const id = parseInt(document.getElementById("studentId").value, 10);
   if (!id) return;
 
+  // Try students table
   let { data, error } = await supabase
     .from("students")
     .select("studentid,name,level,age,gender,school")
@@ -180,18 +158,18 @@ document.getElementById("studentId").addEventListener("change", async (e) => {
 
   if (error || !data) {
     // Try academics table
-    const response = await supabase
+    const resp = await supabase
       .from("academics")
       .select("studentid,name,level,age,gender,school")
       .eq("studentid", id)
       .single();
 
-    data = response.data;
-    error = response.error;
+    data = resp.data;
+    error = resp.error;
   }
 
   if (error || !data) {
-    alert("Student not found in students or academics table.");
+    alert("Student not found.");
     return;
   }
 
@@ -204,18 +182,17 @@ document.getElementById("studentId").addEventListener("change", async (e) => {
   document.getElementById("studentSchool").value = data.school || "";
 });
 
-/* ATTENDANCE CALCULATION */
+/* CALCULATE ATTENDANCE */
 function calculateAttendance() {
   const total = parseFloat(document.getElementById("inputTotalDays").value) || 0;
   const present = parseFloat(document.getElementById("inputDaysPresent").value) || 0;
   const absent = total - present;
 
   document.getElementById("daysAbsent").innerText = absent > 0 ? absent : 0;
-
   const percent = total ? (absent * 100 / total) : 0;
   document.getElementById("attendancePercent").innerText = percent.toFixed(2) + "%";
 
-  attendanceRisk = percent * 0.20;
+  attendanceRisk = percent * 0.20; // 20% weight
   calculateTotalRisk();
 }
 
@@ -236,23 +213,16 @@ function calculateTotalRisk() {
   const oval = document.getElementById("riskOval");
   oval.innerText = totalRisk.toFixed(2) + "%";
 
-  if (totalRisk < 4) {
-    oval.className = "oval green";
-  } else {
-    oval.className = "oval red";
-  }
-
+  oval.className = "oval " + (totalRisk < 4 ? "green" : "red");
   return totalRisk;
 }
 
 document.addEventListener("change", (e) => {
-  if (e.target.classList.contains("factor")) {
-    calculateTotalRisk();
-  }
+  if (e.target.classList.contains("factor")) calculateTotalRisk();
 });
 
 /* SAVE / UPDATE RECORD */
-window.saveRecord = async () => {
+async function saveRecord() {
   if (!currentId) return alert("Enter Admission Number first");
 
   const risks = [...document.querySelectorAll(".factor:checked")]
@@ -269,13 +239,12 @@ window.saveRecord = async () => {
     recorded_at: new Date()
   }, { onConflict: "student_id" });
 
-  if (error) {
-    alert("Error saving record");
-  } else {
-    alert("Record saved successfully");
-  }
-};
-</script>
+  if (error) alert("Error saving record: " + error.message);
+  else alert("Record saved successfully");
+}
 
+window.saveRecord = saveRecord;
+
+</script>
 </body>
 </html>
