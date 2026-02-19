@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Behavioral Risk Assessment</title>
+  <title>Behavioral Risk Assessment - NEWIS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -10,107 +10,129 @@
       background: linear-gradient(135deg, #141e30, #243b55);
       color: white;
     }
+
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 30px auto;
       padding: 30px;
-      background: rgba(255,255,255,0.08);
+      background: rgba(255, 255, 255, 0.08);
       border-radius: 20px;
       backdrop-filter: blur(15px);
-      box-shadow: 0 0 40px rgba(0,0,0,0.6);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
     }
-    h2 { text-align:center; margin-bottom:25px; }
+
+    h2 { text-align: center; }
+
     .grid {
-      display:grid;
-      grid-template-columns:1fr;
-      gap:25px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
     }
-    @media(min-width:992px){
-      .grid{ grid-template-columns:1fr 1fr; }
+
+    .section {
+      padding: 20px;
+      border-radius: 15px;
+      background: rgba(255,255,255,0.1);
     }
-    .section{
-      padding:20px;
-      border-radius:15px;
-      background:rgba(255,255,255,0.1);
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      margin-bottom: 10px;
     }
-    input[type="text"]{
-      width:100%;
-      padding:12px;
-      border-radius:10px;
-      border:none;
-      margin-bottom:12px;
+
+    input[readonly] {
+      background: #e0e0e0;
+      font-weight: bold;
     }
-    input[readonly]{
-      background:#e0e0e0;
-      font-weight:bold;
+
+    .attendance-card {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 12px;
+      margin-top: 15px;
     }
-    .checkbox-grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:8px;
+
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
-    @media(min-width:600px){
-      .checkbox-grid{ grid-template-columns:1fr 1fr; }
+
+    .oval {
+      width: 220px;
+      height: 120px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: bold;
+      margin: 30px auto;
     }
-    .button-area{
-      text-align:center;
-      margin-top:25px;
+
+    .green { background: #28a745; }
+    .red { background: #dc3545; }
+
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
     }
-    button{
-      padding:10px 18px;
-      margin:6px;
-      border:none;
-      border-radius:10px;
-      font-weight:bold;
-      cursor:pointer;
-    }
-    .save{ background:#28a745; color:white; }
-    .update{ background:#ffc107; }
-    .delete{ background:#dc3545; color:white; }
-    .circular{
-      width:200px;
-      height:200px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:32px;
-      font-weight:bold;
-      margin:30px auto;
-    }
-    .green{ background:#28a745; }
-    .yellow{ background:#ffc107; color:black; }
-    .red{ background:#dc3545; }
+
+    .save { background: #28a745; color: white; }
+    .view { background: #6f42c1; color: white; }
+
   </style>
 </head>
 
 <body>
 <div class="container">
-  <h2>Behavioral Risk Assessment</h2>
+<h2>Behavioral Dropout Risk Assessment</h2>
 
-  <div class="grid">
-    <div class="section">
-      <label>Enter Admission Number:</label>
-      <input type="text" id="studentId" placeholder="Enter Admission Number">
+<div class="grid">
 
-      <!-- ONLY NAME & GENDER -->
-      <input type="text" id="studentName" readonly placeholder="Student Name">
-      <input type="text" id="studentGender" readonly placeholder="Gender">
-    </div>
+  <!-- STUDENT SECTION -->
+  <div class="section">
+    <label>Admission Number</label>
+    <input type="text" id="studentId" placeholder="Enter Admission Number">
 
-    <div class="section">
-      <h3>Behavioral Indicators</h3>
-      <div class="checkbox-grid" id="checklist"></div>
+    <input type="text" id="studentName" readonly placeholder="Student Name">
+    <input type="text" id="studentClass" readonly placeholder="Class">
+    <input type="text" id="studentAge" readonly placeholder="Age">
+    <input type="text" id="studentGender" readonly placeholder="Gender">
+    <input type="text" id="studentSchool" readonly placeholder="School">
+
+    <div class="attendance-card">
+      <h4>Attendance Summary</h4>
+      <p>Total Days: <span id="totalDays">0</span></p>
+      <p>Days Present: <span id="daysPresent">0</span></p>
+      <p>Days Absent: <span id="daysAbsent">0</span></p>
+      <p>Attendance Risk %: <span id="attendancePercent">0%</span></p>
     </div>
   </div>
 
-  <div id="circle" class="circular green">0%</div>
-
-  <div class="button-area">
-    <button class="save" onclick="saveRecord()">Save</button>
-    <button class="update" onclick="updateRecord()">Update</button>
-    <button class="delete" onclick="deleteRecord()">Delete</button>
+  <!-- BEHAVIOR SECTION -->
+  <div class="section">
+    <h3>Behavior Factors</h3>
+    <div class="checkbox-grid" id="checklist"></div>
   </div>
+
+</div>
+
+<!-- TOTAL RISK OVAL -->
+<div id="riskOval" class="oval green">0%</div>
+
+<div style="text-align:center">
+  <button class="save" onclick="saveRecord()">Save</button>
+  <button class="view" onclick="window.location.href='behavioral_view.html'">View Behavioral</button>
+</div>
+
 </div>
 
 <script type="module">
@@ -122,138 +144,128 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* STRICTLY BEHAVIORAL FACTORS ONLY */
-const risks = [
-  "Chronic absenteeism",
-  "Frequent lateness",
-  "Truancy",
+/* STRICTLY BEHAVIOR FACTORS */
+const behaviorFactors = [
   "Bullying others",
   "Fighting in school",
   "Drug abuse",
-  "Alcohol abuse",
   "Theft",
   "Disrespect",
   "Dishonesty",
-  "Incomplete assignments",
   "Repeated discipline cases",
-  "Lack of focus in class",
   "Sexual harassment",
   "Gang involvement",
-  "Running away from school",
-  "Non-compliance with school rules",
-  "Excessive phone usage",
-  "Dormitory misconduct"
+  "Non-compliance with school rules"
 ];
 
-/* CREATE CHECKBOXES */
+/* POPULATE CHECKBOXES */
 const checklist = document.getElementById("checklist");
-risks.forEach(r => {
+behaviorFactors.forEach(f => {
   const label = document.createElement("label");
-  label.innerHTML = `<input type="checkbox" class="neg"> ${r}`;
+  label.innerHTML = `<input type="checkbox" class="factor"> ${f}`;
   checklist.appendChild(label);
 });
 
 let currentId = null;
+let attendanceRisk = 0;
 
-/* FETCH ONLY NAME & GENDER */
-document.getElementById("studentId").addEventListener("change", async (e) => {
+/* FETCH STUDENT AUTOMATICALLY */
+document.getElementById("studentId").addEventListener("input", async (e) => {
   const id = e.target.value.trim();
   if (!id) return;
 
   const { data, error } = await supabase
     .from("students")
-    .select("studentid, name, gender")
+    .select("studentid,name,level,age,gender,school,total_days,days_present")
     .eq("studentid", id)
     .single();
 
   if (error || !data) {
-    alert("Student not found.");
+    alert("Student not found");
     return;
   }
 
   currentId = data.studentid;
+
   document.getElementById("studentName").value = data.name || "";
+  document.getElementById("studentClass").value = data.level || "";
+  document.getElementById("studentAge").value = data.age || "";
   document.getElementById("studentGender").value = data.gender || "";
+  document.getElementById("studentSchool").value = data.school || "";
 
-  loadBehavior();
+  loadAttendance(data);
+  calculateTotalRisk();
 });
 
-/* CALCULATE % */
-function calculate(){
-  const checked = document.querySelectorAll(".neg:checked").length;
-  const percent = (checked / risks.length) * 100;
+/* LOAD ATTENDANCE */
+function loadAttendance(data) {
+  const total = data.total_days || 0;
+  const present = data.days_present || 0;
+  const absent = total - present;
 
-  const circle = document.getElementById("circle");
-  circle.innerHTML = percent.toFixed(1) + "%";
+  document.getElementById("totalDays").innerText = total;
+  document.getElementById("daysPresent").innerText = present;
+  document.getElementById("daysAbsent").innerText = absent;
 
-  circle.className = "circular " +
-    (percent > 60 ? "red" :
-     percent > 40 ? "yellow" :
-     "green");
+  const percent = total ? (absent * 100 / total) : 0;
+  document.getElementById("attendancePercent").innerText = percent.toFixed(2) + "%";
 
-  return percent;
+  attendanceRisk = percent * 0.20;  // 20% weight
 }
 
-document.addEventListener("change", (e)=>{
-  if(e.target.classList.contains("neg")) calculate();
+/* CALCULATE BEHAVIOR RISK */
+function calculateBehaviorRisk() {
+  const checked = document.querySelectorAll(".factor:checked").length;
+  const weightPerFactor = 80 / behaviorFactors.length;
+  return checked * weightPerFactor;
+}
+
+/* TOTAL RISK */
+function calculateTotalRisk() {
+  const behaviorRisk = calculateBehaviorRisk();
+  const totalRisk = behaviorRisk + attendanceRisk;
+
+  const oval = document.getElementById("riskOval");
+  oval.innerText = totalRisk.toFixed(2) + "%";
+
+  if (totalRisk < 4) {
+    oval.className = "oval green";
+  } else {
+    oval.className = "oval red";
+  }
+
+  return totalRisk;
+}
+
+document.addEventListener("change", (e) => {
+  if (e.target.classList.contains("factor")) {
+    calculateTotalRisk();
+  }
 });
 
-/* LOAD EXISTING RECORD */
-async function loadBehavior(){
-  const { data } = await supabase
-    .from("behavior")
-    .select("*")
-    .eq("student_id", currentId)
-    .single();
+/* SAVE RECORD */
+window.saveRecord = async () => {
+  if (!currentId) return alert("Enter Admission Number first");
 
-  if(!data) return;
+  const risks = [...document.querySelectorAll(".factor:checked")]
+    .map(cb => cb.parentElement.textContent.trim());
 
-  document.querySelectorAll(".neg").forEach(cb=>{
-    cb.checked = data.risks?.includes(
-      cb.parentElement.textContent.trim()
-    );
-  });
+  const totalRisk = calculateTotalRisk();
 
-  calculate();
-}
+  const { error } = await supabase.from("behavior").upsert({
+    student_id: currentId,
+    behavior_risks: risks,
+    total_risk: totalRisk,
+    recorded_at: new Date()
+  }, { onConflict: "student_id" });
 
-/* SAVE / UPDATE */
-window.saveRecord = async ()=>{
-  if(!currentId) return alert("Enter admission number first.");
-
-  const percent = calculate();
-  const risksList = [...document.querySelectorAll(".neg:checked")]
-    .map(cb=>cb.parentElement.textContent.trim());
-
-  const { error } = await supabase
-    .from("behavior")
-    .upsert({
-      student_id: currentId,
-      behaviorrisk: percent,
-      risks: risksList,
-      recorded_at: new Date().toISOString()
-    }, { onConflict: "student_id" });
-
-  if(error) alert("Error saving: " + error.message);
-  else alert("Record saved successfully!");
-};
-
-window.updateRecord = window.saveRecord;
-
-/* DELETE */
-window.deleteRecord = async ()=>{
-  if(!currentId) return;
-  if(!confirm("Delete record?")) return;
-
-  await supabase
-    .from("behavior")
-    .delete()
-    .eq("student_id", currentId);
-
-  document.querySelectorAll(".neg").forEach(cb=>cb.checked=false);
-  calculate();
-  alert("Record deleted successfully!");
+  if (error) {
+    alert("Error saving record");
+  } else {
+    alert("Record saved successfully");
+  }
 };
 </script>
+
 </body>
 </html>
