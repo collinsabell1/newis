@@ -119,8 +119,8 @@ tr:nth-child(even) { background: rgba(255,255,255,0.05); }
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
-"https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
 let allData=[];
@@ -128,20 +128,40 @@ let allData=[];
 /* LOAD DATA */
 async function loadData(){
   const { data, error } = await supabase
-    .from("behavioral_records")
-    .select("*")
-    .order("created_at",{ascending:false});
-  if(error){ alert(error.message); return; }
-  allData = data.map(r=>({
-    id:r.id,
-    adm:r.admission_no,
-    name:r.name,
-    class:r.class,
-    school:r.school,
-    risk:r.risk_percent,
-    status:r.risk_percent>50?"High":r.risk_percent==50?"Medium":"Low",
-    date:new Date(r.created_at)
+    .from("behavior")
+    .select(`
+      id,
+      total_risk,
+      recorded_at,
+      total_days,
+      days_present,
+      behavior_risks,
+      student:student_id (
+        studentid,
+        studentname,
+        grade,
+        school
+      )
+    `)
+    .order("recorded_at", { ascending: false });
+
+  if (error) { 
+    alert(error.message); 
+    return; 
+  }
+
+  // Map data for your table
+  allData = data.map(r => ({
+    id: r.id,
+    adm: r.student.studentid,
+    name: r.student.studentname,
+    class: r.student.grade,
+    school: r.student.school,
+    risk: r.total_risk,
+    status: r.total_risk > 50 ? "High" : r.total_risk == 50 ? "Medium" : "Low",
+    date: new Date(r.recorded_at)
   }));
+
   populateClassFilter();
   renderTable();
 }
@@ -200,7 +220,7 @@ window.deleteSelected = async () => {
   const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
   if(!ids.length) return alert("No records selected");
   if(!confirm("Delete selected records?")) return;
-  await supabase.from("behavioral_records").delete().in("id",ids);
+  await supabase.from("behavior").delete().in("id",ids);
   loadData();
 };
 
