@@ -2,45 +2,42 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Student Registration - NEWIS</title>
+<title>NEWIS - Student Registration</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body{
 margin:0;
 font-family:'Segoe UI',sans-serif;
-background:linear-gradient(135deg,#141e30,#243b55);
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
 display:flex;
 justify-content:center;
 padding:20px;
 color:white;
 }
 
-/* GLASS CONTAINER */
 .container{
 width:100%;
-max-width:600px;
-background:rgba(255,255,255,0.1);
+max-width:700px;
+background:rgba(255,255,255,0.08);
 backdrop-filter:blur(20px);
 border-radius:20px;
 padding:25px;
-box-shadow:0 8px 30px rgba(0,0,0,.4);
+box-shadow:0 10px 30px rgba(0,0,0,.4);
 }
 
-/* INPUTS */
+h2,h3{margin-top:0}
+
 input,select{
 width:100%;
 padding:12px;
 margin:6px 0;
 border-radius:10px;
 border:none;
-font-size:15px;
 outline:none;
 }
 
-/* BUTTONS */
 button{
 padding:12px;
 border:none;
@@ -48,7 +45,7 @@ border-radius:12px;
 font-weight:bold;
 cursor:pointer;
 color:white;
-transition:all .3s ease;
+transition:.3s;
 width:100%;
 margin:6px 0;
 }
@@ -58,49 +55,39 @@ transform:translateY(-2px);
 box-shadow:0 5px 15px rgba(0,0,0,.3);
 }
 
-/* COLORS */
-.navbtn{background:linear-gradient(45deg,#00c6ff,#0072ff);}
-.btn-search{background:linear-gradient(45deg,#f7971e,#ffd200);color:black;}
-.btn-create{background:linear-gradient(45deg,#00b09b,#96c93d);}
-.btn-update{background:linear-gradient(45deg,#11998e,#38ef7d);}
-.btn-cam{background:linear-gradient(45deg,#fc466b,#3f5efb);}
-
-/* FLEX ROW */
 .row{
 display:flex;
 gap:10px;
 flex-wrap:wrap;
 }
 
-.row button{
-flex:1;
-min-width:120px;
-}
+.row button{flex:1}
 
-#video{
-width:100%;
-display:none;
-border-radius:10px;
-margin-top:10px;
-}
+.nav{background:linear-gradient(45deg,#00c6ff,#0072ff);}
+.search{background:linear-gradient(45deg,#f7971e,#ffd200);color:black;}
+.create{background:linear-gradient(45deg,#00b09b,#96c93d);}
+.update{background:linear-gradient(45deg,#11998e,#38ef7d);}
+.delete{background:linear-gradient(45deg,#ff416c,#ff4b2b);}
+.bulk{background:linear-gradient(45deg,#7f00ff,#e100ff);}
+.camera{background:linear-gradient(45deg,#fc466b,#3f5efb);}
 
-#preview{
-width:150px;
-border-radius:12px;
-margin-top:10px;
-display:none;
-}
+#video{width:100%;display:none;border-radius:10px;margin-top:10px}
+#preview{width:150px;border-radius:10px;margin-top:10px;display:none}
 
 .alert{
-margin-top:10px;
 padding:10px;
 border-radius:8px;
-font-weight:bold;
 text-align:center;
+margin-top:10px;
+font-weight:bold;
 }
-
 .success{background:#00c851;}
 .error{background:#ff4444;}
+
+.student-row{
+padding:6px;
+border-bottom:1px solid rgba(255,255,255,.2);
+}
 
 @media(max-width:480px){
 .row{flex-direction:column;}
@@ -114,15 +101,12 @@ text-align:center;
 <h2>Student Registration</h2>
 
 <div class="row">
-<button class="navbtn" onclick="location.href='index.html'">🏠 Home</button>
-<button class="navbtn" onclick="location.href='schooldetails.html'">🏫 Register School</button>
+<button class="nav" onclick="location.reload()">Refresh</button>
+<button class="bulk" onclick="downloadCSV()">Bulk Download CSV</button>
 </div>
 
-<hr>
-
 <input id="studentId" placeholder="Admission Number">
-
-<button class="btn-search" onclick="searchStudent()">Search Student</button>
+<button class="search" onclick="searchStudent()">Search Student</button>
 
 <input id="studentName" placeholder="Student Full Name">
 <input type="date" id="dateOfBirth">
@@ -130,7 +114,6 @@ text-align:center;
 
 <select id="schoolSelect"><option>Loading schools...</option></select>
 <input id="levelDisplay" placeholder="School Level" readonly>
-
 <select id="gradeSelect"><option>Select Class</option></select>
 <select id="streamSelect"><option>Select Stream</option></select>
 
@@ -138,8 +121,8 @@ text-align:center;
 <input type="file" id="photoUpload">
 
 <div class="row">
-<button class="btn-cam" onclick="startCamera()">Start Camera</button>
-<button class="btn-cam" onclick="capturePhoto()">Capture Photo</button>
+<button class="camera" onclick="startCamera()">Start Camera</button>
+<button class="camera" onclick="capturePhoto()">Capture</button>
 </div>
 
 <video id="video" autoplay></video>
@@ -147,13 +130,14 @@ text-align:center;
 <img id="preview">
 
 <div class="row">
-<button class="btn-create" onclick="registerStudent()">Register Student</button>
-<button class="btn-update" onclick="updateStudent()">Update Student</button>
+<button class="create" onclick="registerStudent()">Register</button>
+<button class="update" onclick="updateStudent()">Update</button>
+<button class="delete" onclick="deleteStudent()">Delete</button>
 </div>
 
 <hr>
 <h3>Live Students</h3>
-<div id="liveList"></div>
+<div id="studentList"></div>
 
 <div id="alertBox"></div>
 
@@ -161,109 +145,77 @@ text-align:center;
 
 <script>
 
-/* ===== SUPABASE CONNECTION ===== */
+/* ========= SUPABASE ========= */
 const supabase = window.supabase.createClient(
-"https://xnvnskxcsphbvkxhndui.supabase.co",
+"https://YOUR_PROJECT.supabase.co",
 "YOUR_PUBLIC_ANON_KEY"
 );
 
 const el=id=>document.getElementById(id);
-let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
+let schoolsMap={},currentStudent=null,cameraStream=null,capturedBlob=null;
 
-/* ===== ALERT SYSTEM ===== */
+/* ========= ALERT ========= */
 function showAlert(msg,type="success"){
-const box=el("alertBox");
-box.innerHTML=`<div class="alert ${type}">${msg}</div>`;
-setTimeout(()=>box.innerHTML="",4000);
+el("alertBox").innerHTML=`<div class="alert ${type}">${msg}</div>`;
+setTimeout(()=>el("alertBox").innerHTML="",4000);
 }
 
-/* ===== FIXED AGE CALCULATION ===== */
-function calcAge(){
-const dob=el("dateOfBirth").value;
-if(!dob){el("age").value="";return;}
-
-const birth=new Date(dob);
+/* ========= AGE ========= */
+el("dateOfBirth").addEventListener("change",()=>{
+const dob=new Date(el("dateOfBirth").value);
+if(!dob)return;
 const today=new Date();
-
-let age=today.getFullYear()-birth.getFullYear();
-const m=today.getMonth()-birth.getMonth();
-
-if(m<0 || (m===0 && today.getDate()<birth.getDate())){
-age--;
-}
-
+let age=today.getFullYear()-dob.getFullYear();
+if(today.getMonth()<dob.getMonth() ||
+(today.getMonth()==dob.getMonth() && today.getDate()<dob.getDate())) age--;
 el("age").value=age>=0?age:"";
-}
-el("dateOfBirth").addEventListener("change",calcAge);
+});
 
-/* ===== LOAD SCHOOLS WITH ERROR HANDLING ===== */
+/* ========= LOAD SCHOOLS ========= */
 async function loadSchools(){
-try{
 const {data,error}=await supabase.from("schools").select("*");
-if(error) throw error;
-
-if(!data.length){
-showAlert("No schools found","error");
-return;
-}
+if(error) return showAlert(error.message,"error");
 
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
 data.forEach(s=>{
-try{
 if(typeof s.classes==="string") s.classes=JSON.parse(s.classes||"[]");
 if(typeof s.streams==="string") s.streams=JSON.parse(s.streams||"[]");
-}catch{}
-
 schoolsMap[s.name]=s;
 el("schoolSelect").add(new Option(s.name,s.name));
 });
-
-showAlert("Schools Loaded ✔");
-}catch(err){
-showAlert("School Load Error: "+err.message,"error");
-}
 }
 loadSchools();
 
-/* ===== SCHOOL CHANGE ===== */
+/* ========= SCHOOL CHANGE ========= */
 el("schoolSelect").addEventListener("change",()=>{
 const s=schoolsMap[el("schoolSelect").value];
-
 el("gradeSelect").innerHTML="<option>Select Class</option>";
 el("streamSelect").innerHTML="<option>Select Stream</option>";
-
 if(!s)return;
-
 el("levelDisplay").value=s.level||"";
 (s.classes||[]).forEach(c=>el("gradeSelect").add(new Option(c,c)));
 (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 });
 
-/* ===== SEARCH ===== */
+/* ========= SEARCH ========= */
 async function searchStudent(){
-try{
 const id=el("studentId").value.trim();
 if(!id) return showAlert("Enter admission number","error");
 
-const {data,error}=await supabase
-.from("students")
-.select("*")
-.eq("studentId",id)
-.maybeSingle();
+const {data,error}=await supabase.from("students")
+.select("*").eq("studentId",id).maybeSingle();
 
-if(error) throw error;
+if(error) return showAlert(error.message,"error");
 if(!data) return showAlert("Student not found","error");
 
-currentStudentId=id;
+currentStudent=data;
 
 el("studentName").value=data.studentName||"";
 el("dateOfBirth").value=data.dateOfBirth||"";
-calcAge();
-
+el("age").value=data.age||"";
 el("schoolSelect").value=data.school||"";
 el("schoolSelect").dispatchEvent(new Event("change"));
-
 el("gradeSelect").value=data.grade||"";
 el("streamSelect").value=data.stream||"";
 
@@ -272,39 +224,11 @@ el("preview").src=data.photo;
 el("preview").style.display="block";
 }
 
-showAlert("Student Loaded ✔");
-
-}catch(err){
-showAlert(err.message,"error");
-}
+showAlert("Student Loaded");
 }
 
-/* ===== CAMERA ===== */
-async function startCamera(){
-cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
-el("video").srcObject=cameraStream;
-el("video").style.display="block";
-}
-
-function capturePhoto(){
-const v=el("video"),c=el("canvas");
-c.width=v.videoWidth;
-c.height=v.videoHeight;
-c.getContext("2d").drawImage(v,0,0);
-
-c.toBlob(b=>{
-capturedBlob=b;
-el("preview").src=URL.createObjectURL(b);
-el("preview").style.display="block";
-});
-
-cameraStream?.getTracks().forEach(t=>t.stop());
-v.style.display="none";
-}
-
-/* ===== REGISTER ===== */
+/* ========= REGISTER ========= */
 async function registerStudent(){
-try{
 const id=el("studentId").value.trim();
 if(!id) return showAlert("Admission number required","error");
 
@@ -319,22 +243,17 @@ grade:el("gradeSelect").value||null,
 stream:el("streamSelect").value||null
 }]);
 
-if(error) throw error;
+if(error) return showAlert(error.message,"error");
 
-showAlert("Student Registered ✔");
-}catch(err){
-showAlert(err.message,"error");
-}
+showAlert("Student Registered");
+loadStudents();
 }
 
-/* ===== UPDATE ===== */
+/* ========= UPDATE ========= */
 async function updateStudent(){
-try{
-if(!currentStudentId)
-return showAlert("Search student first","error");
+if(!currentStudent) return showAlert("Search student first","error");
 
-const {error}=await supabase
-.from("students")
+const {error}=await supabase.from("students")
 .update({
 studentName:el("studentName").value,
 dateOfBirth:el("dateOfBirth").value||null,
@@ -344,14 +263,53 @@ level:el("levelDisplay").value||null,
 grade:el("gradeSelect").value||null,
 stream:el("streamSelect").value||null
 })
-.eq("studentId",currentStudentId);
+.eq("studentId",currentStudent.studentId);
 
-if(error) throw error;
+if(error) return showAlert(error.message,"error");
 
-showAlert("Student Updated ✔");
-}catch(err){
-showAlert(err.message,"error");
+showAlert("Student Updated");
+loadStudents();
 }
+
+/* ========= DELETE ========= */
+async function deleteStudent(){
+if(!currentStudent) return showAlert("Search student first","error");
+
+await supabase.from("students")
+.delete()
+.eq("studentId",currentStudent.studentId);
+
+showAlert("Student Deleted");
+loadStudents();
+}
+
+/* ========= LOAD STUDENTS ========= */
+async function loadStudents(){
+const {data}=await supabase.from("students").select("*").order("created_at",{ascending:false});
+el("studentList").innerHTML="";
+data?.forEach(s=>{
+el("studentList").innerHTML+=
+`<div class="student-row">${s.studentId} - ${s.studentName}</div>`;
+});
+}
+loadStudents();
+
+/* ========= BULK CSV DOWNLOAD ========= */
+async function downloadCSV(){
+const {data}=await supabase.from("students").select("*");
+if(!data.length) return showAlert("No data to download","error");
+
+let csv="StudentID,Name,Age,School,Grade,Stream\n";
+data.forEach(s=>{
+csv+=`${s.studentId},${s.studentName},${s.age},${s.school},${s.grade},${s.stream}\n`;
+});
+
+const blob=new Blob([csv],{type:"text/csv"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="students.csv";
+a.click();
+showAlert("CSV Downloaded");
 }
 
 </script>
