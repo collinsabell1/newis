@@ -200,11 +200,11 @@ document.getElementById("studentId").addEventListener("change", async (e) => {
   currentId = data.studentid;
 
   // Populate student details into fields
-  document.getElementById("studentName").value = data.name || "Not Available";  // Ensure 'name' exists
-  document.getElementById("studentClass").value = data.level || "Not Available";
-  document.getElementById("studentAge").value = data.age || "Not Available";
-  document.getElementById("studentGender").value = data.gender || "Not Available";
-  document.getElementById("studentSchool").value = data.school || "Not Available";
+  document.getElementById("studentName").value = data.name ? data.name : "Not Available";  // Ensure 'name' exists
+  document.getElementById("studentClass").value = data.level ? data.level : "Not Available";
+  document.getElementById("studentAge").value = data.age ? data.age : "Not Available";
+  document.getElementById("studentGender").value = data.gender ? data.gender : "Not Available";
+  document.getElementById("studentSchool").value = data.school ? data.school : "Not Available";
 
   loadBehavior();
 });
