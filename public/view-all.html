@@ -112,113 +112,177 @@ button,select,input{
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-const supabase = createClient("https://xnvnskxcsphbvkxhndui.supabase.co","YOUR_KEY");
 
-import {
-  getFirestore,
-  getDocs,
-  collection,
-  doc,
-  writeBatch
+// Supabase config
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+);
 
+let allData = [];
+let currentFiltered = [];
 
-  currentFiltered.forEach(r=>{
-    const key = r.year + "_" + r.class;
-    if(!grouped[key]) grouped[key] = [];
+async function loadData() {
+  // Fetch students
+  const { data: students, error: sError } = await supabase
+    .from('students')
+    .select('*');
+
+  if (sError) return alert("Error loading students: " + sError.message);
+
+  // Fetch academics
+  const { data: academics, error: aError } = await supabase
+    .from('academics')
+    .select('*');
+
+  if (aError) return alert("Error loading academics: " + aError.message);
+
+  // Merge data
+  allData = academics.map(a => {
+    const student = students.find(s => s.studentid === a.student_id);
+    const avg = a.average ?? ((a.term1 + a.term2 + a.term3) / 3);
+    return {
+      ...a,
+      adm: student?.studentid || 'N/A',
+      name: student?.name || student?.studentname || 'N/A',
+      class: student?.grade || 'N/A',
+      avg
+    };
+  });
+
+  populateFilters();
+  renderTable();
+}
+
+function populateFilters() {
+  const yearFilter = document.getElementById('yearFilter');
+  const classFilter = document.getElementById('classFilter');
+
+  const years = [...new Set(allData.map(d => d.year))].sort();
+  yearFilter.innerHTML = `<option value="All">All Years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+  const classes = [...new Set(allData.map(d => d.class))].sort();
+  classFilter.innerHTML = `<option value="All">All Classes</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#recordsTable tbody');
+  const searchValue = document.getElementById('searchInput').value.toLowerCase();
+  const yearValue = document.getElementById('yearFilter').value;
+  const classValue = document.getElementById('classFilter').value;
+  const avgValue = document.getElementById('averageFilter').value;
+
+  currentFiltered = allData.filter(r => {
+    let match = true;
+    if (searchValue) match = r.adm.toLowerCase().includes(searchValue);
+    if (yearValue !== 'All') match = match && r.year == yearValue;
+    if (classValue !== 'All') match = match && r.class == classValue;
+    if (avgValue !== 'All') {
+      if (avgValue === 'Above') match = match && r.avg > 50;
+      else if (avgValue === 'Below') match = match && r.avg < 50;
+      else if (avgValue === 'Equal') match = match && r.avg === 50;
+    }
+    return match;
+  });
+
+  // Calculate rank per year/class
+  const grouped = {};
+  currentFiltered.forEach(r => {
+    const key = `${r.year}_${r.class}`;
+    if (!grouped[key]) grouped[key] = [];
     grouped[key].push(r);
-  }])
+  });
 
-  Object.values(grouped).forEach(group=>{
-    group.sort((a,b)=>b.avg-a.avg);
-    group.forEach((r,i)=>r.rank=i+1);
-  }])
+  Object.values(grouped).forEach(group => {
+    group.sort((a, b) => b.avg - a.avg);
+    group.forEach((r, i) => r.rank = i + 1);
+  });
 
-  currentFiltered.forEach((r,index)=>{
-    let color="lightgreen";
-    if(r.avg<50) color="red";
-    else if(r.avg<=65) color="yellow";
+  tbody.innerHTML = '';
+  currentFiltered.forEach((r, index) => {
+    let color = 'lightgreen';
+    if (r.avg < 50) color = 'red';
+    else if (r.avg <= 65) color = 'yellow';
 
-    tbody.innerHTML+=`
-    <tr>
-      <td><input type="checkbox" class="rowCheck" data-index="${index}"></td>
-      <td>${r.adm}</td>
-      <td>${r.name}</td>
-      <td>${r.class}</td>
-      <td>${r.year}</td>
-      <td>${r.t1}</td>
-      <td>${r.t2}</td>
-      <td>${r.t3}</td>
-      <td style="color:${color};font-weight:bold">${r.avg.toFixed(1)}%</td>
-      <td>${r.rank}</td>
-      <td><button class="btn-print" onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
-    </tr>`;
-  }])
-};
+    tbody.innerHTML += `
+      <tr>
+        <td><input type="checkbox" class="rowCheck" data-index="${index}"></td>
+        <td>${r.adm}</td>
+        <td>${r.name}</td>
+        <td>${r.class}</td>
+        <td>${r.year}</td>
+        <td>${r.term1 ?? r.t1 ?? 0}</td>
+        <td>${r.term2 ?? r.t2 ?? 0}</td>
+        <td>${r.term3 ?? r.t3 ?? 0}</td>
+        <td style="color:${color};font-weight:bold">${r.avg.toFixed(1)}%</td>
+        <td>${r.rank}</td>
+        <td><button class="btn-print" onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
+      </tr>
+    `;
+  });
+}
 
-selectAll.addEventListener("change",function(){
-  document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
-}])
+// Select All
+document.getElementById('selectAll').addEventListener('change', function() {
+  document.querySelectorAll(".rowCheck").forEach(cb => cb.checked = this.checked);
+});
 
-/* 🗑 DELETE SELECTED WITH CONFIRMATION */
-window.deleteSelected = async function(){
+// Delete Selected
+async function deleteSelected() {
   const selected = [...document.querySelectorAll(".rowCheck")]
-    .filter(c=>c.checked)
-    .map(c=>currentFiltered[c.dataset.index]);
+    .filter(c => c.checked)
+    .map(c => currentFiltered[c.dataset.index]);
 
-  if(!selected.length){
-    alert("⚠️ Please select at least one record to delete.");
-    return;
+  if (!selected.length) return alert("⚠️ Please select at least one record to delete.");
+
+  if (!confirm(`⚠️ CONFIRM DELETION\nYou are about to delete ${selected.length} record(s). This cannot be undone.`)) return;
+
+  for (let r of selected) {
+    const { error } = await supabase.from('academics').delete().eq('id', r.id);
+    if (error) alert("Error deleting: " + error.message);
   }
 
-  const confirmDelete = confirm(
-    `⚠️ CONFIRM DELETION\n\nYou are about to permanently delete ${selected.length} academic record(s).\n\nThis action CANNOT be undone.\n\nClick OK to proceed or Cancel to stop.`
-  );
-
-  if(!confirmDelete) return;
-
-  const batch = writeBatch(db);
-  selected.forEach(r=>batch.delete(doc(db,r.docPath)));
-  await batch.commit();
-
-  alert("✅ Selected records deleted successfully.");
+  alert("✅ Selected records deleted.");
   loadData();
-};
+}
 
-/* DOWNLOAD */
-function downloadCSV(rows,filename){
-  let csv="AdmNo,Name,Class,Year,T1,T2,T3,Average,Rank\n";
-  rows.forEach(r=>{
-    csv+=`${r.adm},${r.name},${r.class},${r.year},${r.t1},${r.t2},${r.t3},${r.avg},${r.rank}\n`;
-  }])
-  const blob=new Blob([csv],{type:"text/csv"}])
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=filename;
+// Download CSV
+function downloadCSV(rows, filename) {
+  let csv = "AdmNo,Name,Class,Year,T1,T2,T3,Average,Rank\n";
+  rows.forEach(r => {
+    csv += `${r.adm},${r.name},${r.class},${r.year},${r.term1 ?? 0},${r.term2 ?? 0},${r.term3 ?? 0},${r.avg.toFixed(1)},${r.rank}\n`;
+  });
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
   a.click();
 }
-window.downloadAll=()=>downloadCSV(currentFiltered,"All_Academic_Records.csv");
-window.downloadSelected=()=>{
-  const sel=[...document.querySelectorAll(".rowCheck")]
-    .filter(c=>c.checked)
-    .map(c=>currentFiltered[c.dataset.index]);
-  if(!sel.length) return alert("Select students first!");
-  downloadCSV(sel,"Selected_Records.csv");
-};
 
-/* PRINT */
-window.printReport=function(data){
-  const win=window.open("");
+window.downloadAll = () => downloadCSV(currentFiltered, "All_Academic_Records.csv");
+window.downloadSelected = () => {
+  const sel = [...document.querySelectorAll(".rowCheck")].filter(c => c.checked).map(c => currentFiltered[c.dataset.index]);
+  if (!sel.length) return alert("Select students first!");
+  downloadCSV(sel, "Selected_Records.csv");
+}
+
+// Print report
+window.printReport = function(data) {
+  const win = window.open("");
   win.document.write(`
     <h2>Student Report Card</h2>
     <p><b>Admission:</b> ${data.adm}</p>
     <p><b>Name:</b> ${data.name}</p>
     <p><b>Class:</b> ${data.class}</p>
     <p><b>Year:</b> ${data.year}</p>
-    <p><b>Average:</b> ${data.avg}%</p>
+    <p><b>Average:</b> ${data.avg.toFixed(1)}%</p>
     <button onclick="print()">Print</button>
   `);
 };
+
+// Initial load
+loadData();
+
 </script>
 </body>
-<script type="module" src="test.js"></script>
 </html>
