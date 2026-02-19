@@ -5,31 +5,31 @@
 <title>Student Registration - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"></script>
 
 <style>
 body{
-margin:0;
-font-family:Segoe UI;
-background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-color:white;
-display:flex;
-justify-content:center;
-padding-top:20px;
+  margin:0;
+  font-family:Segoe UI;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  display:flex;
+  justify-content:center;
+  padding-top:20px;
 }
 .container{
-background:rgba(255,255,255,.12);
-padding:30px;
-border-radius:20px;
-width:560px;
-backdrop-filter:blur(15px);
+  background:rgba(255,255,255,.12);
+  padding:30px;
+  border-radius:20px;
+  width:560px;
+  backdrop-filter:blur(15px);
 }
 input,select,button{
-width:100%;
-padding:10px;
-margin:6px 0;
-border:none;
-border-radius:10px;
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:10px;
 }
 button{font-weight:bold;cursor:pointer}
 .navbtn{background:#17a2b8}
@@ -87,225 +87,195 @@ button{font-weight:bold;cursor:pointer}
 
 </div>
 
-<script>
-window.onerror=function(msg,src,line){
-alert("Error: "+msg+" Line:"+line);
-};
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabase = window.supabase.createClient(
-"https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+/* ------------------- SUPABASE CLIENT ------------------- */
+const supabase = createClient(
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
 const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* ---------- AGE FIX ---------- */
+/* ------------------- CALCULATE AGE ------------------- */
 el("dateOfBirth").addEventListener("change",()=>{
-const val=el("dateOfBirth").value;
-if(!val){ el("age").value=""; return; }
+  const val=el("dateOfBirth").value;
+  if(!val){ el("age").value=""; return; }
 
-const b=new Date(val);
-const t=new Date();
+  const b=new Date(val);
+  const t=new Date();
 
-let a=t.getFullYear()-b.getFullYear();
-if(t.getMonth()<b.getMonth()||(t.getMonth()==b.getMonth()&&t.getDate()<b.getDate())) a--;
+  let a=t.getFullYear()-b.getFullYear();
+  if(t.getMonth()<b.getMonth()||(t.getMonth()==b.getMonth()&&t.getDate()<b.getDate())) a--;
 
-el("age").value=a>0?a:"";
+  el("age").value=a>0?a:"";
 });
 
-
-/* ---------- LOAD SCHOOLS FIX ---------- */
+/* ------------------- LOAD SCHOOLS ------------------- */
 async function loadSchools(){
-const {data,error}=await supabase.from("schools").select("*");
+  const {data,error}=await supabase.from("schools").select("*").order("name");
 
-if(error){ alert(error.message); return; }
-if(!data||data.length===0){ alert("No schools found"); return; }
+  if(error){ alert(error.message); return; }
+  if(!data || data.length===0){
+    el("schoolSelect").innerHTML="<option>No schools found</option>";
+    return;
+  }
 
-el("schoolSelect").innerHTML="<option value=''>Select School</option>";
+  el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
-data.forEach(s=>{
-
-/* FIX: support ANY column name */
-const name = s.school_name || s.name || s.school || "Unnamed";
-
-/* parse JSON safely */
-try{
-if(typeof s.classes==="string") s.classes=JSON.parse(s.classes);
-if(typeof s.streams==="string") s.streams=JSON.parse(s.streams);
-}catch{}
-
-schoolsMap[name]=s;
-el("schoolSelect").add(new Option(name,name));
-
-});
+  data.forEach(s=>{
+    schoolsMap[s.name] = s;
+    el("schoolSelect").add(new Option(s.name, s.name));
+  });
 }
 loadSchools();
 
+/* ------------------- SCHOOL CHANGE ------------------- */
+el("schoolSelect").onchange = () => {
+  const s = schoolsMap[el("schoolSelect").value];
 
-/* ---------- SCHOOL CHANGE ---------- */
-el("schoolSelect").onchange=()=>{
-const s=schoolsMap[el("schoolSelect").value];
+  el("gradeSelect").innerHTML="<option>Select Class</option>";
+  el("streamSelect").innerHTML="<option>Select Stream</option>";
 
-el("gradeSelect").innerHTML="<option>Select Class</option>";
-el("streamSelect").innerHTML="<option>Select Stream</option>";
-if(!s)return;
+  if(!s) return;
 
-el("levelDisplay").value=s.level||"";
+  el("levelDisplay").value = s.level || "";
 
-(s.classes||[]).forEach(c=>el("gradeSelect").add(new Option(c,c)));
-(s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
+  (s.classes || []).forEach(c=>el("gradeSelect").add(new Option(c,c)));
+  (s.streams || []).forEach(st=>el("streamSelect").add(new Option(st,st)));
 };
 
+/* ------------------- SEARCH STUDENT ------------------- */
+window.searchStudent = async ()=>{
+  const id = el("studentId").value.trim();
+  if(!id) return alert("Enter admission number");
 
-/* ---------- SEARCH FIX ---------- */
-async function searchStudent(){
+  const {data,error} = await supabase
+    .from("students")
+    .select("*")
+    .eq("studentid", id)
+    .single();
 
-const id=el("studentId").value.trim();
-if(!id)return alert("Enter admission number");
+  if(error){ alert("Student not found"); return; }
 
-const {data,error}=await supabase
-.from("students")
-.select("*")
-.eq("studentId",id)
-.maybeSingle();
+  currentStudentId = id;
 
-if(error)return alert(error.message);
-if(!data)return alert("Student not in system");
+  el("studentName").value = data.studentname || "";
+  el("dateOfBirth").value = data.dateofbirth || "";
+  el("age").value = data.age || "";
 
-currentStudentId=id;
+  el("schoolSelect").value = data.school || "";
+  el("schoolSelect").dispatchEvent(new Event("change"));
 
-el("studentName").value=data.studentName||"";
-el("dateOfBirth").value=data.dateOfBirth||"";
-el("age").value=data.age||"";
+  el("gradeSelect").value = data.grade || "";
+  el("streamSelect").value = data.stream || "";
 
-/* FIX — force reload dropdown before set */
-setTimeout(()=>{
-el("schoolSelect").value=data.school||"";
-el("schoolSelect").onchange();
-el("gradeSelect").value=data.grade||"";
-el("streamSelect").value=data.stream||"";
-},200);
+  if(data.photo){
+    el("preview").src = data.photo;
+    el("preview").style.display="block";
+  }
+};
 
-if(data.photo){
-el("preview").src=data.photo;
-el("preview").style.display="block";
-}
-}
-
-
-/* CAMERA */
+/* ------------------- CAMERA ------------------- */
 async function startCamera(){
-cameraStream=await navigator.mediaDevices.getUserMedia({video:true});
-el("video").srcObject=cameraStream;
-el("video").style.display="block";
+  cameraStream = await navigator.mediaDevices.getUserMedia({video:true});
+  el("video").srcObject = cameraStream;
+  el("video").style.display = "block";
 }
 
 function capturePhoto(){
-const video=el("video");
-const canvas=el("canvas");
+  const video = el("video");
+  const canvas = el("canvas");
 
-canvas.width=video.videoWidth;
-canvas.height=video.videoHeight;
-canvas.getContext("2d").drawImage(video,0,0);
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video,0,0);
 
-canvas.toBlob(b=>{
-capturedBlob=b;
-el("preview").src=URL.createObjectURL(b);
-el("preview").style.display="block";
-});
+  canvas.toBlob(b=>{
+    capturedBlob = b;
+    el("preview").src = URL.createObjectURL(b);
+    el("preview").style.display = "block";
+  });
 
-cameraStream?.getTracks().forEach(t=>t.stop());
-video.style.display="none";
+  cameraStream?.getTracks().forEach(t=>t.stop());
+  video.style.display="none";
 }
 
-
-/* UPLOAD */
+/* ------------------- UPLOAD PHOTO ------------------- */
 async function uploadPhoto(id){
-let f=el("photoUpload").files[0]||capturedBlob;
-if(!f)return null;
+  let f = el("photoUpload").files[0] || capturedBlob;
+  if(!f) return null;
 
-const path=`students/${id}_${Date.now()}.jpg`;
+  const path = `students/${id}_${Date.now()}.jpg`;
 
-const {error}=await supabase.storage.from("photos").upload(path,f);
-if(error){alert(error.message);return null;}
+  const {error} = await supabase.storage.from("photos").upload(path,f);
+  if(error){alert(error.message); return null;}
 
-return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
+  return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 }
 
+/* ------------------- REGISTER STUDENT ------------------- */
+window.registerStudent = async ()=>{
+  const id = el("studentId").value.trim();
+  if(!id) return alert("Admission number required");
 
-/* REGISTER */
-async function registerStudent(){
+  const photo = await uploadPhoto(id);
 
-const id=el("studentId").value.trim();
-if(!id)return alert("Admission number required");
+  const {error} = await supabase.from("students").insert([{
+    studentid: id,
+    studentname: el("studentName").value,
+    dateofbirth: el("dateOfBirth").value || null,
+    age: Number(el("age").value) || null,
+    school: el("schoolSelect").value || null,
+    level: el("levelDisplay").value || null,
+    grade: el("gradeSelect").value || null,
+    stream: el("streamSelect").value || null,
+    photo
+  }]);
 
-const photo=await uploadPhoto(id);
+  if(error) return alert(error.message);
 
-const {error}=await supabase.from("students").insert([{
-studentId:id,
-studentName:el("studentName").value,
-dateOfBirth:el("dateOfBirth").value||null,
-age:Number(el("age").value)||null,
-school:el("schoolSelect").value||null,
-level:el("levelDisplay").value||null,
-grade:el("gradeSelect").value||null,
-stream:el("streamSelect").value||null,
-photo
-}]);
-
-if(error)return alert(error.message);
-
-el("message").innerText="Student Registered ✔";
-}
-
-
-/* UPDATE */
-async function updateStudent(){
-
-if(!currentStudentId)return alert("Search student first");
-
-const photo=await uploadPhoto(currentStudentId);
-
-let data={
-studentName:el("studentName").value,
-dateOfBirth:el("dateOfBirth").value,
-age:Number(el("age").value)||null,
-school:el("schoolSelect").value,
-level:el("levelDisplay").value,
-grade:el("gradeSelect").value,
-stream:el("streamSelect").value
+  el("message").innerText="Student Registered ✔";
 };
-if(photo)data.photo=photo;
 
-const {error}=await supabase
-.from("students")
-.update(data)
-.eq("studentId",currentStudentId);
+/* ------------------- UPDATE STUDENT ------------------- */
+window.updateStudent = async ()=>{
+  if(!currentStudentId) return alert("Search student first");
 
-if(error)return alert(error.message);
+  const photo = await uploadPhoto(currentStudentId);
 
-el("message").innerText="Student Updated ✔";
-}
+  let data = {
+    studentname: el("studentName").value,
+    dateofbirth: el("dateOfBirth").value,
+    age: Number(el("age").value) || null,
+    school: el("schoolSelect").value,
+    level: el("levelDisplay").value,
+    grade: el("gradeSelect").value,
+    stream: el("streamSelect").value
+  };
+  if(photo) data.photo = photo;
 
+  const {error} = await supabase.from("students").update(data)
+    .eq("studentid", currentStudentId);
 
-/* REALTIME LIST */
-supabase.channel("students")
-.on("postgres_changes",
-{event:"INSERT",schema:"public",table:"students"},
-p=>el("liveList").innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
-).subscribe();
+  if(error) return alert(error.message);
 
+  el("message").innerText="Student Updated ✔";
+};
 
-/* INITIAL LIST */
+/* ------------------- LIVE STUDENT LIST ------------------- */
 (async()=>{
-const {data,error}=await supabase.from("students").select("*").limit(20);
-if(error)return alert(error.message);
-data?.forEach(s=>{
-el("liveList").innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
-});
+  const {data,error} = await supabase.from("students").select("*").limit(20);
+  if(error) return alert(error.message);
+
+  data.forEach(s=>{
+    el("liveList").innerHTML += `<div>${s.studentid} — ${s.studentname}</div>`;
+  });
 })();
 </script>
+
 </body>
 </html>
