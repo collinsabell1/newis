@@ -54,12 +54,6 @@ button{cursor:pointer;font-weight:bold}
  padding:5px 10px;
  border-radius:12px;
 }
-.item button{
- margin-left:6px;
- background:red;
- color:white;
- border-radius:50%;
-}
 .spinner{display:none;text-align:center}
 .search-results{
  background:#111;
@@ -70,11 +64,6 @@ button{cursor:pointer;font-weight:bold}
  width:85%;
  z-index:99;
 }
-.search-results div{
- padding:8px;
- cursor:pointer;
-}
-.search-results div:hover{background:#00c6ff}
 .stats{
  background:rgba(0,0,0,.4);
  padding:10px;
@@ -91,7 +80,7 @@ button{cursor:pointer;font-weight:bold}
 
 <h2>School Manager</h2>
 
-<input id="searchName" placeholder="Search school..." autocomplete="off">
+<input id="searchName" placeholder="Search school...">
 <div id="results" class="search-results"></div>
 
 <input id="schoolName" placeholder="School Name">
@@ -165,13 +154,13 @@ classesList.innerHTML="";
 streamsList.innerHTML="";
 }
 
-/* TAGS */
+/* TAG INPUTS */
 function render(arr,box){
 box.innerHTML="";
 arr.forEach((v,i)=>{
 const d=document.createElement("div");
 d.className="item";
-d.innerHTML=v+" <button>x</button>";
+d.innerHTML=v+" ✕";
 d.onclick=()=>{arr.splice(i,1);render(arr,box)}
 box.appendChild(d);
 })
@@ -191,29 +180,46 @@ streamInput.value="";
 }
 }
 
-/* COUNTY + REGION */
+/* REGIONS */
 const regions={
-"Nairobi":"National",
+"Nairobi":"Nairobi Region",
 "Mombasa":"Coast",
-"Kilifi":"Coast",
 "Kwale":"Coast",
-"Mandera":"North Eastern",
-"Garissa":"North Eastern"
+"Kilifi":"Coast",
+"Taita Taveta":"Coast",
+"Lamu":"Coast",
+"Tana River":"Coast",
+"Garissa":"North Eastern",
+"Wajir":"North Eastern",
+"Mandera":"North Eastern"
 };
 
+/* COUNTIES + SUBCOUNTIES (ALL) */
 const counties={
-"Nairobi":["Westlands","Langata","Embakasi East"],
-"Mombasa":["Nyali","Likoni"],
-"Kilifi":["Malindi","Kilifi North"],
-"Garissa":["Dadaab"]
+"Nairobi":["Westlands","Dagoretti","Langata","Embakasi","Kasaran","Makadara","Kamukunji","Starehe","Mathare"],
+"Mombasa":["Nyali","Likoni","Kisauni","Changamwe","Jomvu","Mvita"],
+"Kwale":["Msambweni","Matuga","Kinango","Lunga Lunga"],
+"Kilifi":["Kilifi North","Kilifi South","Kaloleni","Rabai","Ganze","Malindi","Magarini"],
+"Taita Taveta":["Voi","Wundanyi","Taveta","Mwatate"],
+"Lamu":["Lamu East","Lamu West"],
+"Tana River":["Bura","Galole","Garsen"],
+"Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara","Hulugho"],
+"Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Wajir South","Eldas"],
+"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"],
+"Machakos":["Machakos Town","Mwala","Yatta","Kathiani","Masinga","Matungulu","Mavoko"],
+"Kitui":["Kitui Central","Kitui West","Kitui East","Kitui South","Mwingi North","Mwingi West","Mwingi Central"],
+"Makueni":["Makueni","Kaiti","Kilome","Kibwezi East","Kibwezi West","Mbooni"]
 };
 
+/* LOAD COUNTIES */
 Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
 
 schoolCounty.oninput=()=>{
-schoolRegion.value=regions[schoolCounty.value]||"Regional";
+schoolRegion.value=regions[schoolCounty.value]||"Other Region";
 subcountiesList.innerHTML="";
-(counties[schoolCounty.value]||[]).forEach(s=>subcountiesList.appendChild(new Option(s,s)))
+(counties[schoolCounty.value]||[]).forEach(s=>{
+subcountiesList.appendChild(new Option(s,s))
+})
 }
 
 /* SEARCH */
@@ -243,7 +249,7 @@ if(!data){alert("Not found");load(false);return}
 schoolName.value=data.name;
 schoolLevel.value=data.level;
 schoolCounty.value=data.county;
-schoolRegion.value=regions[data.county]||"Regional";
+schoolRegion.value=regions[data.county]||"Other Region";
 schoolSubcounty.value=data.subcounty;
 schoolPhone.value=data.phone;
 classes=data.classes||[];
@@ -253,21 +259,13 @@ render(streams,streamsList);
 load(false);
 }
 
-/* VALIDATE */
-function validate(){
-if(!schoolName.value)return"Enter school name";
-if(!schoolLevel.value)return"Select level";
-return null;
-}
-
-/* CREATE + DUPLICATE CHECK */
+/* CREATE */
 window.createSchool=async()=>{
-const err=validate();
-if(err)return alert(err);
+if(!schoolName.value)return alert("Enter school name");
+if(!schoolLevel.value)return alert("Select level");
 load(true);
 
 const id=schoolName.value.toLowerCase().replace(/\s+/g,"_");
-
 const {data:exists}=await supabase.from("schools").select("id").eq("id",id).single();
 if(exists){load(false);return alert("School already exists")}
 
@@ -291,7 +289,7 @@ loadStats();
 window.updateSchool=async()=>{
 if(!currentId)return alert("Search school first");
 load(true);
-const {error}=await supabase.from("schools").update({
+await supabase.from("schools").update({
 name:schoolName.value,
 level:schoolLevel.value,
 county:schoolCounty.value,
@@ -301,7 +299,6 @@ classes,
 streams
 }).eq("id",currentId);
 load(false);
-if(error)return alert(error.message);
 message.innerText="Updated ✔";
 loadStats();
 }
@@ -318,7 +315,7 @@ clearForm();
 loadStats();
 }
 
-/* GPS DETECT COUNTY */
+/* GPS COUNTY DETECTION */
 window.detectGPS=()=>{
 navigator.geolocation.getCurrentPosition(pos=>{
 const lat=pos.coords.latitude;
@@ -329,7 +326,7 @@ schoolCounty.oninput();
 });
 }
 
-/* DASHBOARD STATS */
+/* STATS */
 async function loadStats(){
 const {data}=await supabase.from("schools").select("county");
 let counts={};
