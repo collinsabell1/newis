@@ -34,6 +34,8 @@
     button { padding: 10px 18px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; }
     .save { background: #28a745; color: white; }
     .view { background: #6f42c1; color: white; }
+    .reset { background: #17a2b8; color: white; }
+    .back { background: #6c757d; color: white; }
   </style>
 </head>
 <body>
@@ -76,6 +78,8 @@
 <div style="text-align:center">
   <button class="save" onclick="saveRecord()">Save / Update</button>
   <button class="view" onclick="window.location.href='behavioral_view.html'">View Behavioral</button>
+  <button class="reset" onclick="resetForm()">Reset</button>
+  <button class="back" onclick="window.location.href='academics.html'">Back to Academics</button>
 </div>
 
 </div>
@@ -110,7 +114,6 @@ document.getElementById("studentId").addEventListener("change", async () => {
   const id = document.getElementById("studentId").value.trim();
   if(!id) return;
 
-  // Fetch student from Supabase
   const { data: student, error } = await supabase
     .from("students")
     .select("*")
@@ -119,6 +122,7 @@ document.getElementById("studentId").addEventListener("change", async () => {
 
   if(error || !student){
     alert("Student not found");
+    resetForm();
     return;
   }
 
@@ -146,6 +150,10 @@ document.getElementById("studentId").addEventListener("change", async () => {
         cb.checked = behavior.behavior_risks.includes(cb.parentElement.textContent.trim());
       });
     }
+  } else {
+    document.querySelectorAll(".factor").forEach(cb => cb.checked = false);
+    document.getElementById("inputTotalDays").value = "";
+    document.getElementById("inputDaysPresent").value = "";
   }
 
   calculateAttendance();
@@ -189,7 +197,24 @@ document.addEventListener("change", e => {
   if(e.target.classList.contains("factor")) calculateTotalRisk();
 });
 
-/* SAVE RECORD */
+/* RESET FORM */
+function resetForm(){
+  currentId = null;
+  document.getElementById("studentId").value = "";
+  document.getElementById("studentName").value = "";
+  document.getElementById("studentClass").value = "";
+  document.getElementById("studentAge").value = "";
+  document.getElementById("studentGender").value = "";
+  document.getElementById("studentSchool").value = "";
+  document.getElementById("inputTotalDays").value = "";
+  document.getElementById("inputDaysPresent").value = "";
+  document.getElementById("daysAbsent").innerText = "0";
+  document.getElementById("attendancePercent").innerText = "0%";
+  document.querySelectorAll(".factor").forEach(cb => cb.checked = false);
+  calculateTotalRisk();
+}
+
+/* SAVE / UPDATE RECORD */
 async function saveRecord(){
   if(!currentId) return alert("Enter Admission Number first");
 
@@ -210,10 +235,14 @@ async function saveRecord(){
   }, { onConflict: "student_id" });
 
   if(error) alert("Error saving record: " + error.message);
-  else alert("Record saved successfully");
+  else {
+    alert("Record saved successfully!");
+    resetForm();
+  }
 }
 
 window.saveRecord = saveRecord;
+window.resetForm = resetForm;
 </script>
 </body>
 </html>
