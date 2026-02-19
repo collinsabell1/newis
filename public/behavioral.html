@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Behavioral Risk Assessment - NEWIS</title>
+  <title>Behavioral Risk Assessment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -11,128 +11,95 @@
       color: white;
     }
     .container {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 30px auto;
       padding: 30px;
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(255,255,255,0.08);
       border-radius: 20px;
       backdrop-filter: blur(15px);
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 40px rgba(0,0,0,0.6);
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 25px;
-      font-size: 28px;
-    }
+    h2 { text-align:center; margin-bottom:25px; }
     .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 25px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:25px;
     }
-    @media(min-width: 992px) {
-      .grid {
-        grid-template-columns: 1fr 1fr;
-      }
+    @media(min-width:992px){
+      .grid{ grid-template-columns:1fr 1fr; }
     }
-    .section {
-      padding: 20px;
-      border-radius: 15px;
-      background: rgba(255, 255, 255, 0.1);
+    .section{
+      padding:20px;
+      border-radius:15px;
+      background:rgba(255,255,255,0.1);
     }
-    input[type="text"] {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      margin-bottom: 12px;
+    input[type="text"]{
+      width:100%;
+      padding:12px;
+      border-radius:10px;
+      border:none;
+      margin-bottom:12px;
     }
-    input[readonly] {
-      background: #e0e0e0;
-      font-weight: bold;
+    input[readonly]{
+      background:#e0e0e0;
+      font-weight:bold;
     }
-    .checkbox-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
+    .checkbox-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:8px;
     }
-    @media(min-width: 600px) {
-      .checkbox-grid {
-        grid-template-columns: 1fr 1fr;
-      }
+    @media(min-width:600px){
+      .checkbox-grid{ grid-template-columns:1fr 1fr; }
     }
-    .button-area {
-      text-align: center;
-      margin-top: 25px;
+    .button-area{
+      text-align:center;
+      margin-top:25px;
     }
-    button {
-      padding: 10px 18px;
-      margin: 6px;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
+    button{
+      padding:10px 18px;
+      margin:6px;
+      border:none;
+      border-radius:10px;
+      font-weight:bold;
+      cursor:pointer;
     }
-    .save {
-      background: #28a745;
-      color: white;
+    .save{ background:#28a745; color:white; }
+    .update{ background:#ffc107; }
+    .delete{ background:#dc3545; color:white; }
+    .circular{
+      width:200px;
+      height:200px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:32px;
+      font-weight:bold;
+      margin:30px auto;
     }
-    .update {
-      background: #ffc107;
-    }
-    .delete {
-      background: #dc3545;
-      color: white;
-    }
-    .view {
-      background: #6f42c1;
-      color: white;
-    }
-    .nav {
-      background: #17a2b8;
-      color: white;
-    }
-    .circular {
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      font-weight: bold;
-      margin: 30px auto;
-    }
-    .green {
-      background: #28a745;
-    }
-    .yellow {
-      background: #ffc107;
-      color: black;
-    }
-    .red {
-      background: #dc3545;
-    }
+    .green{ background:#28a745; }
+    .yellow{ background:#ffc107; color:black; }
+    .red{ background:#dc3545; }
   </style>
 </head>
 
 <body>
 <div class="container">
-  <h2>Behavioral Dropout Risk Assessment</h2>
+  <h2>Behavioral Risk Assessment</h2>
 
   <div class="grid">
     <div class="section">
       <label>Enter Admission Number:</label>
       <input type="text" id="studentId" placeholder="Enter Admission Number">
 
+      <!-- ONLY NAME & GENDER -->
       <input type="text" id="studentName" readonly placeholder="Student Name">
-      <input type="text" id="studentClass" readonly placeholder="Class">
-      <input type="text" id="studentAge" readonly placeholder="Age">
       <input type="text" id="studentGender" readonly placeholder="Gender">
-      <input type="text" id="studentSchool" readonly placeholder="School">
     </div>
 
     <div class="section">
-      <h3>Behavioral Risk Indicators</h3>
+      <h3>Behavioral Indicators</h3>
       <div class="checkbox-grid" id="checklist"></div>
     </div>
   </div>
@@ -143,152 +110,150 @@
     <button class="save" onclick="saveRecord()">Save</button>
     <button class="update" onclick="updateRecord()">Update</button>
     <button class="delete" onclick="deleteRecord()">Delete</button>
-
-    <button class="view" onclick="window.location.href='/behavioral_view.html'">View All Behavioral</button>
-    <button class="nav" onclick="window.location.href='/assessment.html'">📝 Assessment</button>
-    <button class="nav" onclick="window.location.href='/academics.html'">⬅ Back to Academics</button>
   </div>
 </div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// Supabase initialization
+/* SUPABASE CONNECTION */
 const supabase = createClient(
-  "https://xnvnskxcsphbvkxhndui.supabase.co",  // Supabase URL
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"  // Replace with your actual API key
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
+/* STRICTLY BEHAVIORAL FACTORS ONLY */
 const risks = [
-  "Chronic absenteeism", "Frequent lateness", "Truancy", "Bullying others",
-  "Fighting in school", "Drug abuse", "Sneaking out", "Dorm misconduct",
-  "Theft", "Disrespect", "Dishonesty", "Incomplete assignments",
-  "Pregnancy risk", "Peer pressure", "Family instability", "Financial challenges",
-  "Repeated discipline", "Lack of focus in class", "Academic failure",
-  "Alcohol abuse", "Sexual harassment", "Mental health issues (stress, anxiety, depression)",
-  "Child abuse (emotional, physical)", "Broken family dynamics (divorce, separation)",
-  "Early marriage", "Unsupervised social media usage", "Peer rejection",
-  "Limited access to learning resources", "Poor hygiene", "Inappropriate friendships",
-  "Gang involvement", "Runaways", "Bullying others", "Domestic violence exposure",
-  "Peer pressure to engage in criminal activities", "Illiteracy", "Parental neglect",
-  "Non-compliance with school rules", "Excessive phone usage", "Extracurricular activities neglect"
+  "Chronic absenteeism",
+  "Frequent lateness",
+  "Truancy",
+  "Bullying others",
+  "Fighting in school",
+  "Drug abuse",
+  "Alcohol abuse",
+  "Theft",
+  "Disrespect",
+  "Dishonesty",
+  "Incomplete assignments",
+  "Repeated discipline cases",
+  "Lack of focus in class",
+  "Sexual harassment",
+  "Gang involvement",
+  "Running away from school",
+  "Non-compliance with school rules",
+  "Excessive phone usage",
+  "Dormitory misconduct"
 ];
 
-// Populate risk checklist
+/* CREATE CHECKBOXES */
 const checklist = document.getElementById("checklist");
 risks.forEach(r => {
-  const l = document.createElement("label");
-  l.innerHTML = `<input type="checkbox" class="neg"> ${r}`;
-  checklist.appendChild(l);
+  const label = document.createElement("label");
+  label.innerHTML = `<input type="checkbox" class="neg"> ${r}`;
+  checklist.appendChild(label);
 });
 
 let currentId = null;
 
-// Fetch Student Data
+/* FETCH ONLY NAME & GENDER */
 document.getElementById("studentId").addEventListener("change", async (e) => {
-  const id = e.target.value;
+  const id = e.target.value.trim();
   if (!id) return;
 
-  // Fetch student details from Supabase (Ensure column names match your Supabase schema)
-  const { data, error } = await supabase.from("students").select("*").eq("studentid", id).single();
+  const { data, error } = await supabase
+    .from("students")
+    .select("studentid, name, gender")
+    .eq("studentid", id)
+    .single();
 
   if (error || !data) {
-    alert("Student not found or error fetching data: " + (error.message || ""));
+    alert("Student not found.");
     return;
   }
 
   currentId = data.studentid;
-
-  // Populate student details into fields
-  document.getElementById("studentName").value = data.name ? data.name : "Not Available";  // Ensure 'name' exists
-  document.getElementById("studentClass").value = data.level ? data.level : "Not Available";
-  document.getElementById("studentAge").value = data.age ? data.age : "Not Available";
-  document.getElementById("studentGender").value = data.gender ? data.gender : "Not Available";
-  document.getElementById("studentSchool").value = data.school ? data.school : "Not Available";
+  document.getElementById("studentName").value = data.name || "";
+  document.getElementById("studentGender").value = data.gender || "";
 
   loadBehavior();
 });
 
-// Calculate Risk Percentage
-function calculate() {
+/* CALCULATE % */
+function calculate(){
   const checked = document.querySelectorAll(".neg:checked").length;
-  const totalRisks = risks.length;
+  const percent = (checked / risks.length) * 100;
 
-  // Each factor has an equal weight
-  const weightPerFactor = 100 / totalRisks;
-  let percent = Math.min(100, checked * weightPerFactor);
+  const circle = document.getElementById("circle");
+  circle.innerHTML = percent.toFixed(1) + "%";
 
-  // Update circular progress
-  document.getElementById("circle").innerHTML = percent.toFixed(2) + "%";
-
-  // Set the color based on the percentage
-  document.getElementById("circle").className = "circular " + (
-    percent > 60 ? "red" : percent > 40 ? "yellow" : "green"
-  );
+  circle.className = "circular " +
+    (percent > 60 ? "red" :
+     percent > 40 ? "yellow" :
+     "green");
 
   return percent;
 }
 
-document.addEventListener("change", (e) => {
-  if (e.target.classList.contains("neg")) calculate();
+document.addEventListener("change", (e)=>{
+  if(e.target.classList.contains("neg")) calculate();
 });
 
-// Load Existing Behavioral Data
-async function loadBehavior() {
-  const { data, error } = await supabase.from("behavior").select("*").eq("student_id", currentId).single();
+/* LOAD EXISTING RECORD */
+async function loadBehavior(){
+  const { data } = await supabase
+    .from("behavior")
+    .select("*")
+    .eq("student_id", currentId)
+    .single();
 
-  if (error || !data) return;
+  if(!data) return;
 
-  // Populate checkboxes based on existing risks
-  document.querySelectorAll(".neg").forEach(cb => {
-    cb.checked = data.risks.includes(cb.parentElement.textContent.trim());
+  document.querySelectorAll(".neg").forEach(cb=>{
+    cb.checked = data.risks?.includes(
+      cb.parentElement.textContent.trim()
+    );
   });
 
   calculate();
 }
 
-// Save Record
-window.saveRecord = async () => {
-  if (!currentId) return alert("Enter admission number");
+/* SAVE / UPDATE */
+window.saveRecord = async ()=>{
+  if(!currentId) return alert("Enter admission number first.");
 
   const percent = calculate();
-  const risksList = [...document.querySelectorAll(".neg:checked")].map(cb => cb.parentElement.textContent.trim());
+  const risksList = [...document.querySelectorAll(".neg:checked")]
+    .map(cb=>cb.parentElement.textContent.trim());
 
-  // Insert into behavior table
-  const { error } = await supabase.from("behavior").upsert({
-    student_id: currentId,
-    score: percent,
-    recorded_at: new Date().toISOString(),
-    risks: risksList
-  }, { onConflict: "student_id" });
+  const { error } = await supabase
+    .from("behavior")
+    .upsert({
+      student_id: currentId,
+      behaviorrisk: percent,
+      risks: risksList,
+      recorded_at: new Date().toISOString()
+    }, { onConflict: "student_id" });
 
-  if (error) {
-    alert("Error saving record: " + error.message);
-  } else {
-    alert("Record saved successfully!");
-  }
+  if(error) alert("Error saving: " + error.message);
+  else alert("Record saved successfully!");
 };
 
-// Update Record (Same as Save)
 window.updateRecord = window.saveRecord;
 
-// Delete Record
-window.deleteRecord = async () => {
-  if (!currentId) return;
+/* DELETE */
+window.deleteRecord = async ()=>{
+  if(!currentId) return;
+  if(!confirm("Delete record?")) return;
 
-  if (!confirm("Delete record?")) return;
+  await supabase
+    .from("behavior")
+    .delete()
+    .eq("student_id", currentId);
 
-  const { error } = await supabase.from("behavior").delete().eq("student_id", currentId);
-
-  if (error) {
-    alert("Error deleting record: " + error.message);
-  } else {
-    document.querySelectorAll(".neg").forEach(cb => cb.checked = false);
-    calculate();
-    alert("Record deleted successfully!");
-  }
+  document.querySelectorAll(".neg").forEach(cb=>cb.checked=false);
+  calculate();
+  alert("Record deleted successfully!");
 };
 </script>
-
 </body>
 </html>
