@@ -128,8 +128,6 @@ img.student-photo{width:50px;height:50px;object-fit:cover;border-radius:6px;}
     <div class="section-title">🏫 Upload School Logo</div>
     <input type="file" id="logoUpload" accept="image/*">
     <button onclick="uploadLogo()">Upload Logo</button>
-    <button onclick="deleteLogo()">Delete Logo</button>
-    <button onclick="previewLogo()">Preview Logo</button>
     <span id="logoStatus" style="margin-left:10px;"></span>
   </div>
 
@@ -211,8 +209,8 @@ let schoolLogo=null;
 // IndexedDB offline
 const dbRequest = indexedDB.open('NEWIS_Students',1);
 let db;
-dbRequest.onupgradeneeded = e => {db=e.target.result; db.createObjectStore('students',{keyPath:'id'});};
-dbRequest.onsuccess = e => {db=e.target.result; loadOffline();};
+dbRequest.onupgradeneeded = e => {db=e.target.result; db.createObjectStore('students',{keyPath:'id'});}
+dbRequest.onsuccess = e => {db=e.target.result; loadOffline();}
 dbRequest.onerror = e => console.error(e);
 
 // Save/load offline
@@ -222,7 +220,10 @@ function loadOffline(){
   const tx=db.transaction('students','readonly');
   const store=tx.objectStore('students');
   const req=store.getAll();
-  req.onsuccess = ()=>{ if(req.result.length>0){students=req.result; filteredStudents=[...students]; populateClassFilter(); renderTable(); renderIDPreview();} else{loadStudents();}}
+  req.onsuccess = ()=>{
+    if(req.result.length>0){students=req.result; filteredStudents=[...students]; populateClassFilter(); renderTable(); renderIDPreview();}
+    else{loadStudents();}
+  }
 }
 
 // Load students
@@ -299,36 +300,38 @@ function renderPagination(){
 window.goToPage=p=>{currentPage=p; renderTable();}
 window.sortTable=f=>{ if(sortField===f) sortAsc=!sortAsc; else{sortField=f; sortAsc=true;} renderTable();}
 window.toggleSelectAll=m=>{document.querySelectorAll(".selectBox").forEach(cb=>cb.checked=m.checked);}
+window.applyFilters=()=>{
+  const search=document.getElementById("searchInput").value.toLowerCase();
+  const classF=document.getElementById("classFilter").value;
+  const statusF=document.getElementById("statusFilter").value;
+  filteredStudents=students.filter(s=>{
+    const matchSearch=s.studentid.toLowerCase().includes(search)||(s.studentname||"").toLowerCase().includes(search);
+    const matchClass=classF==="All"||s.grade===classF;
+    const matchStatus=statusF==="All"||s.status===statusF;
+    return matchSearch&&matchClass&&matchStatus;
+  });
+  currentPage=1; renderTable();
+};
 
-// Logo upload functions
+// Status & delete actions
+window.changeStatus=async(id,status)=>{await supabase.from("students").update({status}).eq("id",id); loadStudents();}
+window.deleteStudent=async(id)=>{if(!confirm("Delete this student permanently?")) return; await supabase.from("students").delete().eq("id",id); loadStudents();}
+window.bulkAction=async(status)=>{const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value); for(const id of ids){await supabase.from("students").update({status}).eq("id",id);} loadStudents();}
+window.deleteSelected=async()=>{const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value); if(ids.length===0) return alert("No students selected."); if(!confirm(`Delete ${ids.length} student(s)?`)) return; for(const id of ids){await supabase.from("students").delete().eq("id",id);} loadStudents();}
+
+// Logo Upload
 window.uploadLogo=async()=>{
   const file=document.getElementById("logoUpload").files[0];
   if(!file) return alert("Select a logo file first.");
-  const {data,error} = await supabase.storage.from("schoollogo").upload(file.name, file);
-  if(error) return alert("Error uploading logo: " + error.message);
-  schoolLogo = data.Key;  // Store the logo key from Supabase Storage
-  document.getElementById("logoStatus").textContent=" Logo uploaded!";
-  localStorage.setItem('schoolLogo', schoolLogo);
-  renderIDPreview();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    schoolLogo=e.target.result;
+    document.getElementById("logoStatus").textContent=" Logo loaded!";
+    renderIDPreview();
+    localStorage.setItem('schoolLogo',schoolLogo);
+  };
+  reader.readAsDataURL(file);
 };
-
-window.deleteLogo=async()=>{
-  if(!schoolLogo) return alert("No logo uploaded yet.");
-  const {error} = await supabase.storage.from("schoollogo").remove([schoolLogo]);
-  if(error) return alert("Error deleting logo: " + error.message);
-  localStorage.removeItem('schoolLogo');
-  schoolLogo = null;
-  document.getElementById("logoStatus").textContent=" Logo deleted!";
-  renderIDPreview();
-};
-
-window.previewLogo=()=>{
-  if(!schoolLogo) return alert("No logo uploaded yet.");
-  const {data, error} = supabase.storage.from("schoollogo").getPublicUrl(schoolLogo);
-  if(error) return alert("Error previewing logo: " + error.message);
-  window.open(data.publicUrl, "_blank");
-};
-
 if(localStorage.getItem('schoolLogo')) schoolLogo=localStorage.getItem('schoolLogo');
 
 // ID Card Preview
@@ -340,7 +343,7 @@ function renderIDPreview(){
     const div=document.createElement("div");
     div.className="id-card";
     div.innerHTML=`
-      ${schoolLogo?`<img class="logo" src="https://xnvnskxcsphbvkxhndui.supabase.co/storage/v1/object/public/schoollogo/${schoolLogo}">`:''}
+      ${schoolLogo?`<img class="logo" src="${schoolLogo}">`:''}
       ${s.photo?`<img class="photo" src="${s.photo}">`:''}
       <div class="text">
         <div><strong>${s.studentname}</strong></div>
@@ -365,7 +368,6 @@ window.downloadPDF=function(){
   });
   pdf.save("Students.pdf");
 };
-
 window.downloadExcel=function(){
   const data=[["Adm No","Name","DOB","Age","School","Level","Class","Stream","Status","Registered At"]];
   filteredStudents.forEach(s=>{data.push([s.studentid,s.studentname,s.dateofbirth,s.age,s.school,s.level,s.grade,s.stream,s.status,s.created_at]);});
@@ -373,7 +375,6 @@ window.downloadExcel=function(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),"Students");
   XLSX.writeFile(wb,"Students.xlsx");
 };
-
 window.downloadIDCards=function(){
   const { jsPDF }=window.jspdf;
   const pdf=new jsPDF({unit:'mm', format:'a4'});
