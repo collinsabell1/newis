@@ -116,12 +116,13 @@ button{
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// Initialize Supabase
+// Initialize Supabase with your API details
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
-  "YOUR_SUPABASE_ANON_KEY"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
+// ELEMENTS
 const studentId = document.getElementById("studentId");
 const studentName = document.getElementById("studentName");
 const school = document.getElementById("school");
@@ -150,7 +151,9 @@ studentId.addEventListener("change", async () => {
   if (error || !data) return alert("Student not found");
 
   studentRowId = data.id;
-  studentName.value = data.studentname || data.studentName;
+
+  // Map exactly your table columns
+  studentName.value = data.studentname || "";
   school.value = data.school || "";
   grade.value = data.grade || "";
   age.value = data.age || "";
@@ -160,10 +163,13 @@ studentId.addEventListener("change", async () => {
 
 // CALCULATE AVERAGE
 function calculate() {
-  const t1 = +term1.value || 0;
-  const t2 = +term2.value || 0;
-  const t3 = +term3.value || 0;
-  const avg = Math.round((t1 + t2 + t3) / 3);
+  // Restrict 0-100 dynamically
+  term1.value = Math.min(Math.max(+term1.value || 0, 0), 100);
+  term2.value = Math.min(Math.max(+term2.value || 0, 0), 100);
+  term3.value = Math.min(Math.max(+term3.value || 0, 0), 100);
+
+  const avg = Math.round((+term1.value + +term2.value + +term3.value) / 3);
+
   circle.innerText = avg + "%";
   circle.style.background = `conic-gradient(#00ff99 ${avg*3.6}deg,#333 0deg)`;
   return avg;
