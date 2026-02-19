@@ -222,44 +222,7 @@ const counties = {
 "Taita Taveta":["Taveta","Wundanyi","Mwatate","Voi"],
 "Garissa":["Garissa Township","Balambala","Lagdera","Dadaab","Fafi","Ijara"],
 "Wajir":["Wajir North","Wajir East","Tarbaj","Wajir West","Eldas","Wajir South"],
-"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"],
-"Marsabit":["Moyale","North Horr","Saku","Laisamis"],
-"Isiolo":["Isiolo North","Isiolo South"],
-"Meru":["Igembe South","Igembe Central","Igembe North","Tigania West","Tigania East","North Imenti","Buuri","Central Imenti","South Imenti"],
-"Tharaka-Nithi":["Maara","Chuka","Tharaka"],
-"Embu":["Manyatta","Runyenjes","Mbeere South","Mbeere North"],
-"Kitui":["Mwingi North","Mwingi West","Mwingi Central","Kitui West","Kitui Rural","Kitui Central","Kitui East","Kitui South"],
-"Machakos":["Masinga","Yatta","Kangundo","Matungulu","Kathiani","Mavoko","Machakos Town","Mwala"],
-"Makueni":["Mbooni","Kilome","Kaiti","Makueni","Kibwezi West","Kibwezi East"],
-"Nyandarua":["Kinangop","Kipipiri","Ol Kalou","Ol Jorok","Ndaragwa"],
-"Nyeri":["Tetu","Kieni","Mathira","Othaya","Mukurweini","Nyeri Town"],
-"Kirinyaga":["Mwea","Gichugu","Ndia","Kirinyaga Central"],
-"Murang'a":["Kangema","Mathioya","Kiharu","Kigumo","Maragwa","Kandara","Gatanga"],
-"Kiambu":["Gatundu South","Gatundu North","Juja","Thika Town","Ruiru","Githunguri","Kiambu","Kiambaa","Kabete","Kikuyu","Limuru","Lari"],
-"Turkana":["Turkana North","Turkana West","Turkana Central","Loima","Turkana South","Turkana East"],
-"West Pokot":["Kapenguria","Sigor","Kacheliba","Pokot South"],
-"Samburu":["Samburu West","Samburu North","Samburu East"],
-"Trans Nzoia":["Kwanza","Endebess","Saboti","Kiminini","Cherangany"],
-"Uasin Gishu":["Soy","Turbo","Moiben","Ainabkoi","Kapseret","Kesses"],
-"Elgeyo-Marakwet":["Marakwet East","Marakwet West","Keiyo North","Keiyo South"],
-"Nandi":["Tindiret","Aldai","Nandi Hills","Chesumei","Emgwen","Mosop"],
-"Baringo":["Tiaty","Baringo North","Baringo Central","Baringo South","Mogotio","Eldama Ravine"],
-"Laikipia":["Laikipia West","Laikipia East","Laikipia North"],
-"Nakuru":["Molo","Njoro","Naivasha","Gilgil","Kuresoi South","Kuresoi North","Subukia","Rongai","Bahati","Nakuru Town West","Nakuru Town East"],
-"Narok":["Kilgoris","Emurua Dikirr","Narok North","Narok East","Narok South","Narok West"],
-"Kajiado":["Kajiado North","Kajiado Central","Kajiado East","Kajiado West","Kajiado South"],
-"Kericho":["Kipkelion East","Kipkelion West","Ainamoi","Bureti","Belgut","Sigowet/Soin"],
-"Bomet":["Sotik","Chepalungu","Bomet East","Bomet Central","Konoin"],
-"Kakamega":["Lugari","Likuyani","Malava","Lurambi","Navakholo","Mumias West","Mumias East","Matungu","Butere","Khwisero","Shinyalu","Ikolomani"],
-"Vihiga":["Vihiga","Sabatia","Hamisi","Luanda","Emuhaya"],
-"Bungoma":["Mt Elgon","Sirisia","Kabuchai","Bumula","Kanduyi","Webuye East","Webuye West","Kimilili","Tongaren"],
-"Busia":["Teso North","Teso South","Nambale","Matayos","Butula","Funyula","Budalangi"],
-"Siaya":["Ugenya","Ugunja","Alego Usonga","Gem","Bondo","Rarieda"],
-"Kisumu":["Kisumu East","Kisumu West","Kisumu Central","Seme","Nyando","Muhoroni","Nyakach"],
-"Homa Bay":["Kasipul","Kabondo","Karachuonyo","Rangwe","Homa Bay Town","Ndhiwa","Suba North","Suba South"],
-"Migori":["Rongo","Awendo","Suna East","Suna West","Uriri","Nyatike","Kuria West","Kuria East"],
-"Kisii":["Bonchari","South Mugirango","Bomachoge Borabu","Bobasi","Bomachoge Chache","Nyaribari Masaba","Nyaribari Chache","Kitutu Chache North","Kitutu Chache South"],
-"Nyamira":["Kitutu Masaba","West Mugirango","North Mugirango","Borabu"]
+"Mandera":["Mandera West","Banissa","Mandera North","Mandera South","Mandera East","Lafey"]
 };
 
 /* LOAD COUNTIES */
@@ -288,10 +251,61 @@ load(false);
 },()=>{load(false);alert("Permission denied")})
 }
 
+/* ===== OFFLINE STORAGE WITH INDEXEDDB ===== */
+let db;
+const request=indexedDB.open("schoolDB",1);
+request.onupgradeneeded=e=>{
+db=e.target.result;
+if(!db.objectStoreNames.contains("schools")){
+const store=db.createObjectStore("schools",{keyPath:"id",autoIncrement:true});
+store.createIndex("name","name",{unique:false});
+store.createIndex("synced","synced",{unique:false});
+}
+};
+request.onsuccess=e=>{db=e.target.result; syncOffline(); };
+request.onerror=e=>console.error("IndexedDB error",e);
+
+async function saveOffline(school){
+const tx=db.transaction("schools","readwrite");
+const store=tx.objectStore("schools");
+school.synced=false;
+store.put(school);
+return tx.complete;
+}
+
+async function getOfflineSchools(){
+return new Promise(res=>{
+const tx=db.transaction("schools","readonly");
+const store=tx.objectStore("schools");
+const all=[];
+store.openCursor().onsuccess=e=>{
+const cursor=e.target.result;
+if(cursor){all.push(cursor.value);cursor.continue()}
+else res(all);
+}
+});
+}
+
+async function syncOffline(){
+if(!navigator.onLine) return;
+const schools=await getOfflineSchools();
+for(const s of schools){
+if(!s.synced){
+const {data,error}=await supabase.from("schools").upsert([{
+id:s.id,name:s.name,level:s.level,county:s.county,region:s.region,
+subcounty:s.subcounty,phone:s.phone,classes:s.classes,streams:s.streams
+}]).select();
+if(!error){
+const tx=db.transaction("schools","readwrite");
+tx.objectStore("schools").put({...s,synced:true});
+}
+}
+}
+}
+
 /* CREATE */
 window.createSchool=async()=>{
-load(true)
-const {data,error}=await supabase.from("schools").insert([{
+const school={
 name:schoolName.value,
 level:schoolLevel.value,
 county:schoolCounty.value,
@@ -299,36 +313,59 @@ region:schoolRegion.value,
 subcounty:schoolSubcounty.value,
 phone:schoolPhone.value,
 classes,streams
-}]).select()
-if(error) message.innerText=error.message
-else{currentId=data[0].id;message.innerText="Saved"}
-loadStats();load(false)
+};
+load(true);
+if(navigator.onLine){
+const {data,error}=await supabase.from("schools").insert([school]).select();
+if(error){message.innerText=error.message; saveOffline(school)}
+else{currentId=data[0].id;message.innerText="Saved"} 
+}else{await saveOffline(school);message.innerText="Saved offline"}
+loadStats();load(false);
 }
 
 /* UPDATE */
 window.updateSchool=async()=>{
-if(!currentId)return alert("Search school first")
-const {error}=await supabase.from("schools").update({
+if(!currentId)return alert("Search school first");
+const school={
+id:currentId,
 name:schoolName.value,level:schoolLevel.value,county:schoolCounty.value,
 region:schoolRegion.value,subcounty:schoolSubcounty.value,
 phone:schoolPhone.value,classes,streams
-}).eq("id",currentId)
-message.innerText=error?error.message:"Updated";loadStats()
+};
+load(true);
+if(navigator.onLine){
+const {error}=await supabase.from("schools").update(school).eq("id",currentId);
+message.innerText=error?error.message:"Updated";
+}else{await saveOffline(school);message.innerText="Updated offline"}
+loadStats();load(false);
 }
 
 /* DELETE */
 window.deleteSchool=async()=>{
-if(!currentId)return alert("Search first")
-await supabase.from("schools").delete().eq("id",currentId)
-clearForm();message.innerText="Deleted";loadStats()
+if(!currentId)return alert("Search first");
+load(true);
+if(navigator.onLine){
+await supabase.from("schools").delete().eq("id",currentId);
+}else{
+const tx=db.transaction("schools","readwrite");
+tx.objectStore("schools").delete(currentId);
+}
+clearForm();message.innerText="Deleted";loadStats();load(false);
 }
 
 /* SEARCH */
 searchName.oninput=async()=>{
 const q=searchName.value
-if(!q){results.innerHTML="";return}
-const {data}=await supabase.from("schools").select("*").ilike("name","%"+q+"%").limit(5)
 results.innerHTML=""
+if(!q) return
+let data=[];
+if(navigator.onLine){
+const res=await supabase.from("schools").select("*").ilike("name","%"+q+"%").limit(5)
+data=res.data||[]
+}else{
+const offline=await getOfflineSchools();
+data=offline.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())).slice(0,5)
+}
 data.forEach(s=>{
 const d=document.createElement("div")
 d.textContent=s.name
@@ -352,12 +389,21 @@ results.appendChild(d)
 
 /* STATS */
 async function loadStats(){
-const {data}=await supabase.from("schools").select("county")
+let data=[];
+if(navigator.onLine){
+const res=await supabase.from("schools").select("county")
+data=res.data||[]
+}else{
+data=await getOfflineSchools()
+}
 let c={}
 data.forEach(s=>c[s.county]=(c[s.county]||0)+1)
 statsBox.innerHTML=""
 Object.entries(c).forEach(([k,v])=>statsBox.innerHTML+=`<div>${k}: ${v}</div>`)
 }
+
+/* SYNC WHEN BACK ONLINE */
+window.addEventListener("online",()=>{syncOffline(); message.innerText="Back online, syncing..."})
 loadStats()
 </script>
 </body>
