@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Socioeconomic Risk Records - NEWIS</title>
-
+<title>Socioeconomic Risk Assessment - NEWIS</title>
 <style>
 body{
   font-family: Arial, sans-serif;
@@ -13,26 +12,20 @@ body{
   color:#fff;
 }
 .container{
-  max-width:1200px;
-  margin:20px auto;
-  padding:20px;
-  background: rgba(255,255,255,0.08);
+  max-width:600px;
+  margin:30px auto;
+  background:#fff;
+  padding:30px;
   border-radius:15px;
-  backdrop-filter: blur(15px);
-  box-shadow:0 0 40px rgba(0,0,0,0.5);
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+  color:#000;
 }
-h1,h2{text-align:center;margin-bottom:20px;}
-.grid{
-  display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
-  gap:20px;
-}
+h2{text-align:center;color:#203a43;margin-bottom:20px;}
 .section{
   background:#f4f6fa;
   padding:20px;
   border-radius:12px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.1);
-  color:#000;
+  margin-bottom:20px;
 }
 label{display:block;margin:6px 0;}
 input[type="text"]{
@@ -62,7 +55,6 @@ button{
 .delete{background:#dc3545;color:#fff;}
 .clear{background:#6c757d;color:#fff;}
 .nav{background:#203a43;color:#fff;}
-.view{background:#6f42c1;color:#fff;}
 .circle{
   width:170px;
   height:170px;
@@ -78,42 +70,12 @@ button{
 .green{background:#28a745;}
 .yellow{background:#ffc107;color:black;}
 .red{background:#dc3545;}
-/* Table styles */
-table {
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-  font-size:0.9rem;
-}
-th, td { padding:8px; text-align:center; }
-th { background: rgba(255,255,255,0.2); }
-tr:nth-child(even){background: rgba(255,255,255,0.05);}
-@media screen and (max-width:768px){
-  table, thead, tbody, th, td, tr { display:block; width:100%; }
-  thead { display:none; }
-  tr { margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.2); }
-  td { text-align:right; padding-left:50%; position:relative; }
-  td::before {
-    position:absolute; left:15px; width:45%; white-space:nowrap; font-weight:bold;
-  }
-  td:nth-of-type(1)::before{content:"Select";}
-  td:nth-of-type(2)::before{content:"Adm No";}
-  td:nth-of-type(3)::before{content:"Name";}
-  td:nth-of-type(4)::before{content:"Class";}
-  td:nth-of-type(5)::before{content:"Risk %";}
-  td:nth-of-type(6)::before{content:"Date Recorded";}
-  td:nth-of-type(7)::before{content:"Status";}
-  td:nth-of-type(8)::before{content:"Report";}
-}
 </style>
 </head>
-
 <body>
+
 <div class="container">
-
-<h1>Socioeconomic Risk Assessment Records</h1>
-
-<div class="grid">
+<h2>Socioeconomic Dropout Risk Assessment</h2>
 
 <div class="section">
 <h3>Student Details</h3>
@@ -123,23 +85,22 @@ tr:nth-child(even){background: rgba(255,255,255,0.05);}
 <input type="text" id="studentName">
 <label>Class:</label>
 <input type="text" id="studentClass">
-<button class="view" onclick="fetchStudent()">Fetch Student</button>
 </div>
 
 <div class="section">
 <h3>Socioeconomic Risk Indicators</h3>
-<label><input type="checkbox" class="risk" data-weight="10" value="poverty"> Household poverty</label>
-<label><input type="checkbox" class="risk" data-weight="15" value="fees"> Unable to pay school fees</label>
-<label><input type="checkbox" class="risk" data-weight="12" value="orphan"> Orphan / vulnerable child</label>
-<label><input type="checkbox" class="risk" data-weight="15" value="childlabour"> Child labour</label>
-<label><input type="checkbox" class="risk" data-weight="10" value="singleparent"> Single parent</label>
-<label><input type="checkbox" class="risk" data-weight="15" value="violence"> Domestic/community violence</label>
-<label><input type="checkbox" class="risk" data-weight="8" value="largedependents"> Large dependent family</label>
-<label><input type="checkbox" class="risk" data-weight="8" value="poorhousing"> Poor housing conditions</label>
-<label><input type="checkbox" class="risk" data-weight="15" value="pregnancy"> Early pregnancy</label>
-<label><input type="checkbox" class="risk" data-weight="12" value="absenteeism"> Chronic absenteeism</label>
-<label><input type="checkbox" class="risk" data-weight="8" value="drought"> Drought / disaster</label>
-<label><input type="checkbox" class="risk" data-weight="8" value="distance"> Long distance to school</label>
+<label><input type="checkbox" class="risk" value="poverty"> Household poverty</label>
+<label><input type="checkbox" class="risk" value="fees"> Unable to pay school fees</label>
+<label><input type="checkbox" class="risk" value="orphan"> Orphan / vulnerable child</label>
+<label><input type="checkbox" class="risk" value="childlabour"> Child labour</label>
+<label><input type="checkbox" class="risk" value="singleparent"> Single parent</label>
+<label><input type="checkbox" class="risk" value="violence"> Domestic/community violence</label>
+<label><input type="checkbox" class="risk" value="largedependents"> Large dependent family</label>
+<label><input type="checkbox" class="risk" value="poorhousing"> Poor housing conditions</label>
+<label><input type="checkbox" class="risk" value="pregnancy"> Early pregnancy</label>
+<label><input type="checkbox" class="risk" value="absenteeism"> Chronic absenteeism</label>
+<label><input type="checkbox" class="risk" value="drought"> Drought / disaster</label>
+<label><input type="checkbox" class="risk" value="distance"> Long distance to school</label>
 </div>
 
 <div class="section">
@@ -148,32 +109,14 @@ tr:nth-child(even){background: rgba(255,255,255,0.05);}
 <p style="text-align:center;font-weight:bold;" id="riskLevel">Low Risk</p>
 </div>
 
-</div>
-
 <div class="buttons">
 <button class="save" onclick="saveRecord()">Save</button>
 <button class="update" onclick="updateRecord()">Update</button>
 <button class="delete" onclick="deleteRecord()">Delete</button>
 <button class="clear" onclick="clearForm()">Clear</button>
-<button class="view" onclick="renderTable()">View All Records</button>
+<button class="nav" onclick="location.href='previous.html'">⬅ Previous</button>
+<button class="nav" onclick="location.href='next.html'">Next ➡</button>
 </div>
-
-<!-- Table -->
-<table id="recordsTable">
-<thead>
-<tr>
-<th><input type="checkbox" id="selectAll"></th>
-<th>Adm No</th>
-<th>Name</th>
-<th>Class</th>
-<th>Risk %</th>
-<th>Date Recorded</th>
-<th>Status</th>
-<th>Report</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
 
 </div>
 
@@ -186,43 +129,18 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-let allData=[];
-
-/* ------------------- FETCH STUDENT DATA ------------------- */
-async function fetchStudent(){
-  const id = document.getElementById("studentId").value.trim();
-  if(!id) return;
-  const { data, error } = await supabase
-    .from("students")
-    .select("*")
-    .eq("studentid", id)
-    .single();
-  if(error){
-    alert("Student not found");
-    document.getElementById("studentName").value = "";
-    document.getElementById("studentClass").value = "";
-    return;
-  }
-  document.getElementById("studentName").value = data.studentname || "";
-  document.getElementById("studentClass").value = data.grade || "";
-}
-
-// Optional: fetch when field loses focus
-document.getElementById("studentId").addEventListener("blur", fetchStudent);
-
-/* ------------------- RISK CALCULATION ------------------- */
+/* RISK CALCULATION: 100 / number of checked factors */
 function calculateRisk(){
+  const checked=document.querySelectorAll(".risk:checked");
+  const numChecked = checked.length;
   let total=0;
-  document.querySelectorAll(".risk:checked").forEach(cb=>{
-    total+=Number(cb.dataset.weight);
-  });
-  if(total>100) total=100;
-
+  if(numChecked>0){
+    const weightPerFactor = 100 / numChecked;
+    total = Math.min(100, Math.round(weightPerFactor * numChecked));
+  }
   const circle=document.getElementById("riskCircle");
   const level=document.getElementById("riskLevel");
-
-  circle.textContent=total+"%";
-
+  circle.textContent = total + "%";
   if(total<45){
     circle.className="circle green";
     level.textContent="Low Risk";
@@ -233,7 +151,6 @@ function calculateRisk(){
     circle.className="circle red";
     level.textContent="High Risk";
   }
-
   return total;
 }
 
@@ -256,13 +173,12 @@ window.saveRecord=async()=>{
     });
   if(error) return alert(error.message);
   alert("Saved successfully");
-  loadData();
 };
 
 /* UPDATE */
 window.updateRecord=async()=>{
   const id=studentId.value.trim();
-  if(!id) return;
+  if(!id) return alert("Enter admission number");
   const { error } = await supabase
     .from("assessments")
     .update({
@@ -275,25 +191,23 @@ window.updateRecord=async()=>{
     .eq("admission_no",id);
   if(error) return alert(error.message);
   alert("Updated successfully");
-  loadData();
 };
 
 /* DELETE */
 window.deleteRecord=async()=>{
   const id=studentId.value.trim();
-  if(!id) return;
+  if(!id) return alert("Enter admission number");
   if(!confirm("Delete this record?")) return;
   const { error } = await supabase
     .from("assessments")
     .delete()
     .eq("admission_no",id);
   if(error) return alert(error.message);
-  alert("Deleted");
+  alert("Deleted successfully");
   clearForm();
-  loadData();
 };
 
-/* CLEAR */
+/* CLEAR FORM */
 window.clearForm=()=>{
   studentId.value="";
   studentName.value="";
@@ -302,67 +216,8 @@ window.clearForm=()=>{
   calculateRisk();
 };
 
-/* LOAD TABLE DATA */
-async function loadData(){
-  const { data, error } = await supabase
-    .from("assessments")
-    .select("*")
-    .order("date_recorded",{ascending:false});
-  if(error) return alert(error.message);
-  allData = data.map(r=>({
-    id: r.id,
-    adm: r.admission_no,
-    name: r.name,
-    class: r.class,
-    risk: r.risk_percent,
-    date: new Date(r.date_recorded),
-    status: r.risk_percent>55 ? "High" : r.risk_percent>=45 ? "Medium" : "Low"
-  }));
-  renderTable();
-}
-
-/* RENDER TABLE */
-window.renderTable=()=>{
-  const tbody=document.querySelector("#recordsTable tbody");
-  tbody.innerHTML="";
-  allData.forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td><input type="checkbox" class="rowCheck" data-id="${r.id}"></td>
-      <td>${r.adm}</td>
-      <td>${r.name}</td>
-      <td>${r.class}</td>
-      <td>${r.risk}%</td>
-      <td>${r.date.toLocaleDateString()}</td>
-      <td class="${r.status==='High'?'red':r.status==='Medium'?'yellow':'green'}">${r.status}</td>
-      <td><button onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-};
-
-/* SELECT ALL */
-document.getElementById("selectAll").addEventListener("change",function(){
-  document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
-});
-
-/* PRINT */
-window.printReport=(r)=>{
-  const win=window.open("","_blank");
-  win.document.write(`
-    <h2>Socioeconomic Report</h2>
-    Admission: ${r.adm}<br>
-    Name: ${r.name}<br>
-    Class: ${r.class}<br>
-    Risk: ${r.risk}%<br>
-    Status: ${r.status}<br>
-    Date: ${r.date.toLocaleDateString()}<br><br>
-    <button onclick="window.print()">Print</button>
-  `);
-};
-
-/* INITIAL LOAD */
-loadData();
+/* INITIAL CALCULATION */
+calculateRisk();
 </script>
 
 </body>
