@@ -174,33 +174,29 @@ let allData = [];
 
 async function loadData() {
   try {
-    const { data, error } = await supabase
-      .from("behavior")
-      .select(`
-        id,
-        total_risk,
-        recorded_at,
-        student:student_id (
-          studentid,
-          studentname,
-          grade,
-          school
-        )
-      `)
+    // 1️⃣ Fetch all behavior records
+    const { data: behaviors, error: bError } = await supabase.from("behavior")
+      .select("*")
       .order("recorded_at", { ascending: false });
+    if (bError) throw bError;
 
-    if (error) throw error;
+    // 2️⃣ Fetch all students
+    const { data: students, error: sError } = await supabase.from("students")
+      .select("*");
+    if (sError) throw sError;
 
-    allData = data.map(r => {
+    // 3️⃣ Map behavior to student manually
+    allData = behaviors.map(b => {
+      const student = students.find(s => s.id === b.student_id) || {};
       return {
-        id: r.id,
-        adm: r.student?.studentid || "N/A",
-        name: r.student?.studentname || "N/A",
-        class: r.student?.grade || "N/A",
-        school: r.student?.school || "N/A",
-        risk: r.total_risk,
-        status: r.total_risk > 50 ? "High" : r.total_risk == 50 ? "Medium" : "Low",
-        date: new Date(r.recorded_at)
+        id: b.id,
+        adm: student.studentid || "N/A",
+        name: student.studentname || "N/A",
+        class: student.grade || "N/A",
+        school: student.school || "N/A",
+        risk: b.total_risk,
+        status: b.total_risk > 50 ? "High" : b.total_risk == 50 ? "Medium" : "Low",
+        date: new Date(b.recorded_at)
       };
     });
 
@@ -230,7 +226,7 @@ window.renderTable = () => {
   const classFilter = document.getElementById("classFilter").value;
   const riskFilter = document.getElementById("riskFilter").value;
 
-  const filtered = allData.filter(r => 
+  const filtered = allData.filter(r =>
     r.adm.toLowerCase().includes(search) &&
     (classFilter === "All" || r.class === classFilter) &&
     (riskFilter === "All" ||
@@ -249,49 +245,51 @@ window.renderTable = () => {
       <td>${r.school}</td>
       <td>${r.risk}%</td>
       <td>${r.date.toLocaleDateString()}</td>
-      <td class="${r.status === 'High' ? 'red' : r.status === 'Medium' ? 'yellow' : 'green'}">${r.status}</td>
+      <td class="${r.status==='High'?'red':r.status==='Medium'?'yellow':'green'}">${r.status}</td>
       <td><button onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
     `;
     tbody.appendChild(tr);
   });
 };
 
-document.getElementById("selectAll").addEventListener("change", function() {
-  document.querySelectorAll(".rowCheck").forEach(cb => cb.checked = this.checked);
+// --- Select All Checkbox ---
+document.getElementById("selectAll").addEventListener("change", function(){
+  document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
 });
 
+// --- Delete Selected ---
 window.deleteSelected = async () => {
-  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb => cb.dataset.id);
-  if (!ids.length) return alert("No records selected");
-  if (!confirm("Delete selected records?")) return;
-
-  const { error } = await supabase.from("behavior").delete().in("id", ids);
-  if (error) return alert("Error deleting records: " + error.message);
-
+  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  if(!ids.length) return alert("No records selected");
+  if(!confirm("Delete selected records?")) return;
+  const { error } = await supabase.from("behavior").delete().in("id",ids);
+  if(error) return alert("Error deleting records: "+error.message);
   loadData();
 };
 
-function downloadCSV(rows, filename) {
-  if (!rows.length) return alert("No data to download");
-  let csv = "AdmNo,Name,Class,School,Risk,Status,Date\n";
-  rows.forEach(r => {
-    csv += `${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
+// --- Download CSV ---
+function downloadCSV(rows,name){
+  if(!rows.length) return alert("No data");
+  let csv="AdmNo,Name,Class,School,Risk,Status,Date\n";
+  rows.forEach(r=>{
+    csv+=`${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
   });
-  const blob = new Blob([csv], { type: "text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
   a.click();
 }
-window.downloadAll = () => downloadCSV(allData, "All_Behavioral.csv");
-window.downloadSelected = () => {
-  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb => cb.dataset.id);
-  const rows = allData.filter(r => ids.includes(r.id));
-  downloadCSV(rows, "Selected_Behavioral.csv");
+window.downloadAll=()=>downloadCSV(allData,"All_Behavioral.csv");
+window.downloadSelected=()=>{
+  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  const rows=allData.filter(r=>ids.includes(r.id));
+  downloadCSV(rows,"Selected_Behavioral.csv");
 };
 
-window.printReport = (r) => {
-  const win = window.open("", "_blank");
+// --- Print ---
+window.printReport=(r)=>{
+  const win=window.open("","_blank");
   win.document.write(`
     <h2>Behavioral Report</h2>
     Admission: ${r.adm}<br>
@@ -306,17 +304,17 @@ window.printReport = (r) => {
 };
 
 function printReportList(rows){
-  const win = window.open("", "_blank");
-  let html = "<h2>Behavioral Records</h2>";
-  rows.forEach(r => {
-    html += `<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
+  const win=window.open("","_blank");
+  let html="<h2>Behavioral Records</h2>";
+  rows.forEach(r=>{
+    html+=`<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
   });
-  win.document.write(html + "<br><button onclick='window.print()'>Print</button>");
+  win.document.write(html+"<br><button onclick='window.print()'>Print</button>");
 }
-window.printAll = () => printReportList(allData);
-window.printSelected = () => {
-  const ids = [...document.querySelectorAll(".rowCheck:checked")].map(cb => cb.dataset.id);
-  const rows = allData.filter(r => ids.includes(r.id));
+window.printAll=()=>printReportList(allData);
+window.printSelected=()=>{
+  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  const rows=allData.filter(r=>ids.includes(r.id));
   printReportList(rows);
 };
 
