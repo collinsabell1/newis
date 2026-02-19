@@ -31,11 +31,9 @@ button{padding:10px 18px;margin:6px;border:none;border-radius:10px;font-weight:b
 
 <body>
 <div class="container">
-
 <h2>Behavioral Dropout Risk Assessment</h2>
 
 <div class="grid">
-
 <div class="section">
 <label>Enter Admission Number:</label>
 <input type="text" id="studentId" placeholder="Enter Admission Number">
@@ -71,113 +69,120 @@ button{padding:10px 18px;margin:6px;border:none;border-radius:10px;font-weight:b
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+// Supabase initialization
 const supabase = createClient(
-"https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-const risks=[
-"Chronic absenteeism","Frequent lateness","Truancy","Bullying others",
-"Fighting in school","Drug abuse","Sneaking out","Dorm misconduct",
-"Theft","Disrespect","Dishonesty","Incomplete assignments",
-"Pregnancy risk","Peer pressure","Family instability",
-"Financial challenges","Repeated discipline"
+const risks = [
+  // New expanded list of behaviors affecting Kenyan students
+  "Chronic absenteeism", "Frequent lateness", "Truancy", "Bullying others",
+  "Fighting in school", "Drug abuse", "Sneaking out", "Dorm misconduct",
+  "Theft", "Disrespect", "Dishonesty", "Incomplete assignments",
+  "Pregnancy risk", "Peer pressure", "Family instability", "Financial challenges",
+  "Repeated discipline", "Lack of focus in class", "Academic failure",
+  "Alcohol abuse", "Sexual harassment", "Mental health issues (stress, anxiety, depression)",
+  "Child abuse (emotional, physical)", "Broken family dynamics (divorce, separation)",
+  "Early marriage", "Unsupervised social media usage", "Peer rejection",
+  "Limited access to learning resources", "Poor hygiene", "Inappropriate friendships",
+  "Gang involvement", "Runaways", "Bullying others", "Domestic violence exposure",
+  "Peer pressure to engage in criminal activities", "Illiteracy", "Parental neglect",
+  "Non-compliance with school rules", "Excessive phone usage", "Extracurricular activities neglect"
 ];
 
-const checklist=document.getElementById("checklist");
-risks.forEach(r=>{
-const l=document.createElement("label");
-l.innerHTML=`<input type="checkbox" class="neg"> ${r}`;
-checklist.appendChild(l);
+const checklist = document.getElementById("checklist");
+risks.forEach(r => {
+  const l = document.createElement("label");
+  l.innerHTML = `<input type="checkbox" class="neg"> ${r}`;
+  checklist.appendChild(l);
 });
 
-let currentId=null;
+let currentId = null;
 
 /* FETCH STUDENT */
-document.getElementById("studentId").addEventListener("change",async e=>{
-const id=e.target.value;
-if(!id) return;
+document.getElementById("studentId").addEventListener("change", async (e) => {
+  const id = e.target.value;
+  if (!id) return;
 
-const {data}=await supabase.from("students").select("*").eq("admission_no",id).single();
+  const { data } = await supabase.from("students").select("*").eq("studentid", id).single();
 
-if(!data){alert("Student not found");return;}
+  if (!data) { alert("Student not found"); return; }
 
-currentId=data.admission_no;
+  currentId = data.studentid;
 
-studentName.value=data.name;
-studentClass.value=data.class;
-studentAge.value=data.age;
-studentGender.value=data.gender;
-studentSchool.value=data.school;
+  studentName.value = data.name;
+  studentClass.value = data.level;
+  studentAge.value = data.age;
+  studentGender.value = data.gender;
+  studentSchool.value = data.school;
 
-loadBehavior();
+  loadBehavior();
 });
 
 /* CALCULATE */
-function calculate(){
-const checked=document.querySelectorAll(".neg:checked").length;
-let percent=Math.min(100,checked*6);
-circle.innerHTML=percent+"%";
+function calculate() {
+  const checked = document.querySelectorAll(".neg:checked").length;
+  let percent = Math.min(100, checked * 6);
+  circle.innerHTML = percent + "%";
 
-circle.className="circular "+(
-percent>60?"red":percent>40?"yellow":"green"
-);
+  circle.className = "circular " + (
+    percent > 60 ? "red" : percent > 40 ? "yellow" : "green"
+  );
 
-return percent;
+  return percent;
 }
 
-document.addEventListener("change",e=>{
-if(e.target.classList.contains("neg")) calculate();
+document.addEventListener("change", (e) => {
+  if (e.target.classList.contains("neg")) calculate();
 });
 
 /* LOAD EXISTING */
-async function loadBehavior(){
-const {data}=await supabase.from("behavioral_records")
-.select("*").eq("admission_no",currentId).single();
+async function loadBehavior() {
+  const { data } = await supabase.from("behavior").select("*").eq("student_id", currentId).single();
 
-if(!data) return;
+  if (!data) return;
 
-document.querySelectorAll(".neg").forEach(cb=>{
-cb.checked=data.risks.includes(cb.parentElement.textContent.trim());
-});
+  document.querySelectorAll(".neg").forEach(cb => {
+    cb.checked = data.risks.includes(cb.parentElement.textContent.trim());
+  });
 
-calculate();
+  calculate();
 }
 
 /* SAVE */
-window.saveRecord=async()=>{
-if(!currentId) return alert("Enter admission number");
+window.saveRecord = async () => {
+  if (!currentId) return alert("Enter admission number");
 
-const percent=calculate();
+  const percent = calculate();
+  const risksList = [...document.querySelectorAll(".neg:checked")].map(cb => cb.parentElement.textContent.trim());
 
-await supabase.from("behavioral_records").upsert({
-admission_no:currentId,
-name:studentName.value,
-class:studentClass.value,
-school:studentSchool.value,
-risk_percent:percent,
-risks:[...document.querySelectorAll(".neg:checked")].map(cb=>cb.parentElement.textContent.trim())
-},{onConflict:"admission_no"});
+  // Insert into behavior table
+  await supabase.from("behavior").upsert({
+    student_id: currentId,
+    score: percent,
+    recorded_at: new Date().toISOString(),
+    risks: risksList
+  }, { onConflict: "student_id" });
 
-alert("Saved");
+  alert("Saved");
 };
 
 /* UPDATE */
-window.updateRecord=window.saveRecord;
+window.updateRecord = window.saveRecord;
 
 /* DELETE */
-window.deleteRecord=async()=>{
-if(!currentId) return;
+window.deleteRecord = async () => {
+  if (!currentId) return;
 
-if(!confirm("Delete record?")) return;
+  if (!confirm("Delete record?")) return;
 
-await supabase.from("behavioral_records")
-.delete()
-.eq("admission_no",currentId);
+  // Delete behavior record
+  await supabase.from("behavior").delete().eq("student_id", currentId);
 
-document.querySelectorAll(".neg").forEach(cb=>cb.checked=false);
-calculate();
-alert("Deleted");
+  document.querySelectorAll(".neg").forEach(cb => cb.checked = false);
+  calculate();
+  alert("Deleted");
 };
 </script>
 </body>
