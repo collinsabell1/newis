@@ -116,7 +116,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // Supabase config
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
-  "YOUR_SUPABASE_ANON_KEY"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
 let allData = [];
@@ -196,7 +196,7 @@ function renderTable() {
   });
 
   Object.values(grouped).forEach(group => {
-    group.sort((a, b) => b.avg - a.avg); // descending
+    group.sort((a, b) => b.avg - a.avg);
     group.forEach((r, i) => r.rank = i + 1);
   });
 
