@@ -118,6 +118,7 @@ img.student-photo{width:50px;height:50px;object-fit:cover;border-radius:6px;}
 </head>
 <body>
 
+<!-- Back button to register page -->
 <button class="floating-back" onclick="goBack()">⬅ Back</button>
 
 <div class="container">
@@ -219,7 +220,10 @@ function loadOffline(){
   const tx=db.transaction('students','readonly');
   const store=tx.objectStore('students');
   const req=store.getAll();
-  req.onsuccess = ()=>{if(req.result.length>0){students=req.result; filteredStudents=[...students]; populateClassFilter(); renderTable(); renderIDPreview();}else{loadStudents();}}
+  req.onsuccess = ()=>{
+    if(req.result.length>0){students=req.result; filteredStudents=[...students]; populateClassFilter(); renderTable(); renderIDPreview();}
+    else{loadStudents();}
+  }
 }
 
 // Load students
@@ -385,34 +389,25 @@ window.downloadIDCards=function(){
     pdf.text(`Adm No: ${s.studentid}`, x+5, y+33);
     pdf.text(`Class: ${s.grade}`, x+5, y+41);
     pdf.text(`Stream: ${s.stream}`, x+5, y+49);
-    x+=w+gap;if(x+w>210){x=10;y+=h+gap;}
-    if(y+h>297){pdf.addPage(); x=10; y=10;}
+    x+=w+gap;if(x+ w>210){x=10; y+=h+gap;} if(y+h>297){pdf.addPage(); x=10; y=10;}
   });
-  pdf.save("ID_Cards.pdf");
+  pdf.save("IDCards.pdf");
 };
 
-// Bulk Promote
+// Bulk promote
 window.bulkPromote=async()=>{
   const ids=[...document.querySelectorAll(".selectBox:checked")].map(cb=>cb.value);
-  if(ids.length===0) return alert("No students selected.");
-  const updates=[];
-  ids.forEach(id=>{
-    const stu=students.find(s=>s.id===id);
-    if(stu && stu.grade){
-      let next=parseInt(stu.grade);
-      if(!isNaN(next)) updates.push({id:id, grade:(next+1).toString()});
-    }
-  });
-  for(const u of updates){
-    await supabase.from("students").update({grade:u.grade}).eq("id",u.id);
+  for(const id of ids){
+    const s=students.find(st=>st.id===id);
+    if(!s) continue;
+    let nextClass=s.grade.match(/\d+/)?parseInt(s.grade.match(/\d+/)[0])+1:"";
+    await supabase.from("students").update({grade:nextClass.toString()}).eq("id",id);
   }
   loadStudents();
 };
 
-window.goBack=()=>{location.href="student-registration.html";};
-
-loadOffline();
+// Back button
+window.goBack=()=>{location.href="register.html";}
 </script>
-
 </body>
 </html>
