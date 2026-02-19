@@ -7,14 +7,18 @@
 <style>
 body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#141e30,#243b55);color:white;}
 .container{max-width:1200px;margin:30px auto;padding:30px;background:rgba(255,255,255,0.08);border-radius:20px;backdrop-filter:blur(15px);box-shadow:0 0 40px rgba(0,0,0,0.6);}
+
 h2{text-align:center;margin-bottom:25px;font-size:28px;}
 .grid{display:grid;grid-template-columns:1fr;gap:25px;}
 @media(min-width:992px){.grid{grid-template-columns:1fr 1fr}}
 .section{padding:20px;border-radius:15px;background:rgba(255,255,255,0.1);}
+
 input[type="text"]{width:100%;padding:12px;border-radius:10px;border:none;margin-bottom:12px;}
 input[readonly]{background:#e0e0e0;font-weight:bold;}
+
 .checkbox-grid{display:grid;grid-template-columns:1fr;gap:8px;}
 @media(min-width:600px){.checkbox-grid{grid-template-columns:1fr 1fr}}
+
 .button-area{text-align:center;margin-top:25px;}
 button{padding:10px 18px;margin:6px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;}
 .save{background:#28a745;color:white}
@@ -22,6 +26,7 @@ button{padding:10px 18px;margin:6px;border:none;border-radius:10px;font-weight:b
 .delete{background:#dc3545;color:white}
 .view{background:#6f42c1;color:white}
 .nav{background:#17a2b8;color:white}
+
 .circular{width:200px;height:200px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:bold;margin:30px auto;}
 .green{background:#28a745}
 .yellow{background:#ffc107;color:black}
@@ -31,6 +36,7 @@ button{padding:10px 18px;margin:6px;border:none;border-radius:10px;font-weight:b
 
 <body>
 <div class="container">
+
 <h2>Behavioral Dropout Risk Assessment</h2>
 
 <div class="grid">
@@ -72,11 +78,10 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // Supabase initialization
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+  "your-api-key-here" // Please replace with your actual API key
 );
 
 const risks = [
-  // New expanded list of behaviors affecting Kenyan students
   "Chronic absenteeism", "Frequent lateness", "Truancy", "Bullying others",
   "Fighting in school", "Drug abuse", "Sneaking out", "Dorm misconduct",
   "Theft", "Disrespect", "Dishonesty", "Incomplete assignments",
@@ -111,11 +116,12 @@ document.getElementById("studentId").addEventListener("change", async (e) => {
 
   currentId = data.studentid;
 
-  studentName.value = data.name;
-  studentClass.value = data.level;
-  studentAge.value = data.age;
-  studentGender.value = data.gender;
-  studentSchool.value = data.school;
+  // Populate student information
+  document.getElementById("studentName").value = data.name;
+  document.getElementById("studentClass").value = data.level;
+  document.getElementById("studentAge").value = data.age;
+  document.getElementById("studentGender").value = data.gender;
+  document.getElementById("studentSchool").value = data.school;
 
   loadBehavior();
 });
@@ -123,10 +129,17 @@ document.getElementById("studentId").addEventListener("change", async (e) => {
 /* CALCULATE */
 function calculate() {
   const checked = document.querySelectorAll(".neg:checked").length;
-  let percent = Math.min(100, checked * 6);
-  circle.innerHTML = percent + "%";
+  const totalRisks = risks.length;
+  
+  // Calculate risk percentage based on number of checked boxes
+  const weightPerFactor = 100 / totalRisks;  // Each factor has an equal weight
+  let percent = Math.min(100, checked * weightPerFactor);
+  
+  // Update circular progress
+  document.getElementById("circle").innerHTML = percent.toFixed(2) + "%";
 
-  circle.className = "circular " + (
+  // Set the color based on the percentage
+  document.getElementById("circle").className = "circular " + (
     percent > 60 ? "red" : percent > 40 ? "yellow" : "green"
   );
 
@@ -137,12 +150,13 @@ document.addEventListener("change", (e) => {
   if (e.target.classList.contains("neg")) calculate();
 });
 
-/* LOAD EXISTING */
+/* LOAD EXISTING BEHAVIOR RECORD */
 async function loadBehavior() {
   const { data } = await supabase.from("behavior").select("*").eq("student_id", currentId).single();
 
   if (!data) return;
 
+  // Populate checkboxes based on stored behavior risks
   document.querySelectorAll(".neg").forEach(cb => {
     cb.checked = data.risks.includes(cb.parentElement.textContent.trim());
   });
@@ -185,5 +199,6 @@ window.deleteRecord = async () => {
   alert("Deleted");
 };
 </script>
+
 </body>
 </html>
