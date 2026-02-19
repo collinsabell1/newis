@@ -116,124 +116,135 @@ button{
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+// Initialize the Supabase client
 const supabase = createClient(
-"https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+  "https://xnvnskxcsphbvkxhndui.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* ELEMENTS */
-const studentId=document.getElementById("studentId");
-const studentName=document.getElementById("studentName");
-const school=document.getElementById("school");
-const grade=document.getElementById("grade");
-const age=document.getElementById("age");
-const gender=document.getElementById("gender");
-const parentName=document.getElementById("parentName");
-const year=document.getElementById("year");
-const recordDate=document.getElementById("recordDate");
-const term1=document.getElementById("term1");
-const term2=document.getElementById("term2");
-const term3=document.getElementById("term3");
-const circle=document.getElementById("averageCircle");
+// ELEMENTS
+const studentId = document.getElementById("studentId");
+const studentName = document.getElementById("studentName");
+const school = document.getElementById("school");
+const grade = document.getElementById("grade");
+const age = document.getElementById("age");
+const gender = document.getElementById("gender");
+const parentName = document.getElementById("parentName");
+const year = document.getElementById("year");
+const recordDate = document.getElementById("recordDate");
+const term1 = document.getElementById("term1");
+const term2 = document.getElementById("term2");
+const term3 = document.getElementById("term3");
+const circle = document.getElementById("averageCircle");
 
-let studentRowId=null;
+let studentRowId = null;
 
-/* DEFAULT YEAR */
-year.value=new Date().getFullYear();
+// DEFAULT YEAR
+year.value = new Date().getFullYear();
 
-/* FIND STUDENT WHEN ID ENTERED */
-studentId.addEventListener("change",async()=>{
-const {data}=await supabase
-.from("students")
-.select("*")
-.eq("studentId",studentId.value)
-.single();
+// FIND STUDENT WHEN ID ENTERED
+studentId.addEventListener("change", async () => {
+  const { data, error } = await supabase
+    .from("students")
+    .select("*")
+    .eq("studentid", studentId.value) // changed 'studentId' to 'studentid'
+    .single();
 
-if(!data)return alert("Student not found");
+  if (error || !data) return alert("Student not found");
 
-studentRowId=data.id;
-studentName.value=data.studentname || data.studentName;
-school.value=data.school || "";
-grade.value=data.grade || "";
-age.value=data.age || "";
-gender.value=data.gender || "";
-parentName.value=data.parentname || "";
+  studentRowId = data.id;
+  studentName.value = data.studentname || data.studentName;
+  school.value = data.school || "";
+  grade.value = data.grade || "";
+  age.value = data.age || "";
+  gender.value = data.gender || "";
+  parentName.value = data.parentname || "";
 });
 
-/* CALCULATE */
-function calculate(){
-const t1=+term1.value||0;
-const t2=+term2.value||0;
-const t3=+term3.value||0;
-const avg=Math.round((t1+t2+t3)/3);
-circle.innerText=avg+"%";
-circle.style.background=`conic-gradient(#00ff99 ${avg*3.6}deg,#333 0deg)`;
-return avg;
+// CALCULATE
+function calculate() {
+  const t1 = +term1.value || 0;
+  const t2 = +term2.value || 0;
+  const t3 = +term3.value || 0;
+  const avg = Math.round((t1 + t2 + t3) / 3);
+  circle.innerText = avg + "%";
+  circle.style.background = `conic-gradient(#00ff99 ${avg * 3.6}deg,#333 0deg)`;
+  return avg;
 }
 
-term1.oninput=term2.oninput=term3.oninput=calculate;
+term1.oninput = term2.oninput = term3.oninput = calculate;
 
-/* CLEAR */
-window.clearFields=()=>{
-term1.value=term2.value=term3.value="";
-calculate();
+// CLEAR
+window.clearFields = () => {
+  term1.value = term2.value = term3.value = "";
+  calculate();
 }
 
-/* ADD NEW */
-window.addNew=()=>{
-studentId.value="";
-studentRowId=null;
-studentName.value=school.value=grade.value=age.value=gender.value=parentName.value="";
-clearFields();
+// ADD NEW
+window.addNew = () => {
+  studentId.value = "";
+  studentRowId = null;
+  studentName.value = school.value = grade.value = age.value = gender.value = parentName.value = "";
+  clearFields();
 }
 
-/* SAVE */
-window.saveAcademic=async()=>{
-if(!studentRowId)return alert("Enter student");
+// SAVE
+window.saveAcademic = async () => {
+  if (!studentRowId) return alert("Enter student");
 
-const avg=calculate();
+  const avg = calculate();
 
-const {data:existing}=await supabase
-.from("academics")
-.select("*")
-.eq("student_id",studentRowId)
-.eq("year",year.value);
+  const { data: existing, error } = await supabase
+    .from("academics")
+    .select("*")
+    .eq("student_id", studentRowId)
+    .eq("year", year.value);
 
-if(existing.length){
-if(!confirm("Record exists. Update?")) return;
-return updateAcademic();
+  if (existing.length) {
+    if (!confirm("Record exists. Update?")) return;
+    return updateAcademic();
+  }
+
+  const { error: insertError } = await supabase
+    .from("academics")
+    .insert([{
+      student_id: studentRowId,
+      year: year.value,
+      term1: +term1.value || 0,
+      term2: +term2.value || 0,
+      term3: +term3.value || 0,
+      average: avg,
+      record_date: new Date().toLocaleString()
+    }]);
+
+  if (insertError) {
+    return alert("Error saving data: " + insertError.message);
+  }
+
+  alert("Saved ✔");
 }
 
-await supabase.from("academics").insert([{
-student_id:studentRowId,
-year:year.value,
-term1:+term1.value||0,
-term2:+term2.value||0,
-term3:+term3.value||0,
-average:avg,
-record_date:new Date().toLocaleString()
-}]);
+// UPDATE
+window.updateAcademic = async () => {
+  if (!studentRowId) return alert("Enter student");
 
-alert("Saved ✔");
-}
+  const { error } = await supabase
+    .from("academics")
+    .update({
+      term1: +term1.value || 0,
+      term2: +term2.value || 0,
+      term3: +term3.value || 0,
+      average: calculate(),
+      record_date: new Date().toLocaleString()
+    })
+    .eq("student_id", studentRowId)
+    .eq("year", year.value);
 
-/* UPDATE */
-window.updateAcademic=async()=>{
-if(!studentRowId)return alert("Enter student");
+  if (error) {
+    return alert("Error updating data: " + error.message);
+  }
 
-await supabase
-.from("academics")
-.update({
-term1:+term1.value||0,
-term2:+term2.value||0,
-term3:+term3.value||0,
-average:calculate(),
-record_date:new Date().toLocaleString()
-})
-.eq("student_id",studentRowId)
-.eq("year",year.value);
-
-alert("Updated ✔");
+  alert("Updated ✔");
 }
 </script>
 
