@@ -90,10 +90,9 @@ button{font-weight:bold;cursor:pointer}
 <script>
 
 /* GLOBAL ERROR ALERT */
-window.onerror = function(msg, src, line, col, err){
+window.onerror = function(msg, src, line, col){
 alert(
-"ERROR:\n"+
-msg+
+"JS ERROR:\n"+msg+
 "\nFile: "+src+
 "\nLine: "+line+
 "\nColumn: "+col
@@ -103,53 +102,41 @@ msg+
 /* SUPABASE INIT */
 const supabase = window.supabase.createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+"YOUR_PUBLIC_ANON_KEY"
 );
 
 const el=id=>document.getElementById(id);
 
 let schoolsMap={},currentStudentId=null,capturedBlob=null,cameraStream=null;
 
-/* AGE CALCULATION FIXED */
-el("dateOfBirth").addEventListener("change",()=>{
+/* AGE CALCULATION — FIXED */
+function calcAge(){
 const val = el("dateOfBirth").value;
-
-if(!val){
-el("age").value="";
-return;
-}
+if(!val){ el("age").value=""; return; }
 
 const birth = new Date(val);
-if(isNaN(birth)){
-alert("Invalid date of birth");
-el("age").value="";
-return;
-}
+if(isNaN(birth)){ el("age").value=""; return; }
 
-const today = new Date();
-let age = today.getFullYear() - birth.getFullYear();
-const m = today.getMonth() - birth.getMonth();
+const today=new Date();
+let age=today.getFullYear()-birth.getFullYear();
+const m=today.getMonth()-birth.getMonth();
 
-if(m < 0 || (m === 0 && today.getDate() < birth.getDate()))
+if(m<0 || (m===0 && today.getDate()<birth.getDate()))
 age--;
 
-el("age").value = age >= 0 ? age : "";
-});
+el("age").value = age>=0 ? age : "";
+}
+el("dateOfBirth").addEventListener("input",calcAge);
+el("dateOfBirth").addEventListener("change",calcAge);
 
 /* LOAD SCHOOLS */
 async function loadSchools(){
 try{
+
 const {data,error}=await supabase.from("schools").select("*");
 
-if(error){
-console.error(error);
-alert("Schools load error:\n"+error.message);
-return;
-}
-if(!data || data.length===0){
-alert("No schools found in database");
-return;
-}
+if(error) return alert("School Load Error:\n"+error.message);
+if(!data || data.length===0) return alert("No schools in database");
 
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
 
@@ -157,16 +144,14 @@ data.forEach(s=>{
 try{
 if(typeof s.classes==="string") s.classes=JSON.parse(s.classes||"[]");
 if(typeof s.streams==="string") s.streams=JSON.parse(s.streams||"[]");
-}catch(e){
-alert("Invalid classes/streams JSON in school "+s.name);
-}
+}catch{}
 
 schoolsMap[s.name]=s;
 el("schoolSelect").add(new Option(s.name,s.name));
 });
 
 }catch(err){
-alert("Fatal loadSchools error:\n"+err.message);
+alert("Fatal school load:\n"+err.message);
 }
 }
 loadSchools();
@@ -177,7 +162,8 @@ const s=schoolsMap[el("schoolSelect").value];
 
 el("gradeSelect").innerHTML="<option>Select Class</option>";
 el("streamSelect").innerHTML="<option>Select Stream</option>";
-if(!s)return;
+
+if(!s) return;
 
 el("levelDisplay").value=s.level||"";
 
@@ -185,11 +171,12 @@ el("levelDisplay").value=s.level||"";
 (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 };
 
-/* SEARCH */
+/* SEARCH STUDENT */
 async function searchStudent(){
 try{
+
 const id=el("studentId").value.trim();
-if(!id)return alert("Enter admission number");
+if(!id) return alert("Enter admission number");
 
 const {data,error}=await supabase
 .from("students")
@@ -197,20 +184,18 @@ const {data,error}=await supabase
 .eq("studentId",id)
 .maybeSingle();
 
-if(error){
-console.error(error);
-alert("Search error:\n"+error.message);
-return;
-}
-if(!data){ alert("Student not in system"); return; }
+if(error) return alert("Search Error:\n"+error.message);
+if(!data) return alert("Student not found");
 
 currentStudentId=id;
 
 el("studentName").value=data.studentName||"";
 el("dateOfBirth").value=data.dateOfBirth||"";
-el("age").value=data.age||"";
+calcAge();
+
 el("schoolSelect").value=data.school||"";
 el("schoolSelect").onchange();
+
 el("gradeSelect").value=data.grade||"";
 el("streamSelect").value=data.stream||"";
 
@@ -257,16 +242,12 @@ video.style.display="none";
 async function uploadPhoto(id){
 try{
 let f=el("photoUpload").files[0]||capturedBlob;
-if(!f)return null;
+if(!f) return null;
 
 const path=`students/${id}_${Date.now()}.jpg`;
 
 const {error}=await supabase.storage.from("photos").upload(path,f);
-if(error){
-console.error(error);
-alert("Upload error:\n"+error.message);
-return null;
-}
+if(error){ alert(error.message); return null; }
 
 return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 
@@ -276,8 +257,9 @@ return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
 /* REGISTER */
 async function registerStudent(){
 try{
+
 const id=el("studentId").value.trim();
-if(!id)return alert("Admission number required");
+if(!id) return alert("Admission number required");
 
 const photo=await uploadPhoto(id);
 
@@ -293,11 +275,7 @@ stream:el("streamSelect").value||null,
 photo
 }]);
 
-if(error){
-console.error(error);
-alert("Insert error:\n"+error.message);
-return;
-}
+if(error) return alert("Insert Error:\n"+error.message);
 
 el("message").innerText="Student Registered ✔";
 
@@ -307,31 +285,29 @@ el("message").innerText="Student Registered ✔";
 /* UPDATE */
 async function updateStudent(){
 try{
-if(!currentStudentId)return alert("Search student first");
+
+if(!currentStudentId) return alert("Search student first");
 
 const photo=await uploadPhoto(currentStudentId);
 
 let data={
 studentName:el("studentName").value,
-dateOfBirth:el("dateOfBirth").value,
+dateOfBirth:el("dateOfBirth").value||null,
 age:Number(el("age").value)||null,
-school:el("schoolSelect").value,
-level:el("levelDisplay").value,
-grade:el("gradeSelect").value,
-stream:el("streamSelect").value
+school:el("schoolSelect").value||null,
+level:el("levelDisplay").value||null,
+grade:el("gradeSelect").value||null,
+stream:el("streamSelect").value||null
 };
-if(photo)data.photo=photo;
+
+if(photo) data.photo=photo;
 
 const {error}=await supabase
 .from("students")
 .update(data)
 .eq("studentId",currentStudentId);
 
-if(error){
-console.error(error);
-alert("Update error:\n"+error.message);
-return;
-}
+if(error) return alert("Update Error:\n"+error.message);
 
 el("message").innerText="Student Updated ✔";
 
@@ -345,10 +321,11 @@ supabase.channel("students")
 p=>el("liveList").innerHTML+=`<div>${p.new.studentId} — ${p.new.studentName}</div>`
 ).subscribe();
 
-/* INITIAL LIST */
+/* INITIAL LOAD */
 (async()=>{
 const {data,error}=await supabase.from("students").select("*").limit(20);
-if(error){ alert(error.message); return; }
+if(error) return alert(error.message);
+
 data?.forEach(s=>{
 el("liveList").innerHTML+=`<div>${s.studentId} — ${s.studentName}</div>`;
 });
