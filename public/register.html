@@ -196,8 +196,7 @@ window.registerStudent = async () => {
 
   const isDuplicate = await checkDuplicate(studentId);
   if (isDuplicate) {
-    alert("This admission number is already taken. Please use a different one.");
-    return; // Prevent proceeding with registration
+    return alert("This admission number is already registered.");
   }
 
   await saveStudent(); // Proceed with the registration if no duplicate
