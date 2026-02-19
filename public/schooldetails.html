@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>School Details - NEWIS</title>
+<title>School Manager - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -17,25 +17,23 @@
  --bg1:#f2f7ff;
  --bg2:#dbeafe;
  --bg3:#c7d2fe;
- --glass:rgba(255,255,255,0.8);
+ --glass:rgba(255,255,255,0.85);
  --text:#111;
 }
 body{
  margin:0;
- font-family:'Segoe UI',Arial;
+ font-family:Segoe UI;
  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
  color:var(--text);
  display:flex;
  justify-content:center;
- padding-top:20px;
- min-height:100vh;
- transition:.3s;
+ padding:20px;
 }
 .container{
- background:var(--glass);
- padding:30px;
- border-radius:20px;
  width:720px;
+ background:var(--glass);
+ padding:25px;
+ border-radius:20px;
  backdrop-filter:blur(15px);
 }
 input,select,button{
@@ -45,16 +43,11 @@ input,select,button{
  border:none;
  border-radius:10px;
 }
-button{font-weight:bold;cursor:pointer}
+button{cursor:pointer;font-weight:bold}
 .btn{background:#00c6ff;color:white}
-.btn-danger{background:#dc3545}
-.btn-edit{background:#28a745}
-.btn-clear{background:#6c757d}
-.topbar{
- display:flex;
- justify-content:flex-end;
- margin-bottom:10px;
-}
+.btn-edit{background:#28a745;color:white}
+.btn-danger{background:#dc3545;color:white}
+.btn-clear{background:#6c757d;color:white}
 .item-list{display:flex;flex-wrap:wrap;gap:6px}
 .item{
  background:rgba(0,0,0,.4);
@@ -67,38 +60,34 @@ button{font-weight:bold;cursor:pointer}
  color:white;
  border-radius:50%;
 }
-.success{text-align:center;color:#00ff99;margin-top:10px}
-.spinner{
- display:none;
- text-align:center;
- font-size:18px;
-}
+.spinner{display:none;text-align:center}
 .search-results{
  background:#111;
  border-radius:10px;
  max-height:150px;
  overflow:auto;
  position:absolute;
- width:90%;
+ width:85%;
  z-index:99;
 }
 .search-results div{
  padding:8px;
  cursor:pointer;
 }
-.search-results div:hover{
- background:#00c6ff;
+.search-results div:hover{background:#00c6ff}
+.stats{
+ background:rgba(0,0,0,.4);
+ padding:10px;
+ border-radius:10px;
+ margin-top:15px;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-<div class="topbar">
 <button onclick="toggleTheme()">Toggle Theme</button>
-</div>
 
 <h2>School Manager</h2>
 
@@ -106,15 +95,26 @@ button{font-weight:bold;cursor:pointer}
 <div id="results" class="search-results"></div>
 
 <input id="schoolName" placeholder="School Name">
+
 <select id="schoolLevel">
 <option value="">Level</option>
+<option>Pre-primary</option>
 <option>Primary</option>
-<option>Secondary</option>
-<option>College</option>
+<option>Junior Secondary</option>
+<option>Senior Secondary</option>
+<option>College / TVET</option>
 </select>
 
-<input id="schoolCounty" placeholder="County">
-<input id="schoolSubcounty" placeholder="Subcounty">
+<input list="countiesList" id="schoolCounty" placeholder="County">
+<datalist id="countiesList"></datalist>
+
+<input id="schoolRegion" placeholder="Region" readonly>
+
+<input list="subcountiesList" id="schoolSubcounty" placeholder="Subcounty">
+<datalist id="subcountiesList"></datalist>
+
+<button onclick="detectGPS()">📍 Detect County Automatically</button>
+
 <input id="schoolPhone" placeholder="Phone">
 
 <input id="classInput" placeholder="Enter class + Enter">
@@ -129,191 +129,217 @@ button{font-weight:bold;cursor:pointer}
 <button class="btn-clear" onclick="clearForm()">Clear</button>
 
 <div class="spinner" id="loader">⏳ Processing...</div>
-<div id="message" class="success"></div>
+<div id="message"></div>
+
+<div class="stats">
+<h3>Dashboard Stats</h3>
+<div id="statsBox">Loading stats...</div>
+</div>
 
 </div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* CONNECT */
 const supabase=createClient(
 "https://xnvnskxcsphbvkxhndui.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
+"YOUR_PUBLIC_ANON_KEY"
 );
 
 /* STATE */
 let currentId=null;
-let classes=[],streams=[];
-
+let classes=[];
+let streams=[];
 const loader=document.getElementById("loader");
-function load(on){loader.style.display=on?"block":"none"}
+function load(x){loader.style.display=x?"block":"none"}
 
 /* THEME */
-window.toggleTheme=()=>{
- document.body.classList.toggle("light")
-};
+window.toggleTheme=()=>document.body.classList.toggle("light")
 
 /* CLEAR */
 window.clearForm=()=>{
- currentId=null;
- classes=[];streams=[];
- document.querySelectorAll("input").forEach(i=>i.value="")
- classesList.innerHTML="";
- streamsList.innerHTML="";
-};
-
-/* RENDER TAGS */
-function render(arr,box){
- box.innerHTML="";
- arr.forEach((v,i)=>{
-  const d=document.createElement("div");
-  d.className="item";
-  d.innerHTML=v+" <button>x</button>";
-  d.onclick=()=>{arr.splice(i,1);render(arr,box)}
-  box.appendChild(d);
- })
+currentId=null;
+classes=[];streams=[];
+document.querySelectorAll("input").forEach(i=>i.value="")
+classesList.innerHTML="";
+streamsList.innerHTML="";
 }
 
+/* TAGS */
+function render(arr,box){
+box.innerHTML="";
+arr.forEach((v,i)=>{
+const d=document.createElement("div");
+d.className="item";
+d.innerHTML=v+" <button>x</button>";
+d.onclick=()=>{arr.splice(i,1);render(arr,box)}
+box.appendChild(d);
+})
+}
 classInput.onkeydown=e=>{
- if(e.key==="Enter"&&classInput.value){
-  classes.push(classInput.value);
-  render(classes,classesList);
-  classInput.value=""
- }
-};
+if(e.key==="Enter"&&classInput.value){
+classes.push(classInput.value);
+render(classes,classesList);
+classInput.value="";
+}
+}
 streamInput.onkeydown=e=>{
- if(e.key==="Enter"&&streamInput.value){
-  streams.push(streamInput.value);
-  render(streams,streamsList);
-  streamInput.value=""
- }
+if(e.key==="Enter"&&streamInput.value){
+streams.push(streamInput.value);
+render(streams,streamsList);
+streamInput.value="";
+}
+}
+
+/* COUNTY + REGION */
+const regions={
+"Nairobi":"National",
+"Mombasa":"Coast",
+"Kilifi":"Coast",
+"Kwale":"Coast",
+"Mandera":"North Eastern",
+"Garissa":"North Eastern"
 };
+
+const counties={
+"Nairobi":["Westlands","Langata","Embakasi East"],
+"Mombasa":["Nyali","Likoni"],
+"Kilifi":["Malindi","Kilifi North"],
+"Garissa":["Dadaab"]
+};
+
+Object.keys(counties).forEach(c=>countiesList.appendChild(new Option(c,c)));
+
+schoolCounty.oninput=()=>{
+schoolRegion.value=regions[schoolCounty.value]||"Regional";
+subcountiesList.innerHTML="";
+(counties[schoolCounty.value]||[]).forEach(s=>subcountiesList.appendChild(new Option(s,s)))
+}
 
 /* SEARCH */
 searchName.oninput=async()=>{
- const q=searchName.value;
- if(q.length<2){results.innerHTML="";return}
-
- const {data}=await supabase
- .from("schools")
- .select("name")
- .ilike("name",`%${q}%`)
- .limit(5);
-
- results.innerHTML="";
- data.forEach(s=>{
-  const d=document.createElement("div");
-  d.textContent=s.name;
-  d.onclick=()=>loadSchool(s.name);
-  results.appendChild(d);
- })
-};
+const q=searchName.value;
+if(q.length<2){results.innerHTML="";return}
+const {data}=await supabase.from("schools").select("name").ilike("name",`%${q}%`).limit(5);
+results.innerHTML="";
+data.forEach(s=>{
+const d=document.createElement("div");
+d.textContent=s.name;
+d.onclick=()=>loadSchool(s.name);
+results.appendChild(d);
+})
+}
 
 /* LOAD SCHOOL */
 async function loadSchool(name){
- load(true);
- results.innerHTML="";
- searchName.value=name;
+load(true);
+results.innerHTML="";
+const id=name.toLowerCase().replace(/\s+/g,"_");
+currentId=id;
 
- const id=name.toLowerCase().replace(/\s+/g,"_");
- currentId=id;
+const {data}=await supabase.from("schools").select("*").eq("id",id).single();
+if(!data){alert("Not found");load(false);return}
 
- const {data}=await supabase
- .from("schools")
- .select("*")
- .eq("id",id)
- .single();
-
- if(!data){alert("Not found");load(false);return}
-
- schoolName.value=data.name;
- schoolLevel.value=data.level;
- schoolCounty.value=data.county;
- schoolSubcounty.value=data.subcounty;
- schoolPhone.value=data.phone;
-
- classes=data.classes||[];
- streams=data.streams||[];
-
- render(classes,classesList);
- render(streams,streamsList);
- load(false);
+schoolName.value=data.name;
+schoolLevel.value=data.level;
+schoolCounty.value=data.county;
+schoolRegion.value=regions[data.county]||"Regional";
+schoolSubcounty.value=data.subcounty;
+schoolPhone.value=data.phone;
+classes=data.classes||[];
+streams=data.streams||[];
+render(classes,classesList);
+render(streams,streamsList);
+load(false);
 }
 
 /* VALIDATE */
 function validate(){
- if(!schoolName.value) return "Enter school name";
- if(!schoolLevel.value) return "Select level";
- return null;
+if(!schoolName.value)return"Enter school name";
+if(!schoolLevel.value)return"Select level";
+return null;
 }
 
-/* CREATE */
+/* CREATE + DUPLICATE CHECK */
 window.createSchool=async()=>{
- const err=validate();
- if(err)return alert(err);
+const err=validate();
+if(err)return alert(err);
+load(true);
 
- load(true);
+const id=schoolName.value.toLowerCase().replace(/\s+/g,"_");
 
- const id=schoolName.value.toLowerCase().replace(/\s+/g,"_");
+const {data:exists}=await supabase.from("schools").select("id").eq("id",id).single();
+if(exists){load(false);return alert("School already exists")}
 
- const {error}=await supabase.from("schools").insert({
- id,
- name:schoolName.value,
- level:schoolLevel.value,
- county:schoolCounty.value,
- subcounty:schoolSubcounty.value,
- phone:schoolPhone.value,
- classes,
- streams
- });
-
- load(false);
- if(error) return alert(error.message);
- message.innerText="Created successfully";
- clearForm();
-};
+const {error}=await supabase.from("schools").insert({
+id,
+name:schoolName.value,
+level:schoolLevel.value,
+county:schoolCounty.value,
+subcounty:schoolSubcounty.value,
+phone:schoolPhone.value,
+classes,
+streams
+});
+load(false);
+if(error)return alert(error.message);
+message.innerText="Created ✔";
+loadStats();
+}
 
 /* UPDATE */
 window.updateSchool=async()=>{
- if(!currentId) return alert("Search school first");
- load(true);
-
- const {error}=await supabase
- .from("schools")
- .update({
- name:schoolName.value,
- level:schoolLevel.value,
- county:schoolCounty.value,
- subcounty:schoolSubcounty.value,
- phone:schoolPhone.value,
- classes,
- streams
- })
- .eq("id",currentId);
-
- load(false);
- if(error) return alert(error.message);
- message.innerText="Updated";
-};
+if(!currentId)return alert("Search school first");
+load(true);
+const {error}=await supabase.from("schools").update({
+name:schoolName.value,
+level:schoolLevel.value,
+county:schoolCounty.value,
+subcounty:schoolSubcounty.value,
+phone:schoolPhone.value,
+classes,
+streams
+}).eq("id",currentId);
+load(false);
+if(error)return alert(error.message);
+message.innerText="Updated ✔";
+loadStats();
+}
 
 /* DELETE */
 window.deleteSchool=async()=>{
- if(!currentId) return alert("Search first");
- if(!confirm("Delete?")) return;
- load(true);
+if(!currentId)return alert("Search first");
+if(!confirm("Delete?"))return;
+load(true);
+await supabase.from("schools").delete().eq("id",currentId);
+load(false);
+message.innerText="Deleted ✔";
+clearForm();
+loadStats();
+}
 
- const {error}=await supabase
- .from("schools")
- .delete()
- .eq("id",currentId);
+/* GPS DETECT COUNTY */
+window.detectGPS=()=>{
+navigator.geolocation.getCurrentPosition(pos=>{
+const lat=pos.coords.latitude;
+if(lat>-2&&lat<2) schoolCounty.value="Nairobi";
+else if(lat<-3) schoolCounty.value="Mombasa";
+else schoolCounty.value="Garissa";
+schoolCounty.oninput();
+});
+}
 
- load(false);
- if(error)return alert(error.message);
- message.innerText="Deleted";
- clearForm();
-};
+/* DASHBOARD STATS */
+async function loadStats(){
+const {data}=await supabase.from("schools").select("county");
+let counts={};
+data.forEach(s=>counts[s.county]=(counts[s.county]||0)+1);
+statsBox.innerHTML="";
+Object.entries(counts).forEach(([c,n])=>{
+statsBox.innerHTML+=`<div>${c}: ${n} schools</div>`;
+});
+}
+loadStats();
 </script>
-
 </body>
 </html>
