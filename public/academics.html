@@ -5,12 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{
+/* Dynamic AI-style moving gradient background */
+body {
   margin:0;
   font-family:'Segoe UI',sans-serif;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
   color:white;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  background-size: 400% 400%;
+  animation: gradientAnimation 15s ease infinite;
 }
+@keyframes gradientAnimation {
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+
 .container{
   max-width:1100px;
   margin:30px auto;
@@ -50,13 +59,14 @@ button{
   width:160px;
   height:160px;
   border-radius:50%;
-  background:conic-gradient(#00ff99 0deg,#333 0deg);
   display:flex;
   align-items:center;
   justify-content:center;
   font-size:22px;
   font-weight:bold;
   margin:25px auto;
+  background: conic-gradient(#00ff99 0deg,#333 0deg);
+  transition: background 0.8s, transform 0.5s;
 }
 .grid{
   display:grid;
@@ -151,7 +161,7 @@ function calculateAge(dob) {
   return age;
 }
 
-// Clear field if >100
+// Clear input if >100
 function validateTermInput(e) {
   if (+e.target.value > 100) e.target.value = "";
   calculate();
@@ -180,7 +190,6 @@ studentId.addEventListener("change", async () => {
   gender.value = data.gender || "";
   parentName.value = data.parentname || "";
 
-  // Load last academic record
   const { data: acad } = await supabase
     .from("academics")
     .select("*")
@@ -201,14 +210,27 @@ studentId.addEventListener("change", async () => {
   }
 });
 
-// Calculate average
+// Animate average circle
+let lastAvg = 0;
 function calculate() {
   const t1 = +term1.value || 0;
   const t2 = +term2.value || 0;
   const t3 = +term3.value || 0;
   const avg = Math.round((t1 + t2 + t3) / 3);
+
+  // Animate scale briefly
+  circle.style.transform = "scale(1.1)";
+  setTimeout(()=>{circle.style.transform = "scale(1)";}, 200);
+
+  // Color coding
+  let color = "#00ff99"; // green
+  if (avg <= 40) color = "#ff4d4d"; // red
+  else if (avg <= 60) color = "#ffd11a"; // yellow
+
+  // Animate background smoothly
+  circle.style.background = `conic-gradient(${color} ${avg*3.6}deg,#333 0deg)`;
   circle.innerText = avg + "%";
-  circle.style.background = `conic-gradient(#00ff99 ${avg*3.6}deg,#333 0deg)`;
+  lastAvg = avg;
   return avg;
 }
 
