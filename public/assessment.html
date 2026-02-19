@@ -2,199 +2,321 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>All Behavioral Records - NEWIS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Socioeconomic Risk Assessment - NEWIS</title>
-
 <style>
-body{
-  font-family: Arial, sans-serif;
+/* --- Body & Container --- */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
   background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  margin:0;
-  color:#fff;
+  color: white;
 }
-.container{
-  max-width:800px;
-  margin:20px auto;
-  padding:20px;
+.container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
   background: rgba(255,255,255,0.08);
-  border-radius:15px;
+  border-radius: 20px;
   backdrop-filter: blur(15px);
-  box-shadow:0 0 40px rgba(0,0,0,0.5);
+  box-shadow: 0 0 40px rgba(0,0,0,0.5);
 }
-h1,h2{text-align:center;margin-bottom:20px;}
-.grid{
-  display:grid;
-  grid-template-columns: 1fr;
-  gap:20px;
+
+/* --- Headings --- */
+h1 { 
+  text-align: center; 
+  margin-bottom: 20px; 
+  font-size: 1.8rem; 
 }
-.section{
-  background:#f4f6fa;
-  padding:20px;
-  border-radius:12px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.1);
-  color:#000;
+
+/* --- Filters & Actions --- */
+.filters, .actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
 }
-label{display:block;margin:6px 0;}
-input[type="text"]{
-  width:100%;
-  padding:10px;
-  margin-bottom:10px;
-  border-radius:8px;
-  border:1px solid #ccc;
+.filters input, .filters select, .actions button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 0.95rem;
 }
-.buttons{
-  margin-top:25px;
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  justify-content:center;
+.actions button { cursor: pointer; }
+.btn-download{ background:#00c6ff; color:white; }
+.btn-nav{ background:#17a2b8; color:white; }
+.btn-filter{ background:#ffc107; color:black; }
+.btn-print{ background:#28a745; color:white; }
+.btn-delete{ background:#dc3545; color:white; }
+
+/* --- Status Colors --- */
+.green{ color:lightgreen; font-weight:bold; }
+.yellow{ color:yellow; font-weight:bold; }
+.red{ color:#ff4d4d; font-weight:bold; }
+
+/* --- Table Styling --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.9rem;
 }
-button{
-  padding:10px 15px;
-  border:none;
-  border-radius:8px;
-  font-weight:bold;
-  cursor:pointer;
-  min-width:120px;
+th, td {
+  padding: 8px;
+  text-align: center;
 }
-.save{background:#28a745;color:#fff;}
-.update{background:#ffc107;}
-.delete{background:#dc3545;color:#fff;}
-.clear{background:#6c757d;color:#fff;}
-.circle{
-  width:170px;
-  height:170px;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:28px;
-  font-weight:bold;
-  margin:20px auto;
-  color:#fff;
+th { background: rgba(255,255,255,0.2); }
+tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+
+/* --- Responsive Mobile Table --- */
+@media screen and (max-width:768px){
+  table, thead, tbody, th, td, tr { display: block; width: 100%; }
+  thead { display: none; }
+  tr { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+  td {
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+    word-break: break-word;
+  }
+  td::before {
+    position: absolute;
+    left: 15px;
+    width: 45%;
+    white-space: nowrap;
+    font-weight: bold;
+  }
+  td:nth-of-type(1)::before{content:"Select";}
+  td:nth-of-type(2)::before{content:"Adm No";}
+  td:nth-of-type(3)::before{content:"Name";}
+  td:nth-of-type(4)::before{content:"Class";}
+  td:nth-of-type(5)::before{content:"School";}
+  td:nth-of-type(6)::before{content:"Risk %";}
+  td:nth-of-type(7)::before{content:"Date Recorded";}
+  td:nth-of-type(8)::before{content:"Status";}
+  td:nth-of-type(9)::before{content:"Report";}
+  .filters input, .filters select, .actions button {
+    flex: 1 1 100%;
+    font-size: 1rem;
+  }
 }
-.green{background:#28a745;}
-.yellow{background:#ffc107;color:black;}
-.red{background:#dc3545;}
+
+/* --- Buttons Full Width on Very Small Screens --- */
+@media screen and (max-width:480px){
+  .actions button, .filters input, .filters select {
+    width: 100%;
+  }
+}
 </style>
 </head>
-
 <body>
 <div class="container">
+  <h1>📊 All Students Behavioral Risk Records</h1>
 
-<h1>Socioeconomic Risk Assessment</h1>
+  <!-- Navigation Buttons -->
+  <div class="actions">
+    <button class="btn-nav" onclick="window.location.href='behavioral.html'">⬅ Back</button>
+    <button class="btn-nav" onclick="window.location.href='assessment.html'">Next ➡</button>
+  </div>
 
-<div class="grid">
+  <!-- Filters -->
+  <div class="filters">
+    <input type="text" id="searchInput" placeholder="Search Admission Number">
+    <select id="classFilter"><option value="All">All Classes</option></select>
+    <select id="riskFilter">
+      <option value="All">All Risk Levels</option>
+      <option value="High">High Risk (&gt;50%)</option>
+      <option value="Medium">Moderate Risk (=50%)</option>
+      <option value="Low">Low Risk (&lt;50%)</option>
+    </select>
+    <button class="btn-filter" onclick="renderTable()">Apply</button>
+  </div>
 
-<div class="section">
-<h3>Student Details</h3>
-<label>Admission Number:</label>
-<input type="text" id="studentId" placeholder="Enter Admission Number">
-<label>Student Name:</label>
-<input type="text" id="studentName">
-<label>Class:</label>
-<input type="text" id="studentClass">
-<button class="view" onclick="fetchStudent()">Fetch Student</button>
-</div>
+  <!-- Action Buttons -->
+  <div class="actions">
+    <button class="btn-download" onclick="downloadAll()">Download All</button>
+    <button class="btn-download" onclick="downloadSelected()">Download Selected</button>
+    <button class="btn-print" onclick="printAll()">Print All</button>
+    <button class="btn-print" onclick="printSelected()">Print Selected</button>
+    <button class="btn-delete" onclick="deleteSelected()">Delete Selected</button>
+  </div>
 
-<div class="section">
-<h3>Socioeconomic Risk Indicators</h3>
-<label><input type="checkbox" class="risk" value="poverty"> Household poverty</label>
-<label><input type="checkbox" class="risk" value="fees"> Unable to pay school fees</label>
-<label><input type="checkbox" class="risk" value="orphan"> Orphan / vulnerable child</label>
-<label><input type="checkbox" class="risk" value="childlabour"> Child labour</label>
-<label><input type="checkbox" class="risk" value="singleparent"> Single parent</label>
-<label><input type="checkbox" class="risk" value="violence"> Domestic/community violence</label>
-<label><input type="checkbox" class="risk" value="largedependents"> Large dependent family</label>
-<label><input type="checkbox" class="risk" value="poorhousing"> Poor housing conditions</label>
-<label><input type="checkbox" class="risk" value="pregnancy"> Early pregnancy</label>
-<label><input type="checkbox" class="risk" value="absenteeism"> Chronic absenteeism</label>
-<label><input type="checkbox" class="risk" value="drought"> Drought / disaster</label>
-<label><input type="checkbox" class="risk" value="distance"> Long distance to school</label>
-</div>
-
-<div class="section">
-<h3>Socioeconomic Risk Level</h3>
-<div id="riskCircle" class="circle green">0%</div>
-<p style="text-align:center;font-weight:bold;" id="riskLevel">Low Risk</p>
-</div>
-
-</div>
-
-<div class="buttons">
-<button class="save" onclick="saveRecord()">Save</button>
-<button class="update" onclick="updateRecord()">Update</button>
-<button class="delete" onclick="deleteRecord()">Delete</button>
-<button class="clear" onclick="clearForm()">Clear</button>
-</div>
-
+  <!-- Records Table -->
+  <table id="recordsTable">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAll"></th>
+        <th>Adm No</th>
+        <th>Name</th>
+        <th>Class</th>
+        <th>School</th>
+        <th>Risk %</th>
+        <th>Date Recorded</th>
+        <th>Status</th>
+        <th>Report</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* SUPABASE CONNECTION */
 const supabase = createClient(
   "https://xnvnskxcsphbvkxhndui.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhudm5za3hjc3BoYnZreGhuZHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjEwNjIsImV4cCI6MjA4Njk5NzA2Mn0.QMn4OHjv9CQC3RIj62aJG8JXI03gtbodtUEIP7uhwLQ"
 );
 
-/* ------------------- FETCH STUDENT DATA ------------------- */
-async function fetchStudent(){
-  const id = document.getElementById("studentId").value.trim();
-  if(!id) return;
+let allData=[];
+
+async function loadData(){
   const { data, error } = await supabase
-    .from("students")
-    .select("*")
-    .eq("studentid", id)
-    .single();
-  if(error){
-    alert("Student not found");
-    document.getElementById("studentName").value = "";
-    document.getElementById("studentClass").value = "";
-    return;
+    .from("behavior")
+    .select(`
+      id,
+      total_risk,
+      recorded_at,
+      total_days,
+      days_present,
+      behavior_risks,
+      student:student_id (
+        studentid,
+        studentname,
+        grade,
+        school
+      )
+    `)
+    .order("recorded_at", { ascending: false });
+
+  if (error) { 
+    alert(error.message); 
+    return; 
   }
-  document.getElementById("studentName").value = data.studentname || "";
-  document.getElementById("studentClass").value = data.grade || "";
+
+  allData = data.map(r => ({
+    id: r.id,
+    adm: r.student.studentid,
+    name: r.student.studentname,
+    class: r.student.grade,
+    school: r.student.school,
+    risk: r.total_risk,
+    status: r.total_risk > 50 ? "High" : r.total_risk == 50 ? "Medium" : "Low",
+    date: new Date(r.recorded_at)
+  }));
+
+  populateClassFilter();
+  renderTable();
 }
 
-document.getElementById("studentId").addEventListener("blur", fetchStudent);
-
-/* ------------------- RISK CALCULATION ------------------- */
-function calculateRisk(){
-  const checked = [...document.querySelectorAll(".risk:checked")];
-  const factorCount = checked.length;
-
-  let total = 0;
-  if(factorCount > 0){
-    const weightPerFactor = 100 / factorCount;
-    total = weightPerFactor * factorCount; // can adjust scaling if needed
-  }
-
-  const circle = document.getElementById("riskCircle");
-  const level = document.getElementById("riskLevel");
-
-  if(total > 100) total = 100;
-  circle.textContent = Math.round(total) + "%";
-
-  if(total < 45){
-    circle.className = "circle green";
-    level.textContent = "Low Risk";
-  } else if(total <= 55){
-    circle.className = "circle yellow";
-    level.textContent = "Medium Risk";
-  } else {
-    circle.className = "circle red";
-    level.textContent = "High Risk";
-  }
-
-  return Math.round(total);
+function populateClassFilter(){
+  const select=document.getElementById("classFilter");
+  const classes=[...new Set(allData.map(x=>x.class))];
+  select.innerHTML='<option value="All">All Classes</option>';
+  classes.forEach(c=>{
+    const o=document.createElement("option");
+    o.value=c; o.textContent=c;
+    select.appendChild(o);
+  });
 }
 
-document.querySelectorAll(".risk").forEach(cb => cb.addEventListener("change", calculateRisk));
+window.renderTable = () => {
+  const tbody=document.querySelector("#recordsTable tbody");
+  tbody.innerHTML="";
+  const search=document.getElementById("searchInput").value.toLowerCase();
+  const classFilter=document.getElementById("classFilter").value;
+  const riskFilter=document.getElementById("riskFilter").value;
 
-/* ------------------- SAVE/UPDATE/DELETE ------------------- */
-window.saveRecord = async () => {
-  const id = studentId.value.trim();
-  if(!
-zzzzz
+  const filtered=allData.filter(r=>{
+    return r.adm.toLowerCase().includes(search) &&
+      (classFilter==="All"||r.class===classFilter) &&
+      (riskFilter==="All"||
+        (riskFilter==="High"&&r.risk>50)||
+        (riskFilter==="Medium"&&r.risk==50)||
+        (riskFilter==="Low"&&r.risk<50));
+  });
+
+  filtered.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><input type="checkbox" class="rowCheck" data-id="${r.id}"></td>
+      <td>${r.adm}</td>
+      <td>${r.name}</td>
+      <td>${r.class}</td>
+      <td>${r.school}</td>
+      <td>${r.risk}%</td>
+      <td>${r.date.toLocaleDateString()}</td>
+      <td class="${r.status==='High'?'red':r.status==='Medium'?'yellow':'green'}">${r.status}</td>
+      <td><button onclick='printReport(${JSON.stringify(r)})'>Print</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+
+document.getElementById("selectAll").addEventListener("change",function(){
+  document.querySelectorAll(".rowCheck").forEach(cb=>cb.checked=this.checked);
+});
+
+window.deleteSelected = async () => {
+  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  if(!ids.length) return alert("No records selected");
+  if(!confirm("Delete selected records?")) return;
+  await supabase.from("behavior").delete().in("id",ids);
+  loadData();
+};
+
+function downloadCSV(rows,name){
+  if(!rows.length) return alert("No data");
+  let csv="AdmNo,Name,Class,School,Risk,Status,Date\n";
+  rows.forEach(r=>{
+    csv+=`${r.adm},${r.name},${r.class},${r.school},${r.risk},${r.status},${r.date.toLocaleDateString()}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
+  a.click();
+}
+window.downloadAll=()=>downloadCSV(allData,"All_Behavioral.csv");
+window.downloadSelected=()=>{
+  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  const rows=allData.filter(r=>ids.includes(r.id));
+  downloadCSV(rows,"Selected_Behavioral.csv");
+};
+
+window.printReport=(r)=>{
+  const win=window.open("","_blank");
+  win.document.write(`
+    <h2>Behavioral Report</h2>
+    Admission: ${r.adm}<br>
+    Name: ${r.name}<br>
+    Class: ${r.class}<br>
+    School: ${r.school}<br>
+    Risk: ${r.risk}%<br>
+    Status: ${r.status}<br>
+    Date: ${r.date.toLocaleDateString()}<br><br>
+    <button onclick="window.print()">Print</button>
+  `);
+};
+
+function printReportList(rows){
+  const win=window.open("","_blank");
+  let html="<h2>Behavioral Records</h2>";
+  rows.forEach(r=>{
+    html+=`<hr>${r.adm} | ${r.name} | ${r.class} | ${r.risk}% | ${r.status}`;
+  });
+  win.document.write(html+"<br><button onclick='window.print()'>Print</button>");
+}
+window.printAll=()=>printReportList(allData);
+window.printSelected=()=>{
+  const ids=[...document.querySelectorAll(".rowCheck:checked")].map(cb=>cb.dataset.id);
+  const rows=allData.filter(r=>ids.includes(r.id));
+  printReportList(rows);
+};
+
+loadData();
+</script>
+</body>
+</html>
