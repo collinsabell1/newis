@@ -2,59 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>NEWIS - Student Registration</title>
+<title>NEWIS Student System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+*{box-sizing:border-box}
+
 body{
 margin:0;
 font-family:'Segoe UI',sans-serif;
 background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
 display:flex;
 justify-content:center;
-padding:20px;
-color:white;
+padding:15px;
 }
 
+/* CONTAINER */
 .container{
 width:100%;
-max-width:700px;
-background:rgba(255,255,255,0.08);
-backdrop-filter:blur(20px);
+max-width:750px;
+background:rgba(255,255,255,.08);
+backdrop-filter:blur(18px);
 border-radius:20px;
-padding:25px;
+padding:20px;
 box-shadow:0 10px 30px rgba(0,0,0,.4);
 }
 
-h2,h3{margin-top:0}
+/* NAVIGATION */
+.nav{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin-bottom:15px;
+}
 
+.nav button{
+flex:1;
+min-width:120px;
+}
+
+/* INPUTS */
 input,select{
 width:100%;
 padding:12px;
 margin:6px 0;
 border-radius:10px;
 border:none;
-outline:none;
+font-size:15px;
 }
 
+/* BUTTONS */
 button{
 padding:12px;
 border:none;
 border-radius:12px;
 font-weight:bold;
 cursor:pointer;
-color:white;
-transition:.3s;
+transition:.25s;
 width:100%;
-margin:6px 0;
+}
+
+button:active{
+transform:scale(.97);
 }
 
 button:hover{
 transform:translateY(-2px);
-box-shadow:0 5px 15px rgba(0,0,0,.3);
+box-shadow:0 6px 15px rgba(0,0,0,.3);
 }
 
+/* COLORS */
+.primary{background:linear-gradient(45deg,#00c6ff,#0072ff);}
+.success{background:linear-gradient(45deg,#00b09b,#96c93d);}
+.warning{background:linear-gradient(45deg,#f7971e,#ffd200);color:black;}
+.danger{background:linear-gradient(45deg,#ff416c,#ff4b2b);}
+.purple{background:linear-gradient(45deg,#7f00ff,#e100ff);}
+.dark{background:#222}
+
+/* FLEX ROW */
 .row{
 display:flex;
 gap:10px;
@@ -63,34 +91,33 @@ flex-wrap:wrap;
 
 .row button{flex:1}
 
-.nav{background:linear-gradient(45deg,#00c6ff,#0072ff);}
-.search{background:linear-gradient(45deg,#f7971e,#ffd200);color:black;}
-.create{background:linear-gradient(45deg,#00b09b,#96c93d);}
-.update{background:linear-gradient(45deg,#11998e,#38ef7d);}
-.delete{background:linear-gradient(45deg,#ff416c,#ff4b2b);}
-.bulk{background:linear-gradient(45deg,#7f00ff,#e100ff);}
-.camera{background:linear-gradient(45deg,#fc466b,#3f5efb);}
-
-#video{width:100%;display:none;border-radius:10px;margin-top:10px}
-#preview{width:150px;border-radius:10px;margin-top:10px;display:none}
-
-.alert{
+/* ALERT */
+#alert{
+margin-top:10px;
 padding:10px;
 border-radius:8px;
-text-align:center;
-margin-top:10px;
 font-weight:bold;
+text-align:center;
+display:none;
 }
-.success{background:#00c851;}
-.error{background:#ff4444;}
 
-.student-row{
+#alert.success{background:#00c851;}
+#alert.error{background:#ff4444;}
+
+/* VIDEO */
+#video{width:100%;display:none;border-radius:10px;margin-top:10px}
+#preview{width:130px;border-radius:10px;margin-top:10px;display:none}
+
+/* STUDENT LIST */
+.student{
 padding:6px;
 border-bottom:1px solid rgba(255,255,255,.2);
+font-size:14px;
 }
 
+/* MOBILE */
 @media(max-width:480px){
-.row{flex-direction:column;}
+.nav,.row{flex-direction:column}
 }
 </style>
 </head>
@@ -98,15 +125,30 @@ border-bottom:1px solid rgba(255,255,255,.2);
 <body>
 <div class="container">
 
-<h2>Student Registration</h2>
+<h2>NEWIS Student System</h2>
 
-<div class="row">
-<button class="nav" onclick="location.reload()">Refresh</button>
-<button class="bulk" onclick="downloadCSV()">Bulk Download CSV</button>
+<!-- NAVIGATION -->
+<div class="nav">
+<button class="primary" type="button" onclick="refreshPage()">Refresh</button>
+<button class="purple" type="button" onclick="downloadCSV()">Download CSV</button>
+<button class="dark" type="button" onclick="toggleBulk()">Bulk Upload</button>
 </div>
 
+<!-- BULK UPLOAD SECTION -->
+<div id="bulkSection" style="display:none">
+<p><b>CSV Format Instructions:</b></p>
+<small>
+Columns must be:<br>
+studentId,studentName,dateOfBirth,age,school,level,grade,stream
+</small>
+<input type="file" id="csvFile" accept=".csv">
+<button class="success" type="button" onclick="uploadCSV()">Upload CSV</button>
+<hr>
+</div>
+
+<!-- STUDENT FORM -->
 <input id="studentId" placeholder="Admission Number">
-<button class="search" onclick="searchStudent()">Search Student</button>
+<button class="warning" type="button" onclick="searchStudent()">Search Student</button>
 
 <input id="studentName" placeholder="Student Full Name">
 <input type="date" id="dateOfBirth">
@@ -117,50 +159,44 @@ border-bottom:1px solid rgba(255,255,255,.2);
 <select id="gradeSelect"><option>Select Class</option></select>
 <select id="streamSelect"><option>Select Stream</option></select>
 
-<label>Upload Photo</label>
-<input type="file" id="photoUpload">
-
 <div class="row">
-<button class="camera" onclick="startCamera()">Start Camera</button>
-<button class="camera" onclick="capturePhoto()">Capture</button>
-</div>
-
-<video id="video" autoplay></video>
-<canvas id="canvas" style="display:none"></canvas>
-<img id="preview">
-
-<div class="row">
-<button class="create" onclick="registerStudent()">Register</button>
-<button class="update" onclick="updateStudent()">Update</button>
-<button class="delete" onclick="deleteStudent()">Delete</button>
+<button class="success" type="button" onclick="registerStudent()">Register</button>
+<button class="primary" type="button" onclick="updateStudent()">Update</button>
+<button class="danger" type="button" onclick="deleteStudent()">Delete</button>
 </div>
 
 <hr>
 <h3>Live Students</h3>
 <div id="studentList"></div>
 
-<div id="alertBox"></div>
+<div id="alert"></div>
 
 </div>
 
 <script>
 
-/* ========= SUPABASE ========= */
+/* SUPABASE */
 const supabase = window.supabase.createClient(
 "https://YOUR_PROJECT.supabase.co",
 "YOUR_PUBLIC_ANON_KEY"
 );
 
 const el=id=>document.getElementById(id);
-let schoolsMap={},currentStudent=null,cameraStream=null,capturedBlob=null;
+let schoolsMap={},currentStudent=null;
 
-/* ========= ALERT ========= */
+/* ALERT */
 function showAlert(msg,type="success"){
-el("alertBox").innerHTML=`<div class="alert ${type}">${msg}</div>`;
-setTimeout(()=>el("alertBox").innerHTML="",4000);
+const a=el("alert");
+a.className=type;
+a.innerText=msg;
+a.style.display="block";
+setTimeout(()=>a.style.display="none",4000);
 }
 
-/* ========= AGE ========= */
+/* REFRESH */
+function refreshPage(){location.reload();}
+
+/* AGE */
 el("dateOfBirth").addEventListener("change",()=>{
 const dob=new Date(el("dateOfBirth").value);
 if(!dob)return;
@@ -171,13 +207,12 @@ if(today.getMonth()<dob.getMonth() ||
 el("age").value=age>=0?age:"";
 });
 
-/* ========= LOAD SCHOOLS ========= */
+/* LOAD SCHOOLS */
 async function loadSchools(){
 const {data,error}=await supabase.from("schools").select("*");
 if(error) return showAlert(error.message,"error");
 
 el("schoolSelect").innerHTML="<option value=''>Select School</option>";
-
 data.forEach(s=>{
 if(typeof s.classes==="string") s.classes=JSON.parse(s.classes||"[]");
 if(typeof s.streams==="string") s.streams=JSON.parse(s.streams||"[]");
@@ -187,7 +222,7 @@ el("schoolSelect").add(new Option(s.name,s.name));
 }
 loadSchools();
 
-/* ========= SCHOOL CHANGE ========= */
+/* SCHOOL CHANGE */
 el("schoolSelect").addEventListener("change",()=>{
 const s=schoolsMap[el("schoolSelect").value];
 el("gradeSelect").innerHTML="<option>Select Class</option>";
@@ -198,36 +233,7 @@ el("levelDisplay").value=s.level||"";
 (s.streams||[]).forEach(st=>el("streamSelect").add(new Option(st,st)));
 });
 
-/* ========= SEARCH ========= */
-async function searchStudent(){
-const id=el("studentId").value.trim();
-if(!id) return showAlert("Enter admission number","error");
-
-const {data,error}=await supabase.from("students")
-.select("*").eq("studentId",id).maybeSingle();
-
-if(error) return showAlert(error.message,"error");
-if(!data) return showAlert("Student not found","error");
-
-currentStudent=data;
-
-el("studentName").value=data.studentName||"";
-el("dateOfBirth").value=data.dateOfBirth||"";
-el("age").value=data.age||"";
-el("schoolSelect").value=data.school||"";
-el("schoolSelect").dispatchEvent(new Event("change"));
-el("gradeSelect").value=data.grade||"";
-el("streamSelect").value=data.stream||"";
-
-if(data.photo){
-el("preview").src=data.photo;
-el("preview").style.display="block";
-}
-
-showAlert("Student Loaded");
-}
-
-/* ========= REGISTER ========= */
+/* REGISTER */
 async function registerStudent(){
 const id=el("studentId").value.trim();
 if(!id) return showAlert("Admission number required","error");
@@ -249,7 +255,31 @@ showAlert("Student Registered");
 loadStudents();
 }
 
-/* ========= UPDATE ========= */
+/* SEARCH */
+async function searchStudent(){
+const id=el("studentId").value.trim();
+if(!id) return showAlert("Enter admission number","error");
+
+const {data,error}=await supabase.from("students")
+.select("*").eq("studentId",id).maybeSingle();
+
+if(error) return showAlert(error.message,"error");
+if(!data) return showAlert("Student not found","error");
+
+currentStudent=data;
+
+el("studentName").value=data.studentName||"";
+el("dateOfBirth").value=data.dateOfBirth||"";
+el("age").value=data.age||"";
+el("schoolSelect").value=data.school||"";
+el("schoolSelect").dispatchEvent(new Event("change"));
+el("gradeSelect").value=data.grade||"";
+el("streamSelect").value=data.stream||"";
+
+showAlert("Student Loaded");
+}
+
+/* UPDATE */
 async function updateStudent(){
 if(!currentStudent) return showAlert("Search student first","error");
 
@@ -271,7 +301,7 @@ showAlert("Student Updated");
 loadStudents();
 }
 
-/* ========= DELETE ========= */
+/* DELETE */
 async function deleteStudent(){
 if(!currentStudent) return showAlert("Search student first","error");
 
@@ -283,25 +313,25 @@ showAlert("Student Deleted");
 loadStudents();
 }
 
-/* ========= LOAD STUDENTS ========= */
+/* LOAD STUDENTS */
 async function loadStudents(){
 const {data}=await supabase.from("students").select("*").order("created_at",{ascending:false});
 el("studentList").innerHTML="";
 data?.forEach(s=>{
 el("studentList").innerHTML+=
-`<div class="student-row">${s.studentId} - ${s.studentName}</div>`;
+`<div class="student">${s.studentId} - ${s.studentName}</div>`;
 });
 }
 loadStudents();
 
-/* ========= BULK CSV DOWNLOAD ========= */
+/* BULK CSV DOWNLOAD */
 async function downloadCSV(){
 const {data}=await supabase.from("students").select("*");
-if(!data.length) return showAlert("No data to download","error");
+if(!data.length) return showAlert("No data available","error");
 
-let csv="StudentID,Name,Age,School,Grade,Stream\n";
+let csv="studentId,studentName,dateOfBirth,age,school,level,grade,stream\n";
 data.forEach(s=>{
-csv+=`${s.studentId},${s.studentName},${s.age},${s.school},${s.grade},${s.stream}\n`;
+csv+=`${s.studentId},${s.studentName},${s.dateOfBirth},${s.age},${s.school},${s.level},${s.grade},${s.stream}\n`;
 });
 
 const blob=new Blob([csv],{type:"text/csv"});
@@ -309,7 +339,46 @@ const a=document.createElement("a");
 a.href=URL.createObjectURL(blob);
 a.download="students.csv";
 a.click();
-showAlert("CSV Downloaded");
+}
+
+/* BULK UPLOAD */
+function toggleBulk(){
+const s=el("bulkSection");
+s.style.display=s.style.display==="none"?"block":"none";
+}
+
+async function uploadCSV(){
+const file=el("csvFile").files[0];
+if(!file) return showAlert("Select CSV file","error");
+
+const text=await file.text();
+const rows=text.split("\n").slice(1);
+
+let students=[];
+
+rows.forEach(r=>{
+const cols=r.split(",");
+if(cols.length>=8){
+students.push({
+studentId:cols[0],
+studentName:cols[1],
+dateOfBirth:cols[2]||null,
+age:Number(cols[3])||null,
+school:cols[4],
+level:cols[5],
+grade:cols[6],
+stream:cols[7]
+});
+}
+});
+
+if(!students.length) return showAlert("Invalid CSV format","error");
+
+const {error}=await supabase.from("students").insert(students);
+if(error) return showAlert(error.message,"error");
+
+showAlert("Bulk Upload Successful");
+loadStudents();
 }
 
 </script>
